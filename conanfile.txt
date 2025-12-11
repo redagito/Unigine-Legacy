@@ -1,0 +1,25 @@
+[requires]
+
+glm/cci.20230113
+openal/1.22.2
+fmtlog/2.2.1
+catch2/3.4.0
+glext/cci.20210420
+wglext/cci.20200813
+# ffmpeg/7.0.1
+
+libmad/0.15.1b
+vorbis/1.3.7
+libpng/1.6.45
+# libjpeg/9f
+
+[options]
+# ffmpeg/*:with_ssl=False
+# ffmpeg/*:with_freetype=False
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout

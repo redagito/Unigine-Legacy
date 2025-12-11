@@ -1,0 +1,5 @@
+build/
+LightMaps/
+SubsurfaceScattering/
+Tools/
+CMakeUserPresets.json

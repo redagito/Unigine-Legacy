@@ -1,0 +1,35 @@
+project(Engine)
+
+file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS 
+	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cxx
+	${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/source/*.hpp
+)
+# Source group to preserve folder structure in ide
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES})
+
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES 
+	CXX_STANDARD 17
+)
+
+target_link_libraries(${PROJECT_NAME}
+	PUBLIC glm::glm
+	PUBLIC glext::glext
+	PUBLIC wglext::wglext
+	PUBLIC fmtlog::fmtlog
+	PRIVATE OpenAL::OpenAL
+	PRIVATE libmad::libmad
+	PRIVATE vorbis::vorbis
+	PRIVATE PNG::PNG 
+	# PRIVATE JPEG::JPEG 
+    # PRIVATE ffmpeg::avcodec
+)
+
+target_include_directories(${PROJECT_NAME}
+	PRIVATE source
+)
+
+file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

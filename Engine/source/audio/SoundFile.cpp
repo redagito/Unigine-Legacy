@@ -1,0 +1,337 @@
+#include "audio/SoundFile.h"
+
+#include <cstdio>
+#include <cstring>
+
+#include <vorbis/vorbisfile.h>
+#include <mad.h>
+
+class SoundFileOgg : public SoundFile {
+public:
+	SoundFileOgg(const char* name);
+	virtual ~SoundFileOgg();
+
+	virtual int size();
+	virtual int read(char* buf, int size = -1);
+	virtual void seek(double time);
+
+protected:
+	FILE* file = nullptr;
+	OggVorbis_File vf = {};
+	vorbis_info* vi = nullptr;
+};
+
+SoundFileOgg::SoundFileOgg(const char* name) {
+	file = fopen(name, "rb");
+	if (!file) {
+		fprintf(stderr, "SoundFileOgg::SoundFileOgg(): error open \"%s\" file\n", name);
+		return;
+	}
+	if (ov_open(file, &vf, NULL, 0) < 0) {
+		fprintf(stderr, "SoundFileOgg::SoundFileOgg(): \"%s\" is not ogg bitstream\n", name);
+		fclose(file);
+		file = NULL;
+		return;
+	}
+	vi = ov_info(&vf, -1);
+	channels = vi->channels;
+	freq = vi->rate;
+}
+
+SoundFileOgg::~SoundFileOgg() {
+	if (file) {
+		ov_clear(&vf);
+		fclose(file);
+	}
+}
+
+
+int SoundFileOgg::size() {
+	if (!file) return 0;
+	return (int)(ov_time_total(&vf, -1) + 0.5) * channels * freq * 2;
+}
+
+int SoundFileOgg::read(char* buffer, int size) {
+	if (!file) return 0;
+	int current_section;
+	if (size < 0) size = this->size();
+	int read = 0;
+	while (read < size) {
+		int ret = ov_read(&vf, buffer + read, size - read, 0, 2, 1, &current_section);
+		if (ret <= 0) break;
+		read += ret;
+	}
+	return read;
+}
+
+void SoundFileOgg::seek(double time) {
+	if (!file) return;
+	ov_time_seek(&vf, time);
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/*                                                                           */
+/*                                                                           */
+/*****************************************************************************/
+
+class SoundFileMp3 : public SoundFile {
+public:
+	SoundFileMp3(const char* name);
+	virtual ~SoundFileMp3();
+
+	virtual int size();
+	virtual int read(char* buf, int size = -1);
+	virtual void seek(double time);
+
+protected:
+	int read_frame();
+	inline int scale(mad_fixed_t sample);
+
+	enum {
+		BUFFER_SIZE = 4096,
+	};
+
+	FILE* file = nullptr;
+	int file_size = 0;
+	unsigned char buffer[BUFFER_SIZE] = { 0 };
+	int buffer_length = 0;
+	struct mad_synth synth;
+	struct mad_stream stream;
+	struct mad_frame frame;
+	int bitrate = 0;
+};
+
+SoundFileMp3::SoundFileMp3(const char* name) {
+	file = fopen(name, "rb");
+	if (!file) {
+		fprintf(stderr, "SoundFileMp3::SoundFileMp3(): error open \"%s\" file\n", name);
+		return;
+	}
+
+	fseek(file, 0, SEEK_END);
+	file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	buffer_length = 0;
+	mad_synth_init(&synth);
+	mad_stream_init(&stream);
+	mad_frame_init(&frame);
+	if (read_frame() == 0) {
+		fprintf(stderr, "SoundFileMp3::SoundFileMp3(): can`t find frame\n");
+		fclose(file);
+		file = NULL;
+		mad_synth_finish(&synth);
+		mad_stream_finish(&stream);
+		mad_frame_finish(&frame);
+		return;
+	}
+
+	channels = (frame.header.mode == MAD_MODE_SINGLE_CHANNEL) ? 1 : 2;
+	freq = frame.header.samplerate;
+	bitrate = frame.header.bitrate;
+}
+
+SoundFileMp3::~SoundFileMp3() {
+	if (file) {
+		fclose(file);
+		mad_synth_finish(&synth);
+		mad_stream_finish(&stream);
+		mad_frame_finish(&frame);
+	}
+}
+
+
+int SoundFileMp3::read_frame() {
+	while (1) {
+		int ret = fread(&buffer[buffer_length], 1, BUFFER_SIZE - buffer_length, file);
+		if (ret <= 0) break;
+		buffer_length += ret;
+		while (1) {
+			mad_stream_buffer(&stream, buffer, buffer_length);
+			ret = mad_frame_decode(&frame, &stream);
+			if (stream.next_frame) {
+				int length = buffer + buffer_length - (unsigned char*)stream.next_frame;
+				memmove(buffer, stream.next_frame, length);
+				buffer_length = length;
+			}
+			if (ret == 0) return 1;
+			if (stream.error == MAD_ERROR_BUFLEN) break;
+		}
+	}
+	return 0;
+}
+
+
+inline int SoundFileMp3::scale(mad_fixed_t sample) {
+	sample += (1 << (MAD_F_FRACBITS - 16));
+	if (sample >= MAD_F_ONE) sample = MAD_F_ONE - 1;
+	else if (sample < -MAD_F_ONE) sample = -MAD_F_ONE;
+	return sample >> (MAD_F_FRACBITS + 1 - 16);
+}
+
+
+int SoundFileMp3::size() {
+	if (!file) return 0;
+	return file_size * 8 / bitrate * channels * freq * 2;
+}
+
+int SoundFileMp3::read(char* buffer, int size) {
+	if (!file) return 0;
+	if (size < 0) size = this->size();
+	int read = 0;
+	while (read < size) {
+		mad_synth_frame(&synth, &frame);
+		struct mad_pcm* pcm = &synth.pcm;
+		mad_fixed_t* left = pcm->samples[0];
+		mad_fixed_t* right = pcm->samples[1];
+		unsigned short* data = (unsigned short*)(buffer + read);
+		for (unsigned int length = pcm->length; length > 0; length--) {
+			*data++ = scale(*left++);
+			if (channels == 2) *data++ = scale(*right++);
+		}
+		read += pcm->length * channels * 2;
+		if (!read_frame()) return read;
+	}
+	return read;
+}
+
+void SoundFileMp3::seek(double time) {
+	if (!file) return;
+	fseek(file, (unsigned int)((double)bitrate / 8.0 * time), SEEK_SET);
+	read_frame();
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/*                                                                           */
+/*                                                                           */
+/*****************************************************************************/
+
+class SoundFileWav : public SoundFile {
+public:
+	SoundFileWav(const char* name);
+	virtual ~SoundFileWav();
+
+	virtual int size();
+	virtual int read(char* buf, int size = -1);
+	virtual void seek(double time);
+
+protected:
+	enum {
+		RIFF = 0x46464952,
+		WAVE = 0x45564157,
+		FMT = 0x20746D66,
+		DATA = 0x61746164,
+	};
+
+	struct Fmt {
+		unsigned short encoding = 0;
+		unsigned short channels = 0;
+		unsigned int frequency = 0;
+		unsigned int byterate = 0;
+		unsigned short blockalign = 0;
+		unsigned short bitspersample = 0;
+	};
+
+	FILE* file = nullptr;
+	Fmt fmt;
+	unsigned int data_offset = 0;
+	unsigned int data_length = 0;
+};
+
+SoundFileWav::SoundFileWav(const char* name) {
+	memset(&fmt, 0, sizeof(Fmt));
+	file = fopen(name, "rb");
+	if (!file) {
+		fprintf(stderr, "SoundFileWav::SoundFileWav(): error open \"%s\" file\n", name);
+		return;
+	}
+	unsigned int magic;
+	unsigned int length;
+	fread(&magic, sizeof(unsigned int), 1, file);
+	fread(&length, sizeof(unsigned int), 1, file);
+	if (magic != RIFF) {
+		fprintf(stderr, "SoundFileWav::SoundFileWav(): wrong main chunk\n");
+		fclose(file);
+		file = NULL;
+		return;
+	}
+	fread(&magic, sizeof(unsigned int), 1, file);
+	if (magic != WAVE) {
+		fprintf(stderr, "SoundFileWav::SoundFileWav(): unknown file type\n");
+		fclose(file);
+		file = NULL;
+		return;
+	}
+	while (1) {
+		if (fread(&magic, sizeof(unsigned int), 1, file) != 1) break;
+		if (fread(&length, sizeof(unsigned int), 1, file) != 1) break;
+		if (magic == FMT) {
+			fread(&fmt, sizeof(Fmt), 1, file);
+			if (fmt.encoding != 1) {
+				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open compressed waveform data\n");
+				fclose(file);
+				file = NULL;
+				return;
+			}
+			if (fmt.bitspersample != 16) {
+				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open %d bit per sample format\n", fmt.bitspersample);
+				fclose(file);
+				file = NULL;
+				return;
+			}
+			channels = fmt.channels;
+			freq = fmt.frequency;
+		}
+		else if (magic == DATA) {
+			data_offset = ftell(file);
+			data_length = length;
+			break;
+		}
+		else {
+			fseek(file, length, SEEK_CUR);
+		}
+	}
+	if (channels == 0 || freq == 0 || data_offset == 0 || data_length == 0) {
+		fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t find FMT or DATA block\n");
+		fclose(file);
+		file = NULL;
+	}
+}
+
+SoundFileWav::~SoundFileWav() {
+	if (file) fclose(file);
+}
+
+
+int SoundFileWav::size() {
+	if (!file) return 0;
+	return data_length;
+}
+
+int SoundFileWav::read(char* buffer, int size) {
+	if (!file) return 0;
+	int left = data_length - ftell(file) + data_offset;
+	if (size < 0 || left < size) size = left;
+	fread(buffer, sizeof(char), size, file);
+	return size;
+}
+
+void SoundFileWav::seek(double time) {
+	if (!file) return;
+	fseek(file, data_offset + (int)(time * fmt.channels * fmt.frequency), SEEK_SET);
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/*                                                                           */
+/*                                                                           */
+/*****************************************************************************/
+
+SoundFile* SoundFile::load(const char* name) {
+	if (strstr(name, ".ogg")) return new SoundFileOgg(name);
+	if (strstr(name, ".mp3")) return new SoundFileMp3(name);
+	if (strstr(name, ".wav")) return new SoundFileWav(name);
+	fprintf(stderr, "\"%s\" is not supported\n", name);
+	return nullptr;
+}
