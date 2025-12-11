@@ -2,7 +2,7 @@
 
 Unigine engine version 0.2 from http://frustum.org
 
-Added modern build system using CMake and Conan.
+With a modern build system.
 
 ## Requirements
 
