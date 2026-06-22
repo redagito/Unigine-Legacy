@@ -21,9 +21,9 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC wglext::wglext
 	PUBLIC fmtlog::fmtlog
 	PUBLIC OpenAL::OpenAL
-	PRIVATE libmad::libmad
-	PRIVATE vorbis::vorbis
-	PRIVATE PNG::PNG 
+	PUBLIC libmad::libmad
+	PUBLIC vorbis::vorbis
+	PUBLIC PNG::PNG 
 	# PRIVATE JPEG::JPEG 
     # PRIVATE ffmpeg::avcodec
 )
