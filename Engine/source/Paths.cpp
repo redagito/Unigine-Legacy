@@ -4,35 +4,51 @@
 #include <cstdio>
 
 void Paths::addPath(const char* path) {
+	if (!path) {
+		fprintf(stderr, "Paths::addPath(): null path\n");
+		return;
+	}
 	char* s = (char*)path;
 	while (1) {
-		char* p = new char[strlen(s) + 1];
+		if (*s == '\0') break;
+		int len = 0;
+		char* t = s;
+		while (*t != '\0' && *t != ',') { t++; len++; }
+		char* p = new char[len + 1];
 		char* d = p;
-		while (*s != '\0' && *s != ',') *d++ = *s++;
+		t = s;
+		while (*t != '\0' && *t != ',') *d++ = *t++;
 		*d = '\0';
 		paths.push_back(p);
-		if (*s == '\0') break;
-		else s++;
+		if (*t == '\0') break;
+		s = t + 1;
 	}
 }
 
 const char* Paths::findFile(const char* name) const {
+	if (!name) {
+		fprintf(stderr, "Paths::findFile(): null name\n");
+		return NULL;
+	}
 	static char buf[1024] = { '\0' };
 
-	for (char* s = (char*)name; *s != '\0'; s++) {
+	for (const char* s = name; *s != '\0'; s++) {
 		if (*s == '%' && *(s + 1) == 's') {
 			static char complex_name[1024];
 			sprintf(complex_name, name, "px");
-			s = (char*)findFile(complex_name);
+			const char* result = findFile(complex_name);
+			if (!result) break;
+			s = result;
 			if (strcmp(s, name)) {
-				for (s = buf + strlen(buf); s > buf; s--) {
-					if (*s == 'x' && *(s - 1) == 'p') {
-						*s = 's';
-						*(s - 1) = '%';
+				char* p = buf + strlen(buf);
+				for (; p > buf; p--) {
+					if (*p == 'x' && *(p - 1) == 'p') {
+						*p = 's';
+						*(p - 1) = '%';
 						break;
 					}
 				}
-				return buf;	// hm
+				return buf;
 			}
 			break;
 		}
@@ -48,6 +64,6 @@ const char* Paths::findFile(const char* name) const {
 			return buf;
 		}
 	}
-	fprintf(stderr, "Path::findFile(): can`t find \"%s\" file\n", name);
+	fprintf(stderr, "Paths::findFile(): can`t find \"%s\" file\n", name);
 	return name;
 }

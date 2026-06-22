@@ -248,15 +248,25 @@ SoundFileWav::SoundFileWav(const char* name) {
 	}
 	unsigned int magic;
 	unsigned int length;
-	fread(&magic, sizeof(unsigned int), 1, file);
-	fread(&length, sizeof(unsigned int), 1, file);
+	if (fread(&magic, sizeof(unsigned int), 1, file) != 1 ||
+		fread(&length, sizeof(unsigned int), 1, file) != 1) {
+		fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading header from \"%s\" file\n", name);
+		fclose(file);
+		file = NULL;
+		return;
+	}
 	if (magic != RIFF) {
 		fprintf(stderr, "SoundFileWav::SoundFileWav(): wrong main chunk\n");
 		fclose(file);
 		file = NULL;
 		return;
 	}
-	fread(&magic, sizeof(unsigned int), 1, file);
+	if (fread(&magic, sizeof(unsigned int), 1, file) != 1) {
+		fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading WAVE header from \"%s\" file\n", name);
+		fclose(file);
+		file = NULL;
+		return;
+	}
 	if (magic != WAVE) {
 		fprintf(stderr, "SoundFileWav::SoundFileWav(): unknown file type\n");
 		fclose(file);
@@ -267,7 +277,12 @@ SoundFileWav::SoundFileWav(const char* name) {
 		if (fread(&magic, sizeof(unsigned int), 1, file) != 1) break;
 		if (fread(&length, sizeof(unsigned int), 1, file) != 1) break;
 		if (magic == FMT) {
-			fread(&fmt, sizeof(Fmt), 1, file);
+			if (fread(&fmt, sizeof(Fmt), 1, file) != 1) {
+				fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading FMT chunk from \"%s\" file\n", name);
+				fclose(file);
+				file = NULL;
+				return;
+			}
 			if (fmt.encoding != 1) {
 				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open compressed waveform data\n");
 				fclose(file);
@@ -311,10 +326,15 @@ int SoundFileWav::size() {
 
 int SoundFileWav::read(char* buffer, int size) {
 	if (!file) return 0;
-	int left = data_length - ftell(file) + data_offset;
+	long pos = ftell(file);
+	int left = data_length - (pos - data_offset);
 	if (size < 0 || left < size) size = left;
-	fread(buffer, sizeof(char), size, file);
-	return size;
+	if (size > 0) {
+		size_t ret = fread(buffer, sizeof(char), size, file);
+		if (ret == 0) return 0;
+		return (int)ret;
+	}
+	return 0;
 }
 
 void SoundFileWav::seek(double time) {

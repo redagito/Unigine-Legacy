@@ -504,6 +504,10 @@ void Mesh::addSurface(const char* name, Vertex* vertex, int num_vertex) {
 /* load
  */
 int Mesh::load(const char* name) {
+	if (!name) {
+		fprintf(stderr, "Mesh::load(): null name\n");
+		return 0;
+	}
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = surfaces[i];
 		if (s->vertex) delete[] s->vertex;
@@ -519,7 +523,11 @@ int Mesh::load(const char* name) {
 			return 0;
 		}
 		int magic;
-		fread(&magic, sizeof(int), 1, file);
+		if (fread(&magic, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load(): error reading magic from \"%s\" file\n", name);
+			fclose(file);
+			return 0;
+		}
 		if (magic == MESH_STRIP_MAGIC) {	// load mesh file
 			load(file);
 			fclose(file);
@@ -530,7 +538,7 @@ int Mesh::load(const char* name) {
 	if (strstr(name, ".3ds")) load_3ds(name);
 	else if (strstr(name, ".mesh")) load_mesh(name);
 	if (num_surfaces == 0) {
-		fprintf(stderr, "Mesh::load(): error open \"%s\" file\n", name);
+		fprintf(stderr, "Mesh::load(): no surfaces loaded from \"%s\" file\n", name);
 		return 0;
 	}
 	calculate_tangent();
@@ -560,34 +568,88 @@ int Mesh::save(const char* name) {
 void Mesh::load(FILE* file) {
 	// number of surfaces
 	int num_surfaces;
-	fread(&num_surfaces, sizeof(int), 1, file);
+	if (fread(&num_surfaces, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Mesh::load(): error reading num_surfaces\n");
+		return;
+	}
+	if (num_surfaces < 0 || num_surfaces > NUM_SURFACES) {
+		fprintf(stderr, "Mesh::load(): invalid num_surfaces %d\n", num_surfaces);
+		return;
+	}
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = new Surface;
 		memset(s, 0, sizeof(Surface));
 		// name
-		fread(s->name, sizeof(s->name), 1, file);
+		if (fread(s->name, sizeof(s->name), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load(): error reading surface name\n");
+			delete s;
+			return;
+		}
 		// vertexes
-		fread(&s->num_vertex, sizeof(int), 1, file);
+		if (fread(&s->num_vertex, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load(): error reading num_vertex\n");
+			delete s;
+			return;
+		}
+		if (s->num_vertex < 0) {
+			fprintf(stderr, "Mesh::load(): invalid num_vertex %d\n", s->num_vertex);
+			delete s;
+			return;
+		}
 		s->vertex = new Vertex[s->num_vertex];
-		fread(s->vertex, sizeof(Vertex), s->num_vertex, file);
+		if (fread(s->vertex, sizeof(Vertex), s->num_vertex, file) != (size_t)s->num_vertex) {
+			fprintf(stderr, "Mesh::load(): error reading vertex data\n");
+			delete s;
+			return;
+		}
 		// edges
-		fread(&s->num_edges, sizeof(int), 1, file);
+		if (fread(&s->num_edges, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load(): error reading num_edges\n");
+			delete s;
+			return;
+		}
+		if (s->num_edges < 0) {
+			fprintf(stderr, "Mesh::load(): invalid num_edges %d\n", s->num_edges);
+			delete s;
+			return;
+		}
 		s->edges = new Edge[s->num_edges];
 		for (int j = 0; j < s->num_edges; j++) {
 			Edge* e = &s->edges[j];
-			fread(e->v, sizeof(vec3), 2, file);
+			if (fread(e->v, sizeof(vec3), 2, file) != 2) {
+				fprintf(stderr, "Mesh::load(): error reading edge %d\n", j);
+				delete s;
+				return;
+			}
 			e->reverse = 0;
 			e->flag = 0;
 		}
 		// triangles
-		fread(&s->num_triangles, sizeof(int), 1, file);
+		if (fread(&s->num_triangles, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load(): error reading num_triangles\n");
+			delete s;
+			return;
+		}
+		if (s->num_triangles < 0) {
+			fprintf(stderr, "Mesh::load(): invalid num_triangles %d\n", s->num_triangles);
+			delete s;
+			return;
+		}
 		s->triangles = new Triangle[s->num_triangles];
 		for (int j = 0; j < s->num_triangles; j++) {
 			Triangle* t = &s->triangles[j];
-			fread(t->v, sizeof(vec3), 3, file);
-			fread(t->e, sizeof(int), 3, file);
+			if (fread(t->v, sizeof(vec3), 3, file) != 3 ||
+				fread(t->e, sizeof(int), 3, file) != 3) {
+				fprintf(stderr, "Mesh::load(): error reading triangle %d\n", j);
+				delete s;
+				return;
+			}
 			char reverse;
-			fread(&reverse, sizeof(char), 1, file);
+			if (fread(&reverse, sizeof(char), 1, file) != 1) {
+				fprintf(stderr, "Mesh::load(): error reading triangle reverse %d\n", j);
+				delete s;
+				return;
+			}
 			t->reverse[0] = reverse & (1 << 0);
 			t->reverse[1] = reverse & (1 << 1);
 			t->reverse[2] = reverse & (1 << 2);
@@ -606,16 +668,36 @@ void Mesh::load(FILE* file) {
 			t->c[2] = vec4(normal, -t->v[2] * normal);
 		}
 		// indices
-		fread(&s->num_indices, sizeof(int), 1, file);
-		fread(&s->num_strips, sizeof(int), 1, file);
+		if (fread(&s->num_indices, sizeof(int), 1, file) != 1 ||
+			fread(&s->num_strips, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load(): error reading index count\n");
+			delete s;
+			return;
+		}
+		if (s->num_indices < 0 || s->num_strips < 0) {
+			fprintf(stderr, "Mesh::load(): invalid index/strip count\n");
+			delete s;
+			return;
+		}
 		s->indices = new int[s->num_indices];
 		if (s->num_indices < 65536) {
 			unsigned short* buf = new unsigned short[s->num_indices];
-			fread(buf, sizeof(unsigned short), s->num_indices, file);
+			if (fread(buf, sizeof(unsigned short), s->num_indices, file) != (size_t)s->num_indices) {
+				fprintf(stderr, "Mesh::load(): error reading index data (16-bit)\n");
+				delete[] buf;
+				delete s;
+				return;
+			}
 			for (int j = 0; j < s->num_indices; j++) s->indices[j] = buf[j];
 			delete[] buf;
 		}
-		else fread(s->indices, sizeof(int), s->num_indices, file);
+		else {
+			if (fread(s->indices, sizeof(int), s->num_indices, file) != (size_t)s->num_indices) {
+				fprintf(stderr, "Mesh::load(): error reading index data (32-bit)\n");
+				delete s;
+				return;
+			}
+		}
 		// shadow volume vertexes
 		for (int j = 0; j < NUM_SILHOUETTES; j++) {
 			s->silhouettes[j].vertex = new vec4[s->num_edges * 4];
@@ -686,7 +768,11 @@ int Mesh::load_mesh(const char* name) {
 	}
 	int magic;
 	// mesh magic raw
-	fread(&magic, sizeof(int), 1, file);
+	if (fread(&magic, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Mesh::load_mesh(): error reading magic from \"%s\" file\n", name);
+		fclose(file);
+		return 0;
+	}
 	if (magic != MESH_RAW_MAGIC) {
 		fprintf(stderr, "Mesh::load_mesh(): wrong magic 0x%04x in \"%s\" file\n", magic, name);
 		fclose(file);
@@ -694,17 +780,48 @@ int Mesh::load_mesh(const char* name) {
 	}
 	// number of surfaces
 	int num_surfaces;
-	fread(&num_surfaces, sizeof(int), 1, file);
+	if (fread(&num_surfaces, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Mesh::load_mesh(): error reading num_surfaces from \"%s\" file\n", name);
+		fclose(file);
+		return 0;
+	}
+	if (num_surfaces < 0 || num_surfaces > NUM_SURFACES) {
+		fprintf(stderr, "Mesh::load_mesh(): invalid num_surfaces %d\n", num_surfaces);
+		fclose(file);
+		return 0;
+	}
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = new Surface;
 		memset(s, 0, sizeof(Surface));
 		// name
-		fread(s->name, sizeof(s->name), 1, file);
+		if (fread(s->name, sizeof(s->name), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load_mesh(): error reading surface name\n");
+			delete s;
+			fclose(file);
+			return 0;
+		}
 		// vertexes
 		int num_vertex;
-		fread(&num_vertex, sizeof(int), 1, file);
+		if (fread(&num_vertex, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Mesh::load_mesh(): error reading num_vertex\n");
+			delete s;
+			fclose(file);
+			return 0;
+		}
+		if (num_vertex < 0) {
+			fprintf(stderr, "Mesh::load_mesh(): invalid num_vertex %d\n", num_vertex);
+			delete s;
+			fclose(file);
+			return 0;
+		}
 		load_mesh_Vertex* vertex = new load_mesh_Vertex[num_vertex];
-		fread(vertex, sizeof(load_mesh_Vertex), num_vertex, file);
+		if (fread(vertex, sizeof(load_mesh_Vertex), num_vertex, file) != (size_t)num_vertex) {
+			fprintf(stderr, "Mesh::load_mesh(): error reading vertex data\n");
+			delete[] vertex;
+			delete s;
+			fclose(file);
+			return 0;
+		}
 		s->vertex = new Vertex[num_vertex];
 		for (int j = 0; j < num_vertex; j += 3) {
 			if (vertex[j + 0].xyz == vertex[j + 1].xyz) continue;	// skip degenerate triangles
@@ -783,19 +900,28 @@ static int load_3ds_read_string(FILE* file, char* string) {
 
 static int load_3ds_read_ushort(FILE* file) {
 	unsigned short ret;
-	fread(&ret, 1, sizeof(unsigned short), file);
+	if (fread(&ret, 1, sizeof(unsigned short), file) != sizeof(unsigned short)) {
+		fprintf(stderr, "Mesh::load_3ds(): error reading unsigned short\n");
+		return 0;
+	}
 	return ret;
 }
 
 static int load_3ds_read_int(FILE* file) {
 	int ret;
-	fread(&ret, 1, sizeof(int), file);
+	if (fread(&ret, 1, sizeof(int), file) != sizeof(int)) {
+		fprintf(stderr, "Mesh::load_3ds(): error reading int\n");
+		return 0;
+	}
 	return ret;
 }
 
 static float load_3ds_read_float(FILE* file) {
 	float ret;
-	fread(&ret, 1, sizeof(float), file);
+	if (fread(&ret, 1, sizeof(float), file) != sizeof(float)) {
+		fprintf(stderr, "Mesh::load_3ds(): error reading float\n");
+		return 0.0f;
+	}
 	return ret;
 }
 

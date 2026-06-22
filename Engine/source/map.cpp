@@ -20,13 +20,18 @@
 char* Map::data;
 
 void Map::load(const char* name, Paths& paths) {
+	if (!name) {
+		fprintf(stderr, "Map::load(): null name\n");
+		return;
+	}
 	Parser* parser = new Parser(name, Engine::defines);
 
 	char file_name[1024];
 	strcpy(file_name, name);
 
-	if (parser->get("path")) {
-		char* s = parser->get("path");
+	char* path_block = parser->get("path");
+	if (path_block) {
+		char* s = path_block;
 		char path[1024];
 		char* d = path;
 		while (*s) {
@@ -95,6 +100,7 @@ const char* Map::read_token(char* must) {
 int Map::read_bool() {
 	const char* token = read_token();
 	if (token) {
+		if (!*token) throw(error("empty token in read_bool"));
 		if (!strcmp(token, "false") || !strcmp(token, "0")) return 0;
 		if (!strcmp(token, "true") || !strcmp(token, "1")) return 1;
 		throw(error("unknown token \"%s\" in read_bool", token));
@@ -106,6 +112,7 @@ int Map::read_bool() {
 int Map::read_int() {
 	const char* token = read_token();
 	if (token) {
+		if (!*token) throw(error("empty token in read_int"));
 		if (!strchr("-01234567890", *token)) throw(error("unknown token \"%s\" in read_int", token));
 		return atoi(token);
 	}
@@ -115,6 +122,7 @@ int Map::read_int() {
 float Map::read_float() {
 	const char* token = read_token();
 	if (token) {
+		if (!*token) throw(error("empty token in read_float"));
 		if (!strchr("-01234567890.", *token)) throw(error("unknown token \"%s\" in read_float", token));
 		return atof(token);
 	}

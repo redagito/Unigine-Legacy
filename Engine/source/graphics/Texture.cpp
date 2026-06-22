@@ -313,32 +313,60 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 		fprintf(stderr, "Texture::load_tga(): error open \"%s\" file\n", name);
 		return NULL;
 	}
-	fread(&info, 1, 18, file);
+	if (fread(&info, 1, 18, file) != 18) {
+		fprintf(stderr, "Texture::load_tga(): error reading header from \"%s\" file\n", name);
+		fclose(file);
+		return NULL;
+	}
 	width = info[12] + info[13] * 256;
 	height = info[14] + info[15] * 256;
+	if (width <= 0 || height <= 0) {
+		fprintf(stderr, "Texture::load_tga(): invalid dimensions %dx%d in \"%s\" file\n", width, height, name);
+		fclose(file);
+		return NULL;
+	}
 	switch (info[16]) {
 	case 32: components = 4; break;
 	case 24: components = 3; break;
-	default: fclose(file); return NULL;
+	default:
+		fprintf(stderr, "Texture::load_tga(): unsupported bit depth %d in \"%s\" file\n", info[16], name);
+		fclose(file);
+		return NULL;
 	}
 	size = width * height * components;
 	buf = new unsigned char[size];
 	data = new unsigned char[width * height * 4];
-	if (!data || !buf) {
-		fclose(file);
-		return NULL;
-	}
 	fseek(file, info[0], SEEK_CUR);
 	switch (info[2]) {
-	case 2: fread(buf, 1, size, file); break;
+	case 2:
+		if (fread(buf, 1, size, file) != (size_t)size) {
+			fprintf(stderr, "Texture::load_tga(): error reading image data from \"%s\" file\n", name);
+			fclose(file);
+			delete[] buf;
+			delete[] data;
+			return NULL;
+		}
+		break;
 	case 10:
 		i = 0;
 		ptr = buf;
 		while (i < size) {
-			fread(&rep, 1, 1, file);
+			if (fread(&rep, 1, 1, file) != 1) {
+				fprintf(stderr, "Texture::load_tga(): error reading RLE packet from \"%s\" file\n", name);
+				fclose(file);
+				delete[] buf;
+				delete[] data;
+				return NULL;
+			}
 			if (rep & 0x80) {
 				rep ^= 0x80;
-				fread(ptr, 1, components, file);
+				if (fread(ptr, 1, components, file) != (size_t)components) {
+					fprintf(stderr, "Texture::load_tga(): error reading RLE pixel from \"%s\" file\n", name);
+					fclose(file);
+					delete[] buf;
+					delete[] data;
+					return NULL;
+				}
 				ptr += components;
 				for (j = 0; j < rep * components; j++) {
 					*ptr = *(ptr - components);
@@ -348,13 +376,20 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 			}
 			else {
 				k = components * (rep + 1);
-				fread(ptr, 1, k, file);
+				if (fread(ptr, 1, k, file) != (size_t)k) {
+					fprintf(stderr, "Texture::load_tga(): error reading RLE run from \"%s\" file\n", name);
+					fclose(file);
+					delete[] buf;
+					delete[] data;
+					return NULL;
+				}
 				ptr += k;
 				i += k;
 			}
 		}
 		break;
 	default:
+		fprintf(stderr, "Texture::load_tga(): unsupported encoding type %d in \"%s\" file\n", info[2], name);
 		fclose(file);
 		delete[] buf;
 		delete[] data;
@@ -421,7 +456,11 @@ unsigned char* Texture::load_png(const char* name, int& width, int& height) {
 		return NULL;
 	}
 	png_byte sig[8];
-	fread(sig, 8, 1, file);
+	if (fread(sig, 8, 1, file) != 1) {
+		fprintf(stderr, "Texture::load_png(): error reading signature from \"%s\" file\n", name);
+		fclose(file);
+		return NULL;
+	}
 	if (!png_check_sig(sig, 8)) {
 		fprintf(stderr, "Texture::load_png(): wrong signature in \"%s\" file\n", name);
 		fclose(file);
@@ -683,7 +722,11 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 		return NULL;
 	}
 	dds_header header;
-	fread(&header, sizeof(dds_header), 1, file);
+	if (fread(&header, sizeof(dds_header), 1, file) != 1) {
+		fprintf(stderr, "Texture::load_dds(): error reading header from \"%s\" file\n", name);
+		fclose(file);
+		return NULL;
+	}
 	if (header.magic != ('D' | 'D' << 8 | 'S' << 16 | ' ' << 24)) {
 		fprintf(stderr, "Texture::load_dds(): wrong magic in \"%s\" file\n", name);
 		fclose(file);
@@ -713,10 +756,21 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 		fclose(file);
 		return NULL;
 	}
+	if (width <= 0 || height <= 0) {
+		fprintf(stderr, "Texture::load_dds(): invalid dimensions %dx%d in \"%s\" file\n", width, height, name);
+		fclose(file);
+		return NULL;
+	}
 	unsigned char* data = new unsigned char[width * height * 4];
 	if (format == DDS_RGB) {
 		unsigned char* buf = new unsigned char[width * height * 3];
-		fread(buf, width * height * 3, 1, file);
+		if (fread(buf, width * height * 3, 1, file) != 1) {
+			fprintf(stderr, "Texture::load_dds(): error reading RGB data from \"%s\" file\n", name);
+			fclose(file);
+			delete[] buf;
+			delete[] data;
+			return NULL;
+		}
 		unsigned char* src = buf;
 		unsigned char* dest = data;
 		for (int y = 0; y < height; y++) {
@@ -731,7 +785,13 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 	}
 	else if (format == DDS_RGBA) {
 		unsigned char* buf = new unsigned char[width * height * 4];
-		fread(buf, width * height * 4, 1, file);
+		if (fread(buf, width * height * 4, 1, file) != 1) {
+			fprintf(stderr, "Texture::load_dds(): error reading RGBA data from \"%s\" file\n", name);
+			fclose(file);
+			delete[] buf;
+			delete[] data;
+			return NULL;
+		}
 		unsigned char* src = buf;
 		unsigned char* dest = data;
 		for (int y = 0; y < height; y++) {
@@ -747,7 +807,13 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 	else {
 		unsigned char* buf = new unsigned char[width * height];
 		unsigned char* src = buf;
-		fread(buf, width * height, 1, file);
+		if (fread(buf, width * height, 1, file) != 1) {
+			fprintf(stderr, "Texture::load_dds(): error reading compressed data from \"%s\" file\n", name);
+			fclose(file);
+			delete[] buf;
+			delete[] data;
+			return NULL;
+		}
 		for (int y = 0; y < height; y += 4) {
 			for (int x = 0; x < width; x += 4) {
 				unsigned long long alpha = 0;
@@ -882,28 +948,46 @@ unsigned char* Texture::load_3d(const char* name, int& width, int& height, int& 
 		return NULL;
 	}
 	int magic;
-	fread(&magic, sizeof(int), 1, file);
-	if (magic != ('3' | 'D' << 8 | 'T' << 16 | 'X' << 24)) {
-		fprintf(stderr, "Texture::load_3d(): wrong magic in \"%s\" file\n", name);
+	if (fread(&magic, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Texture::load_3d(): error reading magic from \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
-	fread(&width, sizeof(int), 1, file);
-	fread(&height, sizeof(int), 1, file);
-	fread(&depth, sizeof(int), 1, file);
-	fread(&format, sizeof(int), 1, file);
+	if (magic != ('3' | 'D' << 8 | 'T' << 16 | 'X' << 24)) {
+		fprintf(stderr, "Texture::load_3d(): wrong magic 0x%08x in \"%s\" file\n", magic, name);
+		fclose(file);
+		return NULL;
+	}
+	if (fread(&width, sizeof(int), 1, file) != 1 ||
+		fread(&height, sizeof(int), 1, file) != 1 ||
+		fread(&depth, sizeof(int), 1, file) != 1 ||
+		fread(&format, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Texture::load_3d(): error reading header from \"%s\" file\n", name);
+		fclose(file);
+		return NULL;
+	}
+	if (width <= 0 || height <= 0 || depth <= 0) {
+		fprintf(stderr, "Texture::load_3d(): invalid dimensions %dx%dx%d in \"%s\" file\n", width, height, depth, name);
+		fclose(file);
+		return NULL;
+	}
 	int size = width * height * depth;
 	if (format == LUMINANCE) size *= 1;
 	else if (format == LUMINANCE_ALPHA) size *= 2;
 	else if (format == RGB) size *= 3;
 	else if (format == RGBA) size *= 4;
 	else {
-		fprintf(stderr, "Texture::load_3d(): unknown format of \"%s\" file\n", name);
+		fprintf(stderr, "Texture::load_3d(): unknown format %d of \"%s\" file\n", format, name);
 		fclose(file);
 		return NULL;
 	}
 	unsigned char* data = new unsigned char[size];
-	fread(data, sizeof(unsigned char), size, file);
+	if (fread(data, sizeof(unsigned char), size, file) != (size_t)size) {
+		fprintf(stderr, "Texture::load_3d(): error reading data from \"%s\" file\n", name);
+		delete[] data;
+		fclose(file);
+		return NULL;
+	}
 	fclose(file);
 	return data;
 }

@@ -8,15 +8,30 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		fprintf(stderr, "Parse::Parse(): error open \"%s\" file\n", name);
+		fprintf(stderr, "Parser::Parser(): error open \"%s\" file\n", name);
 		return;
 	}
-	fseek(file, 0, SEEK_END);
-	int size = ftell(file);
+	if (fseek(file, 0, SEEK_END) != 0) {
+		fprintf(stderr, "Parser::Parser(): error seeking in \"%s\" file\n", name);
+		fclose(file);
+		return;
+	}
+	long size = ftell(file);
+	if (size < 0) {
+		fprintf(stderr, "Parser::Parser(): error getting size of \"%s\" file\n", name);
+		fclose(file);
+		return;
+	}
 	fseek(file, 0, SEEK_SET);
 	data = new char[size + 1];
 	memset(data, 0, sizeof(char) * (size + 1));
-	fread(data, sizeof(char), size, file);
+	if (fread(data, sizeof(char), size, file) == 0) {
+		fprintf(stderr, "Parser::Parser(): error reading \"%s\" file\n", name);
+		delete[] data;
+		data = NULL;
+		fclose(file);
+		return;
+	}
 	fclose(file);
 
 	char* s = data;

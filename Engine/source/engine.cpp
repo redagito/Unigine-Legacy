@@ -193,10 +193,10 @@ int Engine::init(Paths& paths, const char* config)
 		else {
 			char buf[1024];
 			while (fscanf(file, "%s", buf) == 1) {
-				if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) while (fread(buf, 1, 1, file) == 1 && buf[0] != '\n');
-				else if (!strcmp(buf, "screen_width")) fscanf(file, "%d", &screen_width);
-				else if (!strcmp(buf, "screen_height")) fscanf(file, "%d", &screen_height);
-				else if (!strcmp(buf, "screen_multisample")) fscanf(file, "%d", &screen_multisample);
+				if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) { while (fread(buf, 1, 1, file) == 1 && buf[0] != '\n'); }
+				else if (!strcmp(buf, "screen_width")) { if (fscanf(file, "%d", &screen_width) != 1) fprintf(stderr, "Engine::init(): error reading screen_width\n"); }
+				else if (!strcmp(buf, "screen_height")) { if (fscanf(file, "%d", &screen_height) != 1) fprintf(stderr, "Engine::init(): error reading screen_height\n"); }
+				else if (!strcmp(buf, "screen_multisample")) { if (fscanf(file, "%d", &screen_multisample) != 1) fprintf(stderr, "Engine::init(): error reading screen_multisample\n"); }
 				else if (!strcmp(buf, "texture_filter")) {
 					texture_filter = 0;
 					fgets(buf, sizeof(buf), file);
@@ -237,6 +237,7 @@ int Engine::init(Paths& paths, const char* config)
 
 	// console
 	FILE* log = fopen(ENGINE_LOG_NAME, "wb");
+	if (!log) fprintf(stderr, "Engine::init(): error creating \"%s\" log file\n", ENGINE_LOG_NAME);
 	console = new Console(paths.findFile(ENGINE_FONT_NAME), log);
 
 	console->printf(1, 1, 1, "3D Engine\n");
@@ -259,6 +260,11 @@ int Engine::init(Paths& paths, const char* config)
 	fog_toggle = 1;
 	mirror_toggle = 1;
 	physic_toggle = 1;
+
+	if (!extensions) {
+		console->printf("can`t get OpenGL extensions string");
+		return 0;
+	}
 
 	if (!strstr(extensions, "GL_ARB_vertex_program")) {	// fatal error
 		console->printf("can`t find GL_ARB_vertex_program extension");

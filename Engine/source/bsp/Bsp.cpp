@@ -76,37 +76,102 @@ void Bsp::load(const char* name) {
 		}
 
 		int magic;
-		fread(&magic, sizeof(int), 1, file);
+		if (fread(&magic, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Bsp::load(): error reading magic from \"%s\" file\n", name);
+			fclose(file);
+			return;
+		}
 		if (magic != BSP_MAGIC) {
-			fprintf(stderr, "Bsp::load(): wrong magic in \"%s\" file\n", name);
+			fprintf(stderr, "Bsp::load(): wrong magic 0x%08x in \"%s\" file\n", magic, name);
 			fclose(file);
 			return;
 		}
 
-		fread(&num_portals, sizeof(int), 1, file);
+		if (fread(&num_portals, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Bsp::load(): error reading num_portals from \"%s\" file\n", name);
+			fclose(file);
+			return;
+		}
+		if (num_portals < 0) {
+			fprintf(stderr, "Bsp::load(): invalid num_portals %d in \"%s\" file\n", num_portals, name);
+			fclose(file);
+			return;
+		}
 		portals = new Portal[num_portals];
 		for (int i = 0; i < num_portals; i++) {
 			Portal* p = &portals[i];
-			fread(&p->center, sizeof(vec3), 1, file);
-			fread(&p->radius, sizeof(float), 1, file);
-			fread(&p->num_sectors, sizeof(int), 1, file);
+			if (fread(&p->center, sizeof(vec3), 1, file) != 1 ||
+				fread(&p->radius, sizeof(float), 1, file) != 1 ||
+				fread(&p->num_sectors, sizeof(int), 1, file) != 1) {
+				fprintf(stderr, "Bsp::load(): error reading portal %d from \"%s\" file\n", i, name);
+				fclose(file);
+				return;
+			}
+			if (p->num_sectors < 0) {
+				fprintf(stderr, "Bsp::load(): invalid num_sectors %d in portal %d\n", p->num_sectors, i);
+				fclose(file);
+				return;
+			}
 			p->sectors = new int[p->num_sectors];
-			fread(p->sectors, sizeof(int), p->num_sectors, file);
-			fread(p->points, sizeof(vec3), 4, file);
+			if (fread(p->sectors, sizeof(int), p->num_sectors, file) != (size_t)p->num_sectors) {
+				fprintf(stderr, "Bsp::load(): error reading portal sectors from \"%s\" file\n", name);
+				fclose(file);
+				return;
+			}
+			if (fread(p->points, sizeof(vec3), 4, file) != 4) {
+				fprintf(stderr, "Bsp::load(): error reading portal points from \"%s\" file\n", name);
+				fclose(file);
+				return;
+			}
 		}
 
-		fread(&num_sectors, sizeof(int), 1, file);
+		if (fread(&num_sectors, sizeof(int), 1, file) != 1) {
+			fprintf(stderr, "Bsp::load(): error reading num_sectors from \"%s\" file\n", name);
+			fclose(file);
+			return;
+		}
+		if (num_sectors < 0) {
+			fprintf(stderr, "Bsp::load(): invalid num_sectors %d in \"%s\" file\n", num_sectors, name);
+			fclose(file);
+			return;
+		}
 		sectors = new Sector[num_sectors];
 		for (int i = 0; i < num_sectors; i++) {
 			Sector* s = &sectors[i];
-			fread(&s->center, sizeof(vec3), 1, file);
-			fread(&s->radius, sizeof(float), 1, file);
-			fread(&s->num_portals, sizeof(int), 1, file);
+			if (fread(&s->center, sizeof(vec3), 1, file) != 1 ||
+				fread(&s->radius, sizeof(float), 1, file) != 1 ||
+				fread(&s->num_portals, sizeof(int), 1, file) != 1) {
+				fprintf(stderr, "Bsp::load(): error reading sector %d from \"%s\" file\n", i, name);
+				fclose(file);
+				return;
+			}
+			if (s->num_portals < 0) {
+				fprintf(stderr, "Bsp::load(): invalid num_portals %d in sector %d\n", s->num_portals, i);
+				fclose(file);
+				return;
+			}
 			s->portals = new int[s->num_portals];
-			fread(s->portals, sizeof(int), s->num_portals, file);
-			fread(&s->num_planes, sizeof(int), 1, file);
+			if (fread(s->portals, sizeof(int), s->num_portals, file) != (size_t)s->num_portals) {
+				fprintf(stderr, "Bsp::load(): error reading sector portals from \"%s\" file\n", name);
+				fclose(file);
+				return;
+			}
+			if (fread(&s->num_planes, sizeof(int), 1, file) != 1) {
+				fprintf(stderr, "Bsp::load(): error reading num_planes from \"%s\" file\n", name);
+				fclose(file);
+				return;
+			}
+			if (s->num_planes < 0) {
+				fprintf(stderr, "Bsp::load(): invalid num_planes %d in sector %d\n", s->num_planes, i);
+				fclose(file);
+				return;
+			}
 			s->planes = new vec4[s->num_planes];
-			fread(s->planes, sizeof(vec4), s->num_planes, file);
+			if (fread(s->planes, sizeof(vec4), s->num_planes, file) != (size_t)s->num_planes) {
+				fprintf(stderr, "Bsp::load(): error reading sector planes from \"%s\" file\n", name);
+				fclose(file);
+				return;
+			}
 			s->root = new Node();
 			s->root->load(file);
 			s->create();
@@ -214,25 +279,41 @@ void Bsp::save(const char* name) {
 		return;
 	}
 	int magic = BSP_MAGIC;
-	fwrite(&magic, sizeof(int), 1, file);
-	fwrite(&num_portals, sizeof(int), 1, file);
+	if (fwrite(&magic, sizeof(int), 1, file) != 1 ||
+		fwrite(&num_portals, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Bsp::save(): error writing header to \"%s\" file\n", name);
+		fclose(file);
+		return;
+	}
 	for (int i = 0; i < num_portals; i++) {
 		Portal* p = &portals[i];
-		fwrite(&p->center, sizeof(vec3), 1, file);
-		fwrite(&p->radius, sizeof(float), 1, file);
-		fwrite(&p->num_sectors, sizeof(int), 1, file);
-		fwrite(p->sectors, sizeof(int), p->num_sectors, file);
-		fwrite(p->points, sizeof(vec3), 4, file);
+		if (fwrite(&p->center, sizeof(vec3), 1, file) != 1 ||
+			fwrite(&p->radius, sizeof(float), 1, file) != 1 ||
+			fwrite(&p->num_sectors, sizeof(int), 1, file) != 1 ||
+			fwrite(p->sectors, sizeof(int), p->num_sectors, file) != (size_t)p->num_sectors ||
+			fwrite(p->points, sizeof(vec3), 4, file) != 4) {
+			fprintf(stderr, "Bsp::save(): error writing portal %d to \"%s\" file\n", i, name);
+			fclose(file);
+			return;
+		}
 	}
-	fwrite(&num_sectors, sizeof(int), 1, file);
+	if (fwrite(&num_sectors, sizeof(int), 1, file) != 1) {
+		fprintf(stderr, "Bsp::save(): error writing num_sectors to \"%s\" file\n", name);
+		fclose(file);
+		return;
+	}
 	for (int i = 0; i < num_sectors; i++) {
 		Sector* s = &sectors[i];
-		fwrite(&s->center, sizeof(vec3), 1, file);
-		fwrite(&s->radius, sizeof(float), 1, file);
-		fwrite(&s->num_portals, sizeof(int), 1, file);
-		fwrite(s->portals, sizeof(int), s->num_portals, file);
-		fwrite(&s->num_planes, sizeof(int), 1, file);
-		fwrite(s->planes, sizeof(vec4), s->num_planes, file);
+		if (fwrite(&s->center, sizeof(vec3), 1, file) != 1 ||
+			fwrite(&s->radius, sizeof(float), 1, file) != 1 ||
+			fwrite(&s->num_portals, sizeof(int), 1, file) != 1 ||
+			fwrite(s->portals, sizeof(int), s->num_portals, file) != (size_t)s->num_portals ||
+			fwrite(&s->num_planes, sizeof(int), 1, file) != 1 ||
+			fwrite(s->planes, sizeof(vec4), s->num_planes, file) != (size_t)s->num_planes) {
+			fprintf(stderr, "Bsp::save(): error writing sector %d to \"%s\" file\n", i, name);
+			fclose(file);
+			return;
+		}
 		s->root->save(file);
 	}
 	fclose(file);
