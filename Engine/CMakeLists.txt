@@ -20,7 +20,7 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC glext::glext
 	PUBLIC wglext::wglext
 	PUBLIC fmtlog::fmtlog
-	PRIVATE OpenAL::OpenAL
+	PUBLIC OpenAL::OpenAL
 	PRIVATE libmad::libmad
 	PRIVATE vorbis::vorbis
 	PRIVATE PNG::PNG 
