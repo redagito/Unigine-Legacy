@@ -179,7 +179,7 @@ void Texture::load(const char* name, GLuint target, int flag) {
 			else if (format == GL_RGB) data = rgba2rgb(data, width, height);
 		}
 		glTexImage2D(target, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		if (data) delete data;
+		if (data) delete[] data;
 	}
 	else if (target == TEXTURE_CUBE) {
 		GLuint targets[6] = {
@@ -198,7 +198,7 @@ void Texture::load(const char* name, GLuint target, int flag) {
 				else if (format == GL_RGB) data = rgba2rgb(data, width, height);
 			}
 			glTexImage2D(targets[i], 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-			if (data) delete data;
+			if (data) delete[] data;
 		}
 	}
 	else if (target == TEXTURE_3D) {
@@ -209,7 +209,7 @@ void Texture::load(const char* name, GLuint target, int flag) {
 		else if (fmt == RGBA) format = GL_RGBA;
 		else format = GL_RGB;
 		glTexImage3D(target, 0, format, width, height, depth, 0, format, GL_UNSIGNED_BYTE, data);
-		if (data) delete data;
+		if (data) delete[] data;
 	}
 }
 
@@ -356,8 +356,8 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 		break;
 	default:
 		fclose(file);
-		delete buf;
-		delete data;
+		delete[] buf;
+		delete[] data;
 		return NULL;
 	}
 	for (i = 0, j = 0; i < size; i += components, j += 4) {
@@ -377,7 +377,7 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 		}
 	}
 	fclose(file);
-	delete buf;
+	delete[] buf;
 	return data;
 }
 
@@ -408,7 +408,7 @@ int Texture::save_tga(const char* name, const unsigned char* data, int width, in
 	}
 	fwrite(buf, 1, 18 + width * height * 4, file);
 	fclose(file);
-	delete buf;
+	delete[] buf;
 	return 1;
 }
 
@@ -465,7 +465,7 @@ unsigned char* Texture::load_png(const char* name, int& width, int& height) {
 	png_read_end(png_ptr, NULL);
 	png_destroy_read_struct(&png_ptr, 0, 0);
 	fclose(file);
-	delete row;
+	delete[] row;
 	width = w;
 	height = h;
 	unsigned char* data = new unsigned char[width * height * 4];
@@ -480,7 +480,7 @@ unsigned char* Texture::load_png(const char* name, int& width, int& height) {
 			else *ptr++ = 255;
 		}
 	}
-	delete img;
+	delete[] img;
 	return data;
 }
 
@@ -559,11 +559,11 @@ unsigned char* Texture::load_jpeg(const char* name, int& width, int& height) {
 			}
 			break;
 		default:
-			delete data;
-			delete data_buffer;
+	delete[] data;
+	delete[] data_buffer;
 			return NULL;
 	}
-	delete data_buffer;
+	delete[] data_buffer;
 	fclose(file);
 	return data;
 	*/
@@ -607,7 +607,7 @@ int Texture::save_jpeg(const char* name, const unsigned char* data, int width, i
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
-	delete data_buffer;
+	delete[] data_buffer;
 	fclose(file);
 	return 1;
 	*/
@@ -727,7 +727,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 				*dest++ = 255;
 			}
 		}
-		delete buf;
+		delete[] buf;
 	}
 	else if (format == DDS_RGBA) {
 		unsigned char* buf = new unsigned char[width * height * 4];
@@ -742,7 +742,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 				*dest++ = *src++;
 			}
 		}
-		delete buf;
+		delete[] buf;
 	}
 	else {
 		unsigned char* buf = new unsigned char[width * height];
@@ -818,7 +818,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 				}
 			}
 		}
-		delete buf;
+		delete[] buf;
 	}
 	fclose(file);
 	return data;
@@ -840,7 +840,7 @@ unsigned char* Texture::rgba2rgb(unsigned char* data, int width, int height) {
 		*d++ = *s++;
 		s++;
 	}
-	delete data;
+	delete[] data;
 	return dest;
 }
 
@@ -852,7 +852,7 @@ unsigned char* Texture::rgba2luminance(unsigned char* data, int width, int heigh
 		*d++ = *s++;
 		s += 3;
 	}
-	delete data;
+	delete[] data;
 	return dest;
 }
 

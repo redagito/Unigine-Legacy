@@ -16,13 +16,13 @@ old_num_visible_objects(0), old_visible_objects(NULL), old_portal(NULL), old_fra
 }
 
 Sector::~Sector() {
-	if (portals) delete portals;
-	if (planes) delete planes;
+	if (portals) delete[] portals;
+	if (planes) delete[] planes;
 	if (root) delete root;
-	if (objects) delete objects;
-	if (node_objects) delete node_objects;
-	if (visible_objects) delete visible_objects;
-	if (old_visible_objects) delete old_visible_objects;
+	if (objects) delete[] objects;
+	if (node_objects) delete[] node_objects;
+	if (visible_objects) delete[] visible_objects;
+	if (old_visible_objects) delete[] old_visible_objects;
 }
 
 

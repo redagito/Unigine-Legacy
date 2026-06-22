@@ -7,7 +7,7 @@ Frustum::Frustum() : num_planes(6), depth(0) {
 }
 
 Frustum::~Frustum() {
-	delete planes;
+	delete[] planes;
 }
 
 // Sets the modelview projection matrix

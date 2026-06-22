@@ -16,8 +16,8 @@ Console::Console(const char* name, FILE* file) : Font(name), current_line(0), la
 }
 
 Console::~Console() {
-	for (int i = 0; i < NUM_LINES; i++) delete lines[i].str;
-	for (int i = 0; i < HISTORY; i++) delete history[i];
+	for (int i = 0; i < NUM_LINES; i++) delete[] lines[i].str;
+	for (int i = 0; i < HISTORY; i++) delete[] history[i];
 }
 
 

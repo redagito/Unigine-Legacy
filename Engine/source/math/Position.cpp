@@ -16,7 +16,7 @@ Position::Position() : spline(NULL), expression(NULL), sector(-1), radius(0.0), 
 Position::~Position() {
 	if (spline) delete spline;
 	if (expression) delete expression;
-	delete sectors;
+	delete[] sectors;
 }
 
 Position& Position::operator=(const Position& pos) {

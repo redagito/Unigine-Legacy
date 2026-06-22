@@ -53,7 +53,7 @@ Font::Font(const char* name)
 			space[i][1] = step - space[i][0] - space[i][1];
 		}
 	}
-	delete data;
+	delete[] data;
 
 	list_id = glGenLists(256);
 	for (int y = 0, i = 0; y < 16; y++) {

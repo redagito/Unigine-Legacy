@@ -11,7 +11,7 @@ Portal::Portal() : center(0, 0, 0), radius(1000000.0), num_sectors(0), sectors(N
 }
 
 Portal::~Portal() {
-	if (sectors) delete sectors;
+	if (sectors) delete[] sectors;
 }
 
 

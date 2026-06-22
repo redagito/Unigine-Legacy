@@ -79,7 +79,7 @@ Spline::Spline(const Spline& spline) {
 }
 
 Spline::~Spline() {
-	if (params) delete params;
+	if (params) delete[] params;
 }
 
 

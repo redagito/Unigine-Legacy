@@ -23,14 +23,14 @@ Sound::Sound(const char* name, int flag) : flag(flag) {
 		alGenSources(1, &source);
 		alSourcei(source, AL_BUFFER, buffers[0]);
 		alSourcei(source, AL_LOOPING, flag & LOOP ? AL_TRUE : AL_FALSE);
-		delete buffer;
+		delete[] buffer;
 	}
 }
 
 Sound::~Sound() {
 	if (!file) return;
 	delete file;
-	if (flag & STREAM) delete buffer;
+	if (flag & STREAM) delete[] buffer;
 	alDeleteSources(1, &source);
 	if (flag & STREAM) alDeleteBuffers(2, buffers);
 	else alDeleteBuffers(1, buffers);

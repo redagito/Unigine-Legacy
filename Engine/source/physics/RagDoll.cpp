@@ -233,9 +233,9 @@ RagDoll::~RagDoll() {
 			delete meshes[i];
 		}
 	}
-	delete meshes;
-	delete offsets;
-	delete ioffsets;
+	delete[] meshes;
+	delete[] offsets;
+	delete[] ioffsets;
 }
 
 

@@ -16,18 +16,18 @@ SkinnedMesh::SkinnedMesh(const char* name) : num_bones(0), bones(NULL), num_fram
 }
 
 SkinnedMesh::~SkinnedMesh() {
-	if (bones) delete bones;
+	if (bones) delete[] bones;
 	if (frames) {
-		for (int i = 0; i < num_frames; i++) delete frames[i];
-		delete frames;
+		for (int i = 0; i < num_frames; i++) delete[] frames[i];
+		delete[] frames;
 	}
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = surfaces[i];
-		for (int j = 0; j < s->num_vertex; j++) delete s->vertex[j].weights;
-		if (s->vertex) delete s->vertex;
-		if (s->edges) delete s->edges;
-		if (s->triangles) delete s->triangles;
-		if (s->shadow_volume_vertex) delete s->shadow_volume_vertex;
+		for (int j = 0; j < s->num_vertex; j++) delete[] s->vertex[j].weights;
+		if (s->vertex) delete[] s->vertex;
+		if (s->edges) delete[] s->edges;
+		if (s->triangles) delete[] s->triangles;
+		if (s->shadow_volume_vertex) delete[] s->shadow_volume_vertex;
 		delete s;
 	}
 	num_surfaces = 0;
@@ -975,8 +975,8 @@ void SkinnedMesh::create_shadow_volumes() {
 			t->reverse[2] = rbuf[k + 2];
 		}
 		s->shadow_volume_vertex = new vec4[s->num_edges * 4];
-		delete rbuf;
-		delete ebuf;
-		delete e;
+		delete[] rbuf;
+		delete[] ebuf;
+		delete[] e;
 	}
 }

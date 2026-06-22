@@ -27,10 +27,10 @@ ObjectSkinnedMesh::ObjectSkinnedMesh(const char* name, const Paths& paths) : Obj
 }
 
 ObjectSkinnedMesh::~ObjectSkinnedMesh() {
-	delete materials;
-	delete opacities;
-	delete transparents;
-	delete frames;
+	delete[] materials;
+	delete[] opacities;
+	delete[] transparents;
+	delete[] frames;
 }
 
 

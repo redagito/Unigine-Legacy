@@ -53,14 +53,14 @@ Mesh::Mesh(const Mesh* mesh) : num_surfaces(0) {
 Mesh::~Mesh() {
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = surfaces[i];
-		if (s->vertex) delete s->vertex;
-		if (s->indices) delete s->indices;
-		if (s->edges) delete s->edges;
-		if (s->triangles) delete s->triangles;
+		if (s->vertex) delete[] s->vertex;
+		if (s->indices) delete[] s->indices;
+		if (s->edges) delete[] s->edges;
+		if (s->triangles) delete[] s->triangles;
 		if (s->silhouettes[0].vertex) {
 			for (int j = 0; j < NUM_SILHOUETTES; j++) {
-				delete s->silhouettes[j].vertex;
-				delete s->silhouettes[j].flags;
+				delete[] s->silhouettes[j].vertex;
+				delete[] s->silhouettes[j].flags;
 			}
 		}
 		delete s;
@@ -506,10 +506,10 @@ void Mesh::addSurface(const char* name, Vertex* vertex, int num_vertex) {
 int Mesh::load(const char* name) {
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = surfaces[i];
-		if (s->vertex) delete s->vertex;
-		if (s->edges) delete s->edges;
-		if (s->triangles) delete s->triangles;
-		if (s->indices) delete s->indices;
+		if (s->vertex) delete[] s->vertex;
+		if (s->edges) delete[] s->edges;
+		if (s->triangles) delete[] s->triangles;
+		if (s->indices) delete[] s->indices;
 		delete s;
 	}
 	if (strstr(name, ".mesh")) {
@@ -613,7 +613,7 @@ void Mesh::load(FILE* file) {
 			unsigned short* buf = new unsigned short[s->num_indices];
 			fread(buf, sizeof(unsigned short), s->num_indices, file);
 			for (int j = 0; j < s->num_indices; j++) s->indices[j] = buf[j];
-			delete buf;
+			delete[] buf;
 		}
 		else fread(s->indices, sizeof(int), s->num_indices, file);
 		// shadow volume vertexes
@@ -660,7 +660,7 @@ void Mesh::save(FILE* file) {
 			unsigned short* buf = new unsigned short[s->num_indices];
 			for (int j = 0; j < s->num_indices; j++) buf[j] = (unsigned int)s->indices[j];
 			fwrite(buf, sizeof(unsigned short), s->num_indices, file);
-			delete buf;
+			delete[] buf;
 		}
 		else fwrite(s->indices, sizeof(int), s->num_indices, file);
 	}
@@ -717,7 +717,7 @@ int Mesh::load_mesh(const char* name) {
 			}
 			s->num_vertex += 3;
 		}
-		delete vertex;
+		delete[] vertex;
 		if (this->num_surfaces == NUM_SURFACES) {
 			fprintf(stderr, "Mesh::load_mesh(): many surfaces\n");
 			this->num_surfaces--;
@@ -952,10 +952,10 @@ static void load_3ds_trimesh_calculate_normals(load_3ds_trimesh* t) {
 		}
 	}
 	for (int i = 0; i < t->num_face * 3; i++) t->normal[i].normalize();
-	for (int i = 0; i < t->num_vertex; i++) delete vertex_face[i];
-	delete vertex_face;
-	delete vertex_count;
-	delete normal_face;
+	for (int i = 0; i < t->num_vertex; i++) delete[] vertex_face[i];
+	delete[] vertex_face;
+	delete[] vertex_count;
+	delete[] normal_face;
 }
 
 
@@ -1009,12 +1009,12 @@ int Mesh::load_3ds(const char* name) {
 				v[2].normal = t->normal[l + 2];
 			}
 			num_objblock_vertex += t->num_face * 3;
-			delete t->vertex;
-			delete t->texcoord;
-			delete t->face;
-			if (t->smoothgroup) delete t->smoothgroup;
-			delete t->normal;
-			delete t;
+			delete[] t->vertex;
+			delete[] t->texcoord;
+			delete[] t->face;
+			if (t->smoothgroup) delete[] t->smoothgroup;
+			delete[] t->normal;
+		delete[] t;
 		}
 		free(o->trimesh);
 		delete o;
@@ -1254,10 +1254,10 @@ void Mesh::create_shadow_volumes() {
 			s->silhouettes[j].vertex = new vec4[s->num_edges * 4];
 			s->silhouettes[j].flags = new char[s->num_triangles];
 		}
-		delete rbuf;
-		delete ebuf;
-		delete e;
-		delete v;
+		delete[] rbuf;
+		delete[] ebuf;
+		delete[] e;
+		delete[] v;
 	}
 }
 
@@ -1369,7 +1369,7 @@ void Mesh::create_triangle_strips() {
 			e[j + 1].num = 1;
 			e[j + 2].num = 2;
 		}
-		delete vbuf;
+		delete[] vbuf;
 		qsort(e, s->num_vertex, sizeof(cts_Edge), cts_edge_cmp);
 		// create triangles
 		for (int j = 0; j < s->num_vertex / 3; j++) {
@@ -1384,7 +1384,7 @@ void Mesh::create_triangle_strips() {
 				t[e[k].face].env[e[k].num] = e[j].face;
 			}
 		}
-		delete e;
+		delete[] e;
 		// create triangle strips
 		for (int j = 0; j < s->num_vertex / 3; j++) {
 			if (t[j].v[0] == t[j].v[1] || t[j].v[1] == t[j].v[2] || t[j].v[2] == t[j].v[0]) t[j].flag = 1;
@@ -1437,14 +1437,14 @@ void Mesh::create_triangle_strips() {
 			}
 		}
 		delete t;
-		delete s->vertex;
+		delete[] s->vertex;
 		s->num_vertex = num_optimized_vertex;
 		s->vertex = new Vertex[s->num_vertex];
 		for (int j = 0; j < s->num_vertex; j++) s->vertex[j] = v[j].v;
-		delete v;
+		delete[] v;
 		indices = new int[s->num_indices];
 		for (int j = 0; j < s->num_indices; j++) indices[j] = s->indices[j];
-		delete s->indices;
+		delete[] s->indices;
 		s->indices = indices;
 	}
 }

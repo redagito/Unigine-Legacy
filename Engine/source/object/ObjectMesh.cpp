@@ -40,10 +40,10 @@ ObjectMesh::ObjectMesh(const char *name, const Paths& paths) : Object(OBJECT_MES
 }
 
 ObjectMesh::~ObjectMesh() {
-	delete materials;
-	delete opacities;
-	delete transparents;
-	delete frames;
+	delete[] materials;
+	delete[] opacities;
+	delete[] transparents;
+	delete[] frames;
 }
 
 

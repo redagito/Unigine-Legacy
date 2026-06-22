@@ -25,7 +25,7 @@ Joint::Joint(RigidBody* rigidbody_0, RigidBody* rigidbody_1) : rigidbody_0(rigid
 
 	Joint** j = new Joint * [++Physic::all_joints];
 	memcpy(j, Physic::joints, sizeof(Joint*) * (Physic::all_joints - 1));
-	if (Physic::joints) delete Physic::joints;
+	if (Physic::joints) delete[] Physic::joints;
 	Physic::joints = j;
 }
 
@@ -53,7 +53,7 @@ Joint::~Joint() {
 
 	if (Physic::all_joints) Physic::all_joints--;
 	else {
-		delete Physic::joints;
+		delete[] Physic::joints;
 		Physic::joints = NULL;
 	}
 }

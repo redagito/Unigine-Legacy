@@ -34,14 +34,14 @@ Collide::Collide() : num_contacts(0), num_objects(0) {
 
 Collide::~Collide() {
 
-	delete contacts;
-	delete objects;
+	delete[] contacts;
+	delete[] objects;
 
 	if (--counter == 0) {
 		for (int i = 0; i < NUM_SURFACES; i++) {
-			delete surfaces[i].triangles;
+			delete[] surfaces[i].triangles;
 		}
-		delete surfaces;
+		delete[] surfaces;
 	}
 }
 

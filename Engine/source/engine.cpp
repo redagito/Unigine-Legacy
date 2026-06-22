@@ -367,7 +367,7 @@ void Engine::clear(const Paths& paths) {
 	// objects
 	if (num_objects) {
 		for (int i = 0; i < num_objects; i++) delete objects[i];
-		delete objects;
+		delete[] objects;
 		objects = NULL;
 		num_objects = 0;
 	}
@@ -378,10 +378,10 @@ void Engine::clear(const Paths& paths) {
 	// fogs
 	if (num_fogs) {
 		for (int i = 0; i < num_fogs; i++) delete fogs[i];
-		delete fogs;
+		delete[] fogs;
 		fogs = NULL;
 		num_fogs = 0;
-		delete visible_fogs;
+		delete[] visible_fogs;
 		visible_fogs = NULL;
 		num_visible_fogs = 0;
 	}
@@ -389,10 +389,10 @@ void Engine::clear(const Paths& paths) {
 	// mirrors
 	if (num_mirrors) {
 		for (int i = 0; i < num_fogs; i++) delete mirrors[i];
-		delete mirrors;
+		delete[] mirrors;
 		mirrors = NULL;
 		num_mirrors = 0;
-		delete  visible_mirrors;
+		delete[] visible_mirrors;
 		visible_mirrors = NULL;
 		num_visible_mirrors = 0;
 	}
@@ -517,7 +517,7 @@ void Engine::addObject(Object* object) {
 	if (num_objects % ENGINE_GAP_SIZE == 0) {
 		Object** objects = new Object * [num_objects + ENGINE_GAP_SIZE];
 		for (int i = 0; i < num_objects; i++) objects[i] = Engine::objects[i];
-		if (Engine::objects) delete Engine::objects;
+		if (Engine::objects) delete[] Engine::objects;
 		Engine::objects = objects;
 	}
 	object->update(0.0);

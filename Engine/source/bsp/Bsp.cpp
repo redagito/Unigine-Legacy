@@ -50,10 +50,10 @@ Bsp::~Bsp() {
 	if (num_sectors) delete[] sectors;
 	num_sectors = 0;
 	sectors = NULL;
-	if (visible_sectors) delete visible_sectors;
+	if (visible_sectors) delete[] visible_sectors;
 	num_visible_sectors = 0;
 	visible_sectors = NULL;
-	if (old_visible_sectors) delete old_visible_sectors;
+	if (old_visible_sectors) delete[] old_visible_sectors;
 	old_num_visible_sectors = 0;
 	old_visible_sectors = NULL;
 }
