@@ -31,7 +31,7 @@ struct vec2 {
 	inline int operator!=(const vec2& v) { return !(*this == v); }
 
 	inline const vec2 operator*(float f) const { return vec2(x * f, y * f); }
-	inline const vec2 operator/(float f) const { return vec2(x / f, y / f); }
+	inline const vec2 operator/(float f) const { if (fabs(f) < EPSILON) f = 1.0f; return vec2(x / f, y / f); }
 	inline const vec2 operator+(const vec2& v) const { return vec2(x + v.x, y + v.y); }
 	inline const vec2 operator-() const { return vec2(-x, -y); }
 	inline const vec2 operator-(const vec2& v) const { return vec2(x - v.x, y - v.y); }
@@ -85,7 +85,7 @@ struct vec3 {
 	inline int operator!=(const vec3& v) { return !(*this == v); }
 
 	inline const vec3 operator*(float f) const { return vec3(x * f, y * f, z * f); }
-	inline const vec3 operator/(float f) const { return vec3(x / f, y / f, z / f); }
+	inline const vec3 operator/(float f) const { if (fabs(f) < EPSILON) f = 1.0f; return vec3(x / f, y / f, z / f); }
 	inline const vec3 operator+(const vec3& v) const { return vec3(x + v.x, y + v.y, z + v.z); }
 	inline const vec3 operator-() const { return vec3(-x, -y, -z); }
 	inline const vec3 operator-(const vec3& v) const { return vec3(x - v.x, y - v.y, z - v.z); }
@@ -158,7 +158,7 @@ struct vec4 {
 	inline int operator!=(const vec4& v) const { return !((*this) == v); }
 
 	inline const vec4 operator*(float f) const { return vec4(x * f, y * f, z * f, w * f); }
-	inline const vec4 operator/(float f) const { return vec4(x / f, y / f, z / f, w / f); }
+	inline const vec4 operator/(float f) const { if (fabs(f) < EPSILON) f = 1.0f; return vec4(x / f, y / f, z / f, w / f); }
 	inline const vec4 operator+(const vec4& v) const { return vec4(x + v.x, y + v.y, z + v.z, w + v.w); }
 	inline const vec4 operator-() const { return vec4(-x, -y, -z, -w); }
 	inline const vec4 operator-(const vec4& v) const { return vec4(x - v.x, y - v.y, z - v.z, w - v.w); } // fix: was z - v.w (copy-paste bug)
@@ -300,7 +300,9 @@ struct mat3 {
 	}
 	mat3 inverse() const {
 		mat3 ret;
-		float idet = 1.0f / det();
+		float d = det();
+		if (fabs(d) < EPSILON) { ret.identity(); return ret; }
+		float idet = 1.0f / d;
 		ret[0] = (mat[4] * mat[8] - mat[7] * mat[5]) * idet;
 		ret[1] = -(mat[1] * mat[8] - mat[7] * mat[2]) * idet;
 		ret[2] = (mat[1] * mat[5] - mat[4] * mat[2]) * idet;
@@ -562,7 +564,9 @@ struct mat4 {
 
 	mat4 inverse() const {
 		mat4 ret;
-		float idet = 1.0f / det();
+		float d = det();
+		if (fabs(d) < EPSILON) { ret.identity(); return ret; }
+		float idet = 1.0f / d;
 		ret[0] = (mat[5] * mat[10] - mat[9] * mat[6]) * idet;
 		ret[1] = -(mat[1] * mat[10] - mat[9] * mat[2]) * idet;
 		ret[2] = (mat[1] * mat[6] - mat[5] * mat[2]) * idet;
@@ -691,6 +695,8 @@ struct mat4 {
 	}
 
 	void perspective(float fov, float aspect, float znear, float zfar) {
+		if (fov <= 0.0f || fov >= 180.0f) fov = 90.0f;
+		if (fabs(zfar - znear) < EPSILON) zfar = znear + 1.0f;
 		float y = tan(fov * PI / 360.0f);
 		float x = y * aspect;
 		mat[0] = 1.0f / x; mat[4] = 0.0; mat[8] = 0.0; mat[12] = 0.0;
@@ -703,8 +709,10 @@ struct mat4 {
 		vec3 x, y, z;
 		mat4 m0, m1;
 		z = eye - dir;
+		if (z.length() < EPSILON) z = vec3(0, 0, 1);
 		z.normalize();
 		x.cross(up, z);
+		if (x.length() < EPSILON) x.cross(vec3(1, 0, 0), z);
 		x.normalize();
 		y.cross(z, x);
 		y.normalize();
