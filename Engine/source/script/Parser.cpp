@@ -404,7 +404,7 @@ int Parser::interpret_eq(const char* src) {
 	else if (op == 1) variables[var - 'a'] += expression(exp);
 	else if (op == 2) variables[var - 'a'] -= expression(exp);
 	else if (op == 3) variables[var - 'a'] += 1.0f;
-	else if (op == 3) variables[var - 'a'] -= 1.0f;
+	else if (op == 4) variables[var - 'a'] -= 1.0f; // fix: was op == 3 (duplicate, x-- became x++)
 
 	return s - src;
 }

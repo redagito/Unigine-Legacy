@@ -1,4 +1,7 @@
 build/
+CMakeCache.txt
+CMakeFiles/
+*.log
 LightMaps/
 SubsurfaceScattering/
 Tools/

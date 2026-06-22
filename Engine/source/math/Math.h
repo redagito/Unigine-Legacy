@@ -161,7 +161,7 @@ struct vec4 {
 	inline const vec4 operator/(float f) const { return vec4(x / f, y / f, z / f, w / f); }
 	inline const vec4 operator+(const vec4& v) const { return vec4(x + v.x, y + v.y, z + v.z, w + v.w); }
 	inline const vec4 operator-() const { return vec4(-x, -y, -z, -w); }
-	inline const vec4 operator-(const vec4& v) const { return vec4(x - v.x, y - v.y, z - v.z, z - v.w); }
+	inline const vec4 operator-(const vec4& v) const { return vec4(x - v.x, y - v.y, z - v.z, w - v.w); } // fix: was z - v.w (copy-paste bug)
 
 	inline vec4& operator*=(float f) { return *this = *this * f; }
 	inline vec4& operator/=(float f) { return *this = *this / f; }
@@ -545,7 +545,7 @@ struct mat4 {
 		ret[0] = mat[0]; ret[4] = mat[1]; ret[8] = mat[2]; ret[12] = mat[12];
 		ret[1] = mat[4]; ret[5] = mat[5]; ret[9] = mat[6]; ret[13] = mat[13];
 		ret[2] = mat[8]; ret[6] = mat[9]; ret[10] = mat[10]; ret[14] = mat[14];
-		ret[3] = mat[3]; ret[7] = mat[7]; ret[14] = mat[14]; ret[15] = mat[15];
+		ret[3] = mat[3]; ret[7] = mat[7]; ret[11] = mat[11]; ret[15] = mat[15]; // fix: was ret[14] = mat[14] (duplicate, ret[11] never set)
 		return ret;
 	}
 
@@ -778,7 +778,7 @@ struct quat {
 
 	quat operator*(const quat& q) const {
 		quat ret;
-		ret.x = w * q.x + x * q.x + y * q.z - z * q.y;
+		ret.x = w * q.x + x * q.w + y * q.z - z * q.y; // fix: was x * q.x (copy-paste bug)
 		ret.y = w * q.y + y * q.w + z * q.x - x * q.z;
 		ret.z = w * q.z + z * q.w + x * q.y - y * q.x;
 		ret.w = w * q.w - x * q.x - y * q.y - z * q.z;
