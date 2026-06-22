@@ -13,6 +13,7 @@ if (MSVC)
 endif()
 
 # Testing
+enable_testing()
 find_package(catch2 REQUIRED)
 
 # Dependencies
@@ -32,3 +33,7 @@ find_package(PNG REQUIRED)
 
 # Engine
 add_subdirectory(Engine)
+# App
+add_subdirectory(App)
+# Unit tests
+add_subdirectory(Test)

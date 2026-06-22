@@ -1,4 +1,4 @@
-project(Engine)
+project(Test)
 
 file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS 
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp
@@ -9,26 +9,19 @@ file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS
 # Source group to preserve folder structure in ide
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES})
 
-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 
 	CXX_STANDARD 17
 )
 
 target_link_libraries(${PROJECT_NAME}
-	PUBLIC glm::glm
-	PUBLIC glext::glext
-	PUBLIC wglext::wglext
-	PUBLIC fmtlog::fmtlog
-	PRIVATE OpenAL::OpenAL
-	PRIVATE libmad::libmad
-	PRIVATE vorbis::vorbis
-	PRIVATE PNG::PNG 
-	# PRIVATE JPEG::JPEG 
-    # PRIVATE ffmpeg::avcodec
+	PRIVATE Engine
+	PRIVATE Catch2::Catch2WithMain
 )
 
-# TODO Move public header to include dir
 target_include_directories(${PROJECT_NAME}
-	PUBLIC source
+	PRIVATE source
 )
+
+add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
