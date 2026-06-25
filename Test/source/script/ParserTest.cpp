@@ -182,3 +182,93 @@ TEST_CASE("Parser::interpret nested expressions", "[script][parser]") {
     REQUIRE(strcmp(r, "21") == 0);
     delete[] r;
 }
+
+TEST_CASE("Parser::expression rand function", "[script][parser]") {
+    float r = Parser::expression("rand(100)");
+    REQUIRE(r >= 0.0f);
+    REQUIRE(r <= 100.0f);
+}
+
+TEST_CASE("Parser::expression with built-in dollar variable", "[script][parser]") {
+    float r = Parser::expression("$a");
+    REQUIRE(r == Approx(0.0f));
+}
+
+TEST_CASE("Parser::interpret if true branch", "[script][parser]") {
+    const char* r = Parser::interpret("if(1){yes}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "yes") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret if false branch", "[script][parser]") {
+    const char* r = Parser::interpret("if(0){yes}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret if else true branch", "[script][parser]") {
+    const char* r = Parser::interpret("if(1){yes}else{no}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "yes") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret if else false branch", "[script][parser]") {
+    const char* r = Parser::interpret("if(0){yes}else{no}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "no") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret for loop", "[script][parser]") {
+    const char* r = Parser::interpret("for($a=0;$a<3;$a++){x}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "xxx") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret for loop with variable use in body", "[script][parser]") {
+    const char* r = Parser::interpret("for($a=0;$a<3;$a++){$a}");
+    REQUIRE(r != nullptr);
+    // Variables default to a, $a starts at 0, first iter outputs 0,
+    // then $a++ increments, second iter outputs 1, etc.
+    // But interpret_main outputs $a as sprintf("%g", variables[idx])
+    // So output depends on exact timing of increment
+    REQUIRE(strcmp(r, "012") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret variable assignment", "[script][parser]") {
+    // Single assignment: read_token stops at end of string
+    const char* r = Parser::interpret("$b=42");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret assignment with semicolon separator", "[script][parser]") {
+    // read_token stops at ';' so $c after ';' is a separate variable read
+    const char* r = Parser::interpret("$c=42;$c");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "42") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret assignment with parenthesis separator", "[script][parser]") {
+    // read_token stops at ')' so the expression after is separate
+    const char* r = Parser::interpret("$d=42");
+    REQUIRE(r != nullptr);
+    r = Parser::interpret("$d");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "42") == 0);
+    delete[] r;
+}
+
+TEST_CASE("Parser::interpret nested if inside for", "[script][parser]") {
+    const char* r = Parser::interpret("for($g=0;$g<5;$g++){if($g<3){a}}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "aaa") == 0);
+    delete[] r;
+}

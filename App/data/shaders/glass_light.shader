@@ -136,7 +136,7 @@ END
 /*****************************************************************************/
 !!ARBfp1.0
 
-TEMP dist, light_dir, camera_dir, base, color, temp, reflect;
+TEMP dist, light_dir, camera_dir, normal, base, color, temp, reflect;
 
 DP3 dist.w, fragment.texcoord[1], fragment.texcoord[1];
 MAD_SAT dist.x, dist.w, -fragment.texcoord[1].w, 1.0;				// attenuation
@@ -156,6 +156,8 @@ MAD camera_dir, camera_dir, 2.0, -1.0;
 	MAD light_dir, light_dir, temp.y, light_dir;
 	MAD camera_dir, camera_dir, temp.z, camera_dir;
 #endif	/* TEYLOR */
+
+MOV normal, {0,0,1,0};												// fixed normal for glass (no normal map)
 
 DP3 temp.w, normal, light_dir;
 MUL temp.w, temp.w, 2.0;

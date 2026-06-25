@@ -508,7 +508,7 @@ int Parser::interpret_main(const char* src, char** dest) {
 			else {
 				const char* e = ++s;
 				while (*e && !strchr("=(){};\n\r", *e)) e++;
-				if (*e == '=') s += interpret_eq(s - 1);
+				if (*e == '=') s += interpret_eq(s - 1) - 1;
 				else (*dest) += sprintf(*dest, "%g", variables[tolower(*s++ - 'a')]);
 			}
 		}

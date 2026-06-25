@@ -260,19 +260,19 @@ void Engine::init(Paths& paths, const char* config)
 		console->printf("find GL_NV_depth_clamp extension\n");
 	}
 
-	if (strstr(extensions, "GL_NV_fragment_program")) {			// nv3x cards
-		defines.define("NV3X");
-		defines.define("TEYLOR");
-		defines.define("OFFSET");
-		defines.define("HORIZON");
-		console->printf("using GL_NV_fragment_program shaders code\n");
-	}
-	else if (strstr(extensions, "GL_ARB_fragment_program")) {		// radeons
+	if (strstr(extensions, "GL_ARB_fragment_program")) {			// radeons
 		defines.define("RADEON");
 		defines.define("TEYLOR");
 		defines.define("OFFSET");
 		defines.define("HORIZON");
 		console->printf("using GL_ARB_fragment_program shaders code\n");
+	}
+	else if (strstr(extensions, "GL_NV_fragment_program")) {		// nv3x cards
+		defines.define("NV3X");
+		defines.define("TEYLOR");
+		defines.define("OFFSET");
+		defines.define("HORIZON");
+		console->printf("using GL_NV_fragment_program shaders code\n");
 	}
 	else if (strstr(extensions, "GL_ARB_texture_env_combine")) {	// hm
 		defines.define("VERTEX");

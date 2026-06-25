@@ -39,6 +39,22 @@ cmake --build build/Debug
 cmake --build build/Release
 ```
 
+## Running
+
+The app looks for the `data/` folder in the current working directory.
+It must be launched from `build/App` (not from a per-config subdirectory).
+
+```
+cd build/App
+./Debug/App.exe
+```
+
+or on Linux:
+```
+cd build/App
+./App
+```
+
 ## Features
 
 From the original release:
