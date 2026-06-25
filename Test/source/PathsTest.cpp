@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstring>
 #include "Paths.h"
+#include "EngineException.h"
 
 TEST_CASE("Paths::addPath single path", "[paths]") {
     Paths p;
@@ -12,16 +13,15 @@ TEST_CASE("Paths::addPath comma-separated paths", "[paths]") {
     p.addPath("data/,textures/,models/");
 }
 
-TEST_CASE("Paths::findFile returns name if file not found", "[paths]") {
+TEST_CASE("Paths::findFile throws on nonexistent file", "[paths]") {
     Paths p;
     p.addPath(".");
-    const char* result = p.findFile("nonexistent_file.xyz");
-    REQUIRE(result != nullptr);
+    REQUIRE_THROWS_AS(p.findFile("nonexistent_file.xyz"), EngineException);
 }
 
 TEST_CASE("Paths::findFile finds added path", "[paths]") {
     Paths p;
-    p.addPath("./");
+    p.addPath("../../Engine/source/");
     const char* result = p.findFile("Paths.h");
     REQUIRE(result != nullptr);
 }

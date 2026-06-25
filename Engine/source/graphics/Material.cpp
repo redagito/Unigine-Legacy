@@ -7,6 +7,7 @@
 #include "script/Parser.h"
 #include "engine.h"
 #include "Paths.h"
+#include "EngineException.h"
 
 Material* Material::old_material = nullptr;
 
@@ -109,7 +110,7 @@ void Material::load(const char* name, const Paths& paths) {
 					else if (!strcmp(buf, "ANISOTROPY_8")) flag |= Texture::ANISOTROPY_8;
 					else if (!strcmp(buf, "ANISOTROPY_16")) flag |= Texture::ANISOTROPY_16;
 
-					else fprintf(stderr, "Material::Material(): unknown texture%d flag \"%s\"\n", i, buf);
+					else throw EngineException(std::string("Material::Material(): unknown texture") + std::to_string(i) + " flag \"" + buf + "\"");
 				}
 				else *d++ = *s++;
 			}
@@ -134,8 +135,7 @@ GLuint Material::getBlendFactor(const char* factor) {
 	if (!strcmp(factor, "ONE_MINUS_DST_ALPHA")) return GL_ONE_MINUS_DST_ALPHA;
 	if (!strcmp(factor, "DST_COLOR")) return GL_DST_COLOR;
 	if (!strcmp(factor, "ONE_MINUS_DST_COLOR")) return GL_ONE_MINUS_DST_COLOR;
-	fprintf(stderr, "Material::getBlendFactor() unknown blend factor \"%s\"\n", factor);
-	return 0;
+	throw EngineException(std::string("Material::getBlendFactor() unknown blend factor \"") + factor + "\"");
 }
 
 
@@ -148,8 +148,7 @@ GLuint Material::getAlphaFunc(const char* func) {
 	if (!strcmp(func, "NOTEQUAL")) return GL_NOTEQUAL;
 	if (!strcmp(func, "GEQUAL")) return GL_GEQUAL;
 	if (!strcmp(func, "ALWAYS")) return GL_ALWAYS;
-	fprintf(stderr, "Material::getAlphaFunc() unknown alpha function \"%s\"\n", func);
-	return 0;
+	throw EngineException(std::string("Material::getAlphaFunc() unknown alpha function \"") + func + "\"");
 }
 
 /*****************************************************************************/

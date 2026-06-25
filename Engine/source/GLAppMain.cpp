@@ -155,7 +155,7 @@ GLAppMain::~GLAppMain()
 	Engine::clear(paths);
 }
 
-int GLAppMain::init() {
+void GLAppMain::init() {
 
 	// absolute minimum
 	checkExtension("GL_ARB_vertex_program");
@@ -188,7 +188,7 @@ int GLAppMain::init() {
 		"data/meshes/,"
 		"data/physic/");
 
-	if (Engine::init(paths, "data/engine.conf") == 0) return 0;
+	Engine::init(paths, "data/engine.conf");
 
 	Engine::console->addCommand("quit", quit);
 	Engine::console->addCommand("help", help);
@@ -196,15 +196,11 @@ int GLAppMain::init() {
 
 	Engine::load("physic.map", paths);
 
-	GLApp::error();	// errors
-	ALApp::error();
-
 #ifdef GRAB
 	video = new Video("video.mpg", WIDTH, HEIGHT, 16000000);
 	buffer = new unsigned char[WIDTH * HEIGHT * 4];
 #endif
 
-	return 1;
 }
 
 
@@ -219,9 +215,6 @@ void GLAppMain::render() {
 	Engine::update(pause_toggle ? 0 : ifps);
 	Engine::render(ifps);
 	// it`s all :)
-
-	GLApp::error();
-	ALApp::error();
 
 	// cross
 	if (!Engine::console->getActivity() && robot_toggle == 0) {

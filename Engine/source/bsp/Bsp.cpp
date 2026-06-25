@@ -70,32 +70,25 @@ void Bsp::load(const char* name) {
 	if (strstr(name, ".bsp")) {	// read own binary bsp format
 
 		FILE* file = fopen(name, "rb");
-		if (!file) {
-			fprintf(stderr, "Bsp::load(): error open \"%s\" file\n", name);
-			return;
-		}
+		if (!file) throw EngineException(std::string("Bsp::load(): error open \"") + name + "\" file");
 
 		int magic;
 		if (fread(&magic, sizeof(int), 1, file) != 1) {
-			fprintf(stderr, "Bsp::load(): error reading magic from \"%s\" file\n", name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::load(): error reading magic from \"") + name + "\" file");
 		}
 		if (magic != BSP_MAGIC) {
-			fprintf(stderr, "Bsp::load(): wrong magic 0x%08x in \"%s\" file\n", magic, name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::load(): wrong magic in \"") + name + "\" file");
 		}
 
 		if (fread(&num_portals, sizeof(int), 1, file) != 1) {
-			fprintf(stderr, "Bsp::load(): error reading num_portals from \"%s\" file\n", name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::load(): error reading num_portals from \"") + name + "\" file");
 		}
 		if (num_portals < 0) {
-			fprintf(stderr, "Bsp::load(): invalid num_portals %d in \"%s\" file\n", num_portals, name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::load(): invalid num_portals in \"") + name + "\" file");
 		}
 		portals = new Portal[num_portals];
 		for (int i = 0; i < num_portals; i++) {
@@ -103,37 +96,31 @@ void Bsp::load(const char* name) {
 			if (fread(&p->center, sizeof(vec3), 1, file) != 1 ||
 				fread(&p->radius, sizeof(float), 1, file) != 1 ||
 				fread(&p->num_sectors, sizeof(int), 1, file) != 1) {
-				fprintf(stderr, "Bsp::load(): error reading portal %d from \"%s\" file\n", i, name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading portal ") + std::to_string(i) + " from \"" + name + "\" file");
 			}
 			if (p->num_sectors < 0) {
-				fprintf(stderr, "Bsp::load(): invalid num_sectors %d in portal %d\n", p->num_sectors, i);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): invalid num_sectors in portal ") + std::to_string(i));
 			}
 			p->sectors = new int[p->num_sectors];
 			if (fread(p->sectors, sizeof(int), p->num_sectors, file) != (size_t)p->num_sectors) {
-				fprintf(stderr, "Bsp::load(): error reading portal sectors from \"%s\" file\n", name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading portal sectors from \"") + name + "\" file");
 			}
 			if (fread(p->points, sizeof(vec3), 4, file) != 4) {
-				fprintf(stderr, "Bsp::load(): error reading portal points from \"%s\" file\n", name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading portal points from \"") + name + "\" file");
 			}
 		}
 
 		if (fread(&num_sectors, sizeof(int), 1, file) != 1) {
-			fprintf(stderr, "Bsp::load(): error reading num_sectors from \"%s\" file\n", name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::load(): error reading num_sectors from \"") + name + "\" file");
 		}
 		if (num_sectors < 0) {
-			fprintf(stderr, "Bsp::load(): invalid num_sectors %d in \"%s\" file\n", num_sectors, name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::load(): invalid num_sectors in \"") + name + "\" file");
 		}
 		sectors = new Sector[num_sectors];
 		for (int i = 0; i < num_sectors; i++) {
@@ -141,36 +128,30 @@ void Bsp::load(const char* name) {
 			if (fread(&s->center, sizeof(vec3), 1, file) != 1 ||
 				fread(&s->radius, sizeof(float), 1, file) != 1 ||
 				fread(&s->num_portals, sizeof(int), 1, file) != 1) {
-				fprintf(stderr, "Bsp::load(): error reading sector %d from \"%s\" file\n", i, name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading sector ") + std::to_string(i) + " from \"" + name + "\" file");
 			}
 			if (s->num_portals < 0) {
-				fprintf(stderr, "Bsp::load(): invalid num_portals %d in sector %d\n", s->num_portals, i);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): invalid num_portals in sector ") + std::to_string(i));
 			}
 			s->portals = new int[s->num_portals];
 			if (fread(s->portals, sizeof(int), s->num_portals, file) != (size_t)s->num_portals) {
-				fprintf(stderr, "Bsp::load(): error reading sector portals from \"%s\" file\n", name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading sector portals from \"") + name + "\" file");
 			}
 			if (fread(&s->num_planes, sizeof(int), 1, file) != 1) {
-				fprintf(stderr, "Bsp::load(): error reading num_planes from \"%s\" file\n", name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading num_planes from \"") + name + "\" file");
 			}
 			if (s->num_planes < 0) {
-				fprintf(stderr, "Bsp::load(): invalid num_planes %d in sector %d\n", s->num_planes, i);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): invalid num_planes in sector ") + std::to_string(i));
 			}
 			s->planes = new vec4[s->num_planes];
 			if (fread(s->planes, sizeof(vec4), s->num_planes, file) != (size_t)s->num_planes) {
-				fprintf(stderr, "Bsp::load(): error reading sector planes from \"%s\" file\n", name);
 				fclose(file);
-				return;
+				throw EngineException(std::string("Bsp::load(): error reading sector planes from \"") + name + "\" file");
 			}
 			s->root = new Node();
 			s->root->load(file);
@@ -274,16 +255,12 @@ void Bsp::load(const char* name) {
 
 void Bsp::save(const char* name) {
 	FILE* file = fopen(name, "wb");
-	if (!file) {
-		fprintf(stderr, "Bsp::save(): can`t create \"%s\" file\n", name);
-		return;
-	}
+	if (!file) throw EngineException(std::string("Bsp::save(): can`t create \"") + name + "\" file");
 	int magic = BSP_MAGIC;
 	if (fwrite(&magic, sizeof(int), 1, file) != 1 ||
 		fwrite(&num_portals, sizeof(int), 1, file) != 1) {
-		fprintf(stderr, "Bsp::save(): error writing header to \"%s\" file\n", name);
 		fclose(file);
-		return;
+		throw EngineException(std::string("Bsp::save(): error writing header to \"") + name + "\" file");
 	}
 	for (int i = 0; i < num_portals; i++) {
 		Portal* p = &portals[i];
@@ -292,15 +269,13 @@ void Bsp::save(const char* name) {
 			fwrite(&p->num_sectors, sizeof(int), 1, file) != 1 ||
 			fwrite(p->sectors, sizeof(int), p->num_sectors, file) != (size_t)p->num_sectors ||
 			fwrite(p->points, sizeof(vec3), 4, file) != 4) {
-			fprintf(stderr, "Bsp::save(): error writing portal %d to \"%s\" file\n", i, name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::save(): error writing portal ") + std::to_string(i) + " to \"" + name + "\" file");
 		}
 	}
 	if (fwrite(&num_sectors, sizeof(int), 1, file) != 1) {
-		fprintf(stderr, "Bsp::save(): error writing num_sectors to \"%s\" file\n", name);
 		fclose(file);
-		return;
+		throw EngineException(std::string("Bsp::save(): error writing num_sectors to \"") + name + "\" file");
 	}
 	for (int i = 0; i < num_sectors; i++) {
 		Sector* s = &sectors[i];
@@ -310,9 +285,8 @@ void Bsp::save(const char* name) {
 			fwrite(s->portals, sizeof(int), s->num_portals, file) != (size_t)s->num_portals ||
 			fwrite(&s->num_planes, sizeof(int), 1, file) != 1 ||
 			fwrite(s->planes, sizeof(vec4), s->num_planes, file) != (size_t)s->num_planes) {
-			fprintf(stderr, "Bsp::save(): error writing sector %d to \"%s\" file\n", i, name);
 			fclose(file);
-			return;
+			throw EngineException(std::string("Bsp::save(): error writing sector ") + std::to_string(i) + " to \"" + name + "\" file");
 		}
 		s->root->save(file);
 	}

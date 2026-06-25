@@ -1,4 +1,5 @@
 #include "audio/SoundFile.h"
+#include "EngineException.h"
 
 #include <cstdio>
 #include <cstring>
@@ -23,15 +24,10 @@ protected:
 
 SoundFileOgg::SoundFileOgg(const char* name) {
 	file = fopen(name, "rb");
-	if (!file) {
-		fprintf(stderr, "SoundFileOgg::SoundFileOgg(): error open \"%s\" file\n", name);
-		return;
-	}
+	if (!file) throw EngineException(std::string("SoundFileOgg::SoundFileOgg(): error open \"") + name + "\" file");
 	if (ov_open(file, &vf, NULL, 0) < 0) {
-		fprintf(stderr, "SoundFileOgg::SoundFileOgg(): \"%s\" is not ogg bitstream\n", name);
 		fclose(file);
-		file = NULL;
-		return;
+		throw EngineException(std::string("SoundFileOgg::SoundFileOgg(): \"") + name + "\" is not ogg bitstream");
 	}
 	vi = ov_info(&vf, -1);
 	channels = vi->channels;
@@ -39,20 +35,16 @@ SoundFileOgg::SoundFileOgg(const char* name) {
 }
 
 SoundFileOgg::~SoundFileOgg() {
-	if (file) {
-		ov_clear(&vf);
-		fclose(file);
-	}
+	ov_clear(&vf);
+	fclose(file);
 }
 
 
 int SoundFileOgg::size() {
-	if (!file) return 0;
 	return (int)(ov_time_total(&vf, -1) + 0.5) * channels * freq * 2;
 }
 
 int SoundFileOgg::read(char* buffer, int size) {
-	if (!file) return 0;
 	int current_section;
 	if (size < 0) size = this->size();
 	int read = 0;
@@ -65,7 +57,6 @@ int SoundFileOgg::read(char* buffer, int size) {
 }
 
 void SoundFileOgg::seek(double time) {
-	if (!file) return;
 	ov_time_seek(&vf, time);
 }
 
@@ -104,10 +95,7 @@ protected:
 
 SoundFileMp3::SoundFileMp3(const char* name) {
 	file = fopen(name, "rb");
-	if (!file) {
-		fprintf(stderr, "SoundFileMp3::SoundFileMp3(): error open \"%s\" file\n", name);
-		return;
-	}
+	if (!file) throw EngineException(std::string("SoundFileMp3::SoundFileMp3(): error open \"") + name + "\" file");
 
 	fseek(file, 0, SEEK_END);
 	file_size = ftell(file);
@@ -117,13 +105,11 @@ SoundFileMp3::SoundFileMp3(const char* name) {
 	mad_stream_init(&stream);
 	mad_frame_init(&frame);
 	if (read_frame() == 0) {
-		fprintf(stderr, "SoundFileMp3::SoundFileMp3(): can`t find frame\n");
 		fclose(file);
-		file = NULL;
 		mad_synth_finish(&synth);
 		mad_stream_finish(&stream);
 		mad_frame_finish(&frame);
-		return;
+		throw EngineException(std::string("SoundFileMp3::SoundFileMp3(): can`t find frame in \"") + name + "\"");
 	}
 
 	channels = (frame.header.mode == MAD_MODE_SINGLE_CHANNEL) ? 1 : 2;
@@ -132,12 +118,10 @@ SoundFileMp3::SoundFileMp3(const char* name) {
 }
 
 SoundFileMp3::~SoundFileMp3() {
-	if (file) {
-		fclose(file);
-		mad_synth_finish(&synth);
-		mad_stream_finish(&stream);
-		mad_frame_finish(&frame);
-	}
+	fclose(file);
+	mad_synth_finish(&synth);
+	mad_stream_finish(&stream);
+	mad_frame_finish(&frame);
 }
 
 
@@ -171,12 +155,10 @@ inline int SoundFileMp3::scale(mad_fixed_t sample) {
 
 
 int SoundFileMp3::size() {
-	if (!file) return 0;
 	return file_size * 8 / bitrate * channels * freq * 2;
 }
 
 int SoundFileMp3::read(char* buffer, int size) {
-	if (!file) return 0;
 	if (size < 0) size = this->size();
 	int read = 0;
 	while (read < size) {
@@ -196,7 +178,6 @@ int SoundFileMp3::read(char* buffer, int size) {
 }
 
 void SoundFileMp3::seek(double time) {
-	if (!file) return;
 	fseek(file, (unsigned int)((double)bitrate / 8.0 * time), SEEK_SET);
 	read_frame();
 }
@@ -242,58 +223,41 @@ protected:
 SoundFileWav::SoundFileWav(const char* name) {
 	memset(&fmt, 0, sizeof(Fmt));
 	file = fopen(name, "rb");
-	if (!file) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): error open \"%s\" file\n", name);
-		return;
-	}
+	if (!file) throw EngineException(std::string("SoundFileWav::SoundFileWav(): error open \"") + name + "\" file");
 	unsigned int magic;
 	unsigned int length;
 	if (fread(&magic, sizeof(unsigned int), 1, file) != 1 ||
 		fread(&length, sizeof(unsigned int), 1, file) != 1) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading header from \"%s\" file\n", name);
 		fclose(file);
-		file = NULL;
-		return;
+		throw EngineException(std::string("SoundFileWav::SoundFileWav(): error reading header from \"") + name + "\" file");
 	}
 	if (magic != RIFF) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): wrong main chunk\n");
 		fclose(file);
-		file = NULL;
-		return;
+		throw EngineException("SoundFileWav::SoundFileWav(): wrong main chunk");
 	}
 	if (fread(&magic, sizeof(unsigned int), 1, file) != 1) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading WAVE header from \"%s\" file\n", name);
 		fclose(file);
-		file = NULL;
-		return;
+		throw EngineException(std::string("SoundFileWav::SoundFileWav(): error reading WAVE header from \"") + name + "\" file");
 	}
 	if (magic != WAVE) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): unknown file type\n");
 		fclose(file);
-		file = NULL;
-		return;
+		throw EngineException("SoundFileWav::SoundFileWav(): unknown file type");
 	}
 	while (1) {
 		if (fread(&magic, sizeof(unsigned int), 1, file) != 1) break;
 		if (fread(&length, sizeof(unsigned int), 1, file) != 1) break;
 		if (magic == FMT) {
 			if (fread(&fmt, sizeof(Fmt), 1, file) != 1) {
-				fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading FMT chunk from \"%s\" file\n", name);
 				fclose(file);
-				file = NULL;
-				return;
+				throw EngineException(std::string("SoundFileWav::SoundFileWav(): error reading FMT chunk from \"") + name + "\" file");
 			}
 			if (fmt.encoding != 1) {
-				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open compressed waveform data\n");
 				fclose(file);
-				file = NULL;
-				return;
+				throw EngineException("SoundFileWav::SoundFileWav(): can`t open compressed waveform data");
 			}
 			if (fmt.bitspersample != 16) {
-				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open %d bit per sample format\n", fmt.bitspersample);
 				fclose(file);
-				file = NULL;
-				return;
+				throw EngineException(std::string("SoundFileWav::SoundFileWav(): can`t open ") + std::to_string(fmt.bitspersample) + " bit per sample format");
 			}
 			channels = fmt.channels;
 			freq = fmt.frequency;
@@ -308,24 +272,21 @@ SoundFileWav::SoundFileWav(const char* name) {
 		}
 	}
 	if (channels == 0 || freq == 0 || data_offset == 0 || data_length == 0) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t find FMT or DATA block\n");
 		fclose(file);
-		file = NULL;
+		throw EngineException(std::string("SoundFileWav::SoundFileWav(): can`t find FMT or DATA block in \"") + name + "\"");
 	}
 }
 
 SoundFileWav::~SoundFileWav() {
-	if (file) fclose(file);
+	fclose(file);
 }
 
 
 int SoundFileWav::size() {
-	if (!file) return 0;
 	return data_length;
 }
 
 int SoundFileWav::read(char* buffer, int size) {
-	if (!file) return 0;
 	long pos = ftell(file);
 	int left = data_length - (pos - data_offset);
 	if (size < 0 || left < size) size = left;
@@ -338,7 +299,6 @@ int SoundFileWav::read(char* buffer, int size) {
 }
 
 void SoundFileWav::seek(double time) {
-	if (!file) return;
 	fseek(file, data_offset + (int)(time * fmt.channels * fmt.frequency), SEEK_SET);
 }
 
@@ -352,6 +312,5 @@ SoundFile* SoundFile::load(const char* name) {
 	if (strstr(name, ".ogg")) return new SoundFileOgg(name);
 	if (strstr(name, ".mp3")) return new SoundFileMp3(name);
 	if (strstr(name, ".wav")) return new SoundFileWav(name);
-	fprintf(stderr, "\"%s\" is not supported\n", name);
-	return nullptr;
+	throw EngineException(std::string("\"") + name + "\" is not supported");
 }

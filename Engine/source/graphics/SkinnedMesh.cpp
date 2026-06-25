@@ -7,6 +7,8 @@
 
 #include "graphics/SkinnedMesh.h"
 
+#include "EngineException.h"
+
 SkinnedMesh::SkinnedMesh(const char* name) : num_bones(0), bones(NULL), num_frames(0), frames(NULL), num_surfaces(0) {
 	min = vec3(0, 0, 0);
 	max = vec3(0, 0, 0);
@@ -457,8 +459,7 @@ const char* SkinnedMesh::getSurfaceName(int s) {
 
 int SkinnedMesh::getSurface(const char* name) {
 	for (int i = 0; i < num_surfaces; i++) if (!strcmp(name, surfaces[i]->name)) return i;
-	fprintf(stderr, "SkinnedMesh::getSurface(): can`t find \"%s\" surface\n", name);
-	return -1;
+	throw EngineException(std::string("SkinnedMesh::getSurface(): can`t find \"") + name + "\" surface\n");
 }
 
 
@@ -476,8 +477,7 @@ const char* SkinnedMesh::getBoneName(int b) {
 
 int SkinnedMesh::getBone(const char* name) {
 	for (int i = 0; i < num_bones; i++) if (!strcmp(name, bones[i].name)) return i;
-	fprintf(stderr, "SkinnedMesh::getBone(): can`t find \"%s\" bone\n", name);
-	return -1;
+	throw EngineException(std::string("SkinnedMesh::getBone(): can`t find \"") + name + "\" bone\n");
 }
 
 const mat4& SkinnedMesh::getBoneTransform(int b) {
@@ -539,8 +539,7 @@ float SkinnedMesh::getRadius(int s) {
 int SkinnedMesh::load(const char* name) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		fprintf(stderr, "SkinnedMesh::load(): error open \"%s\" file\n", name);
-		return 0;
+		throw EngineException(std::string("SkinnedMesh::load(): error open \"") + name + "\" file\n");
 	}
 	int magic = 0;
 	fread(&magic, sizeof(int), 1, file);
@@ -560,8 +559,7 @@ int SkinnedMesh::load(const char* name) {
 int SkinnedMesh::save(const char* name) {
 	FILE* file = fopen(name, "wb");
 	if (!file) {
-		fprintf(stderr, "SkinnedMesh::save(): error create \"%s\" file\n", name);
-		return 0;
+		throw EngineException(std::string("SkinnedMesh::save(): error create \"") + name + "\" file\n");
 	}
 	int magic = SKINNED_MESH_MAGIC;
 	fwrite(&magic, sizeof(int), 1, file);
@@ -611,16 +609,14 @@ int SkinnedMesh::save(const char* name) {
 int SkinnedMesh::load_binary(const char* name) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		fprintf(stderr, "SkinnedMesh::load_binary(): error open \"%s\" file\n", name);
-		return 0;
+		throw EngineException(std::string("SkinnedMesh::load_binary(): error open \"") + name + "\" file\n");
 	}
 
 	int magic;	// magic
 	fread(&magic, sizeof(int), 1, file);
 	if (magic != SKINNED_MESH_MAGIC) {
-		fprintf(stderr, "SkinnedMesh::load_binary(): wrong magic 0x%04x in \"%s\" file", magic, name);
+		throw EngineException(std::string("SkinnedMesh::load_binary(): wrong magic 0x") + std::to_string(magic) + std::string(" in \"") + name + "\" file");
 		fclose(file);
-		return 0;
 	}
 
 	fread(&num_bones, sizeof(int), 1, file);	// bones
@@ -665,7 +661,7 @@ int SkinnedMesh::load_binary(const char* name) {
 			s->indeices[j * 3 + 2] = t->v[2];
 		}
 		if (this->num_surfaces == NUM_SURFACES) {
-			fprintf(stderr, "SkinnedMesh::load_binary(): many surfaces\n");
+			throw EngineException("SkinnedMesh::load_binary(): many surfaces\n");
 			this->num_surfaces--;
 		}
 		surfaces[this->num_surfaces++] = s;
@@ -712,8 +708,7 @@ void SkinnedMesh::read_string(FILE* file, char* string) {
 int SkinnedMesh::load_ascii(const char* name) {
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		fprintf(stderr, "SkinnedMesh::load_ascii(): error open \"%s\" file\n", name);
-		return 0;
+		throw EngineException(std::string("SkinnedMesh::load_ascii(): error open \"") + name + "\" file\n");
 	}
 	char buf[1024];
 	while (fscanf(file, "%s", buf) != EOF) {
@@ -771,13 +766,12 @@ int SkinnedMesh::load_ascii(const char* name) {
 					break;
 				}
 				else {
-					fprintf(stderr, "SkinnedMesh::load_ascii(): unknown token \"%s\"\n", buf);
+					throw EngineException(std::string("SkinnedMesh::load_ascii(): unknown token \"") + buf + "\"\n");
 					fclose(file);
-					return 0;
 				}
 			}
 			if (num_surfaces == NUM_SURFACES) {
-				fprintf(stderr, "SkinnedMesh::load_ascii(): many surfaces\n");
+				throw EngineException("SkinnedMesh::load_ascii(): many surfaces\n");
 				num_surfaces--;
 			}
 			surfaces[num_surfaces++] = s;
@@ -796,9 +790,8 @@ int SkinnedMesh::load_ascii(const char* name) {
 			fscanf(file, "%s", buf);
 		}
 		else {
-			fprintf(stderr, "SkinnedMesh::load_ascii(): unknown token \"%s\"\n", buf);
+			throw EngineException(std::string("SkinnedMesh::load_ascii(): unknown token \"") + buf + "\"\n");
 			fclose(file);
-			return 0;
 		}
 	}
 	fclose(file);

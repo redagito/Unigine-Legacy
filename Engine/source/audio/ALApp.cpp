@@ -1,4 +1,5 @@
 #include "audio/ALApp.h"
+#include "EngineException.h"
 
 #include <cstdio>
 
@@ -10,15 +11,9 @@ constexpr const int NotFound = -1;
 
 ALApp::ALApp() {
 	device = alcOpenDevice(NULL);
-	if (!device) {
-		fprintf(stderr, "ALApp::ALApp(): invalid device\n");
-		return;
-	}
+	if (!device) throw EngineException("ALApp::ALApp(): invalid device");
 	context = alcCreateContext(device, NULL);
-	if (!context) {
-		fprintf(stderr, "ALApp::ALApp(): invalid context\n");
-		return;
-	}
+	if (!context) throw EngineException("ALApp::ALApp(): invalid context");
 	alcMakeContextCurrent(context);
 }
 
@@ -28,9 +23,9 @@ ALApp::~ALApp() {
 }
 
 void ALApp::error() {
-	ALenum error;
-	while ((error = alGetError()) != AL_NO_ERROR) {
-		fprintf(stderr, "ALApp::error(): 0x%04X\n", error);
+	ALenum error = alGetError();
+	if (error != AL_NO_ERROR) {
+		throw EngineException(std::string("ALApp::error(): 0x") + std::to_string(error));
 	}
 }
 

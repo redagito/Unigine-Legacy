@@ -1,4 +1,5 @@
 #include "script/Parser.h"
+#include "EngineException.h"
 #include "script/Defines.h"
 
 float Parser::variables[26];
@@ -8,29 +9,25 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		fprintf(stderr, "Parser::Parser(): error open \"%s\" file\n", name);
-		return;
+		throw EngineException(std::string("Parser::Parser(): error open \"") + name + "\" file");
 	}
 	if (fseek(file, 0, SEEK_END) != 0) {
-		fprintf(stderr, "Parser::Parser(): error seeking in \"%s\" file\n", name);
+		throw EngineException(std::string("Parser::Parser(): error seeking in \"") + name + "\" file");
 		fclose(file);
-		return;
 	}
 	long size = ftell(file);
 	if (size < 0) {
-		fprintf(stderr, "Parser::Parser(): error getting size of \"%s\" file\n", name);
+		throw EngineException(std::string("Parser::Parser(): error getting size of \"") + name + "\" file");
 		fclose(file);
-		return;
 	}
 	fseek(file, 0, SEEK_SET);
 	data = new char[size + 1];
 	memset(data, 0, sizeof(char) * (size + 1));
 	if (fread(data, sizeof(char), size, file) == 0) {
-		fprintf(stderr, "Parser::Parser(): error reading \"%s\" file\n", name);
+		throw EngineException(std::string("Parser::Parser(): error reading \"") + name + "\" file");
 		delete[] data;
 		data = NULL;
 		fclose(file);
-		return;
 	}
 	fclose(file);
 
@@ -114,9 +111,6 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 }
 
 Parser::~Parser() {
-	for (std::map<std::string, Block>::iterator it = blocks.begin(); it != blocks.end(); it++) {
-		if (!it->second.use) fprintf(stderr, "Parser::~Parser(): warning unused block \"%s\"\n", it->first.c_str());
-	}
 	blocks.clear();
 	delete[] data;
 }
@@ -190,8 +184,7 @@ float Parser::expression(const char* str, const char* variable, float value) {
 		s++;
 	}
 	if (brackets != 0) {
-		fprintf(stderr, "Paser::expression(): parse error before '%c'\n", brackets > 0 ? '(' : ')');
-		return 0.0;
+		throw EngineException(std::string("Paser::expression(): parse error before '") + (brackets > 0 ? '(' : ')') + "'");
 	}
 	s = str;
 	while (*s) {
@@ -285,16 +278,14 @@ float Parser::expression(const char* str, const char* variable, float value) {
 		else if (!variable && *s == '$') {
 			s++;
 			if (!isalpha(*s)) {
-				fprintf(stderr, "Paser::expression(): unknown variable \"%c\"\n", *s);
-				return 0.0;
+				throw EngineException(std::string("Paser::expression(): unknown variable \"") + *s + "\"");
 			}
 			stack[stack_depth].op = 'n';
 			stack[stack_depth++].num = variables[tolower(*s++) - 'a'];
 		}
 		else if (strchr(" \t\n\r", *s)) s++;
 		else {
-			fprintf(stderr, "Paser::expression(): unknown token \"%s\"\n", s);
-			return 0.0;
+			throw EngineException(std::string("Paser::expression(): unknown token \"") + s + "\"");
 		}
 	}
 	while (stack_op_depth--) stack[stack_depth++].op = stack_op[stack_op_depth];
@@ -550,9 +541,8 @@ const char* Parser::interpret(const char* src) {
 		*d = '\0';
 	}
 	catch (const char* msg) {
-		fprintf(stderr, "%s\n", msg);
 		delete[] dest;
-		return NULL;
+		throw EngineException(msg);
 	}
 
 	return dest;

@@ -1,4 +1,5 @@
 #include "bsp/Node.h"
+#include "EngineException.h"
 
 #include "bsp/Sector.h"
 #include "graphics/Mesh.h"
@@ -153,16 +154,14 @@ void Node::create(Mesh* mesh) {
 void Node::load(FILE* file) {
 	int header;
 	if (fread(&header, sizeof(int), 1, file) != 1) {
-		fprintf(stderr, "Node::load(): error reading header\n");
-		return;
+		throw EngineException("Node::load(): error reading header");
 	}
 	if (header == 0x7fffffff) {
 		if (fread(&min, sizeof(vec3), 1, file) != 1 ||
 			fread(&max, sizeof(vec3), 1, file) != 1 ||
 			fread(&center, sizeof(vec3), 1, file) != 1 ||
 			fread(&radius, sizeof(float), 1, file) != 1) {
-			fprintf(stderr, "Node::load(): error reading node bounds\n");
-			return;
+		throw EngineException("Node::load(): error reading node bounds");
 		}
 		left = new Node();
 		left->load(file);

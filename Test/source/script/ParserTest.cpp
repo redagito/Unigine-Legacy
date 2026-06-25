@@ -2,6 +2,7 @@
 #include <catch2/catch_approx.hpp>
 #include <cstring>
 #include "script/Parser.h"
+#include "EngineException.h"
 
 using Catch::Approx;
 
@@ -122,9 +123,8 @@ TEST_CASE("Parser::expression complex", "[script][parser]") {
     REQUIRE(r == Approx(13.0f));
 }
 
-TEST_CASE("Parser::expression unbalanced brackets returns 0", "[script][parser]") {
-    float r = Parser::expression("(2 + 3");
-    REQUIRE(r == Approx(0.0f));
+TEST_CASE("Parser::expression unbalanced brackets throws", "[script][parser]") {
+    REQUIRE_THROWS_AS(Parser::expression("(2 + 3"), EngineException);
 }
 
 TEST_CASE("Parser::expression exp function", "[script][parser]") {

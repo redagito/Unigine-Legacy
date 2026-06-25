@@ -1,3 +1,5 @@
+#include "EngineException.h"
+
 #include "math/Expression.h"
 
 #include "script/Parser.h"
@@ -17,8 +19,7 @@ Expression::Expression(const char* str) {
 		d = exp[i];
 		if (*s == '\0') {
 			if (i == 7) return;
-			fprintf(stderr, "Expression::Expression(): missing argument %d \"%s\"\n", i, str);
-			return;
+			throw EngineException(std::string("Expression::Expression(): missing argument ") + std::to_string(i) + " \"" + str + "\"");
 		}
 		while (1) {
 			if (*s && *s != ',') {
@@ -28,8 +29,7 @@ Expression::Expression(const char* str) {
 			else {
 				if (*d == '\0' && *s != ',') {
 					if (i == 6) return;
-					fprintf(stderr, "Expression::Expression(): missing argument %d \"%s\"\n", i, str);
-					return;
+					throw EngineException(std::string("Expression::Expression(): missing argument ") + std::to_string(i) + " \"" + str + "\"");
 				}
 				else *d = '\0';
 				if (*s) s++;

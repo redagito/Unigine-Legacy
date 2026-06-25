@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "EngineException.h"
 #include "math/Math.h"
 #include "bsp/Bsp.h"
 #include "math/Position.h"
@@ -54,7 +55,7 @@ class Paths;
 
 class Engine {
 public:
-	static int init(Paths& paths, const char* config = NULL);
+	static void init(Paths& paths, const char* config = NULL);
 	static void clear(const Paths& paths);
 
 	// loaders
@@ -189,6 +190,4 @@ public:
 	static void (*extern_load)(void*);
 	static void* extern_load_data;
 
-	// new stderr descriptor
-	static int stderr_fd;
 };

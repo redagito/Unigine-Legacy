@@ -1,12 +1,12 @@
 #include "Paths.h"
+#include "EngineException.h"
 
 #include <cstring>
 #include <cstdio>
 
 void Paths::addPath(const char* path) {
 	if (!path) {
-		fprintf(stderr, "Paths::addPath(): null path\n");
-		return;
+		throw EngineException("Paths::addPath(): null path");
 	}
 	char* s = (char*)path;
 	while (1) {
@@ -27,8 +27,7 @@ void Paths::addPath(const char* path) {
 
 const char* Paths::findFile(const char* name) const {
 	if (!name) {
-		fprintf(stderr, "Paths::findFile(): null name\n");
-		return NULL;
+		throw EngineException("Paths::findFile(): null name");
 	}
 	static char buf[1024] = { '\0' };
 
@@ -64,6 +63,5 @@ const char* Paths::findFile(const char* name) const {
 			return buf;
 		}
 	}
-	fprintf(stderr, "Paths::findFile(): can`t find \"%s\" file\n", name);
-	return name;
+	throw EngineException(std::string("Paths::findFile(): can`t find \"") + name + "\" file");
 }

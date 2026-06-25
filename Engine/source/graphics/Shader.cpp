@@ -4,6 +4,7 @@
 #include "light.h"
 #include "script/Parser.h"
 #include "script/Defines.h"
+#include "EngineException.h"
 
 
 Shader* Shader::old_shader;
@@ -91,7 +92,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* s = data;
 			while (*s != '\0' && *s != '\n') s++;
 			*s = '\0';
-			fprintf(stderr, "Shader::Shader(): unknown vertex program header \"%s\" in \"%s\" file\n", data, name);
+			throw EngineException(std::string("Shader::Shader(): unknown vertex program header \"") + data + "\" in \"" + name + "\" file");
 		}
 		if (error != -1) {
 			int line = 0;
@@ -101,7 +102,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* e = ++s;
 			while (*e != '\0' && *e != '\n') e++;
 			*e = '\0';
-			fprintf(stderr, "Shader::Shader(): vertex program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
+			throw EngineException(std::string("Shader::Shader(): vertex program error in \"") + name + "\" file at line " + std::to_string(line) + ":\n\"" + s + "\"");
 		}
 	}
 	// fragment program
@@ -131,7 +132,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* s = data;
 			while (*s != '\0' && *s != '\n') s++;
 			*s = '\0';
-			fprintf(stderr, "Shader::Shader(): unknown fragment program header \"%s\" in \"%s\" file\n", data, name);
+			throw EngineException(std::string("Shader::Shader(): unknown fragment program header \"") + data + "\" in \"" + name + "\" file");
 		}
 		if (error != -1) {
 			int line = 0;
@@ -141,7 +142,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* e = ++s;
 			while (*e != '\0' && *e != '\n') e++;
 			*e = '\0';
-			fprintf(stderr, "Shader::Shader(): fragment program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
+			throw EngineException(std::string("Shader::Shader(): fragment program error in \"") + name + "\" file at line " + std::to_string(line) + ":\n\"" + s + "\"");
 		}
 	}
 	delete parser;
@@ -153,9 +154,8 @@ GLuint Shader::compileARBtec(const char* src) {
 	GLuint list = glGenLists(1);
 	glNewList(list, GL_COMPILE);
 	if (strncmp("!!ARBtec1.0", s, 11)) {
-		fprintf(stderr, "Shader::compileARBtec(): unknown header\n");
+		throw EngineException("Shader::compileARBtec(): unknown header");
 		glEndList();
-		return list;
 	}
 	s += 11;
 	int unit = -1;
@@ -218,9 +218,8 @@ GLuint Shader::compileARBtec(const char* src) {
 					char* d = buf;
 					while (*s && !strchr(" \t\n\r", *s)) *d++ = *s++;
 					*d = '\0';
-					fprintf(stderr, "Shader::compileARBtec(): unknown token \"%s\"\n", buf);
+					throw EngineException(std::string("Shader::compileARBtec(): unknown token \"") + buf + "\"");
 					glEndList();
-					return list;
 				}
 			}
 			for (int i = 0; i < sources; i++) glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB + i, GL_SRC_COLOR);
@@ -239,7 +238,7 @@ void Shader::getMatrix(const char* name, Matrix* m) {
 	else if (!strcmp(name, "transform")) m->type = TRANSFORM;
 	else if (!strcmp(name, "itransform")) m->type = ITRANSFORM;
 	else if (!strcmp(name, "light_transform")) m->type = LIGHT_TRANSFORM;
-	else fprintf(stderr, "Shader::getMatrix(): unknown matrix \"%s\"\n", name);
+	else throw EngineException(std::string("Shader::getMatrix(): unknown matrix \"") + name + "\"");
 }
 
 void Shader::getLocalParameter(const char* name, Shader::LocalParameter* p) {
@@ -257,11 +256,11 @@ void Shader::getLocalParameter(const char* name, Shader::LocalParameter* p) {
 		p->type = PARAMETER;
 		sscanf(name + 9, "%d", &p->parameter);
 		if (p->parameter >= NUM_PARAMETERS) {
-			fprintf(stderr, "Shader::getLocalParameter(): number of parameters is big\n");
+			throw EngineException("Shader::getLocalParameter(): number of parameters is big");
 			p->parameter = 0;
 		}
 	}
-	else fprintf(stderr, "Shader::getLocalParameter(): unknown parameter \"%s\"\n", name);
+	else throw EngineException(std::string("Shader::getLocalParameter(): unknown parameter \"") + name + "\"");
 }
 
 

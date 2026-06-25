@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "EngineException.h"
+
 #ifndef _WIN32
 
 /* linux
@@ -137,9 +139,7 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 		}
 	}
 	catch(const char *error) {
-		fprintf(stderr,"PBuffer::PBuffer: %s\n",error);
-		pbuffer = glXGetCurrentDrawable();
-		context = old_context;
+		throw EngineException(std::string("PBuffer::PBuffer: ") + error);
 	}
 	
 	data = new PBuffer_data;
@@ -167,7 +167,7 @@ void PBuffer::enable() {
 	data->old_context = glXGetCurrentContext();
 	
 	if(!glXMakeCurrent(data->display,data->pbuffer,data->context)) {
-		fprintf(stderr,"PBuffer::enable(): glXMakeCurrent() failed\n");
+		throw EngineException("PBuffer::enable(): glXMakeCurrent() failed");
 	}
 }
 
@@ -175,7 +175,7 @@ void PBuffer::enable() {
 void PBuffer::disable() {
 	glXWaitGL();
 	if(!glXMakeCurrent(data->display,data->old_pbuffer,data->old_context)) {
-		fprintf(stderr,"PBuffer::disable(): glXMakeCurrent() failed\n");
+		throw EngineException("PBuffer::disable(): glXMakeCurrent() failed");
 	}
 }
 
@@ -296,9 +296,7 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 		if(!wglShareLists(old_context,context)) throw("wglShareLists() failed");
 	}
 	catch(const char *error) {
-		fprintf(stderr,"PBuffer::PBuffer: %s\n",error);
-		hdc = old_hdc;
-		context = old_context;
+		throw EngineException(std::string("PBuffer::PBuffer: ") + error);
 	}
 	
 	data = new PBuffer_data;
@@ -324,14 +322,14 @@ void PBuffer::enable() {
 	data->old_context = wglGetCurrentContext();
 	
 	if(!wglMakeCurrent(data->hdc,data->context)) {
-		fprintf(stderr,"PBuffer::disable(): wglMakeCurrent() failed\n");
+		throw EngineException("PBuffer::disable(): wglMakeCurrent() failed");
 	}
 }
 
 
 void PBuffer::disable() {
 	if(!wglMakeCurrent(data->old_hdc,data->old_context)) {
-		fprintf(stderr,"PBuffer::disable(): wglMakeCurrent() failed\n");
+		throw EngineException("PBuffer::disable(): wglMakeCurrent() failed");
 	}
 }
 

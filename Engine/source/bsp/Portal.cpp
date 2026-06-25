@@ -1,3 +1,5 @@
+#include "EngineException.h"
+
 #include "bsp/Portal.h"
 
 #include "graphics/OpenGL.h"
@@ -20,8 +22,7 @@ void Portal::create(Mesh* mesh, int s) {
 	radius = mesh->getRadius(s);
 	int num_vertex = mesh->getNumVertex(s);
 	if (num_vertex != 6) {
-		fprintf(stderr, "Portal::create(): portal mesh must have only two triangle\n");
-		return;
+		throw EngineException("Portal::create(): portal mesh must have only two triangle");
 	}
 	Mesh::Vertex* v = mesh->getVertex(s);
 	int flag[6] = { 0 };	// create quad from the six vertexes
@@ -35,8 +36,7 @@ void Portal::create(Mesh* mesh, int s) {
 	for (int i = 0, j = 0; i < 6; i++) {
 		if (flag[i] == 0) points[j++] = v[i].xyz;
 		if (i == 5 && j != 2) {
-			fprintf(stderr, "Portal::create(): can`t find two similar vertexes for create quad\n");
-			return;
+			throw EngineException("Portal::create(): can`t find two similar vertexes for create quad");
 		}
 	}
 	points[2] = points[1];

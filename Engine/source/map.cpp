@@ -1,4 +1,5 @@
 #include "map.h"
+#include "EngineException.h"
 
 #include "engine.h"
 #include "script/Parser.h"
@@ -21,8 +22,7 @@ char* Map::data;
 
 void Map::load(const char* name, Paths& paths) {
 	if (!name) {
-		fprintf(stderr, "Map::load(): null name\n");
-		return;
+		throw EngineException("Map::load(): null name");
 	}
 	Parser* parser = new Parser(name, Engine::defines);
 
@@ -44,9 +44,8 @@ void Map::load(const char* name, Paths& paths) {
 
 	char* data_block = (char*)Parser::interpret(parser->get("data"));
 	if (!data_block) {
-		fprintf(stderr, "Map::load(): can`t get data block in \"%s\" file\n", file_name);
 		delete parser;
-		return;
+		throw EngineException(std::string("Map::load(): can`t get data block in \"") + file_name + "\" file");
 	}
 
 	data = data_block;
@@ -65,10 +64,9 @@ void Map::load(const char* name, Paths& paths) {
 		}
 	}
 	catch (const char* msg) {
-		fprintf(stderr, "Map::load(): %s in \"%s\" file\n", msg, file_name);
 		delete data_block;
 		delete parser;
-		return;
+		throw EngineException(std::string("Map::load(): ") + msg + " in \"" + file_name + "\" file");
 	}
 
 	delete data_block;
@@ -297,7 +295,7 @@ void Map::load_fog(const Paths& paths) {
 		else throw(error("unknown token \"%s\" in fog block", token));
 	}
 	if (mesh) Engine::addFog(new Fog(mesh, color, paths));
-	else fprintf(stderr, "Map::load_fog(): can`t find mesh\n");
+	else throw EngineException("Map::load_fog(): can`t find mesh");
 }
 
 
@@ -315,7 +313,7 @@ void Map::load_mirror(const Paths& paths) {
 		else throw(error("unknown token \"%s\" in mirror block", token));
 	}
 	if (mirror) Engine::addMirror(mirror);
-	else fprintf(stderr, "Map::load_mirror(): can`t find mesh\n");
+	else throw EngineException("Map::load_mirror(): can`t find mesh");
 }
 
 
@@ -375,7 +373,7 @@ void Map::load_mesh(const Paths& paths) {
 		mesh->setShadows(shadows);
 		Engine::addObject(mesh);
 	}
-	else fprintf(stderr, "Map::load_mesh(): can`t find mesh\n");
+	else throw EngineException("Map::load_mesh(): can`t find mesh");
 }
 
 void Map::load_skinnedmesh()

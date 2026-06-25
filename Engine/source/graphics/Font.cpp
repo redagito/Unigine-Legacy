@@ -4,14 +4,14 @@
 #include <cstdarg>
 
 #include "graphics/Texture.h"
+#include "EngineException.h"
 
 Font::Font(const char* name)
 {
 	int width = 0, height = 0;
 	unsigned char* data = Texture::load(name, width, height);
 	if (!data) {
-		fprintf(stderr, "Font::Font(): can`t open \"%s\" file\n", name);
-		return;
+		throw EngineException(std::string("Font::Font(): can`t open \"") + name + "\" file");
 	}
 
 	glGenTextures(1, &tex_id);

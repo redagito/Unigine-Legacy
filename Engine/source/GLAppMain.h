@@ -21,7 +21,7 @@ public:
 	GLAppMain() = default;
 	~GLAppMain();
 
-	int init();
+	void init();
 	void idle();
 	void render();
 

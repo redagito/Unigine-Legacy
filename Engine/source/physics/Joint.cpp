@@ -1,5 +1,6 @@
 #include "physics/Joint.h"
 #include "physics/Constants.h"
+#include "EngineException.h"
 
 //
 #include <cstdio>
@@ -13,8 +14,7 @@ Joint::Joint(RigidBody* rigidbody_0, RigidBody* rigidbody_1) : rigidbody_0(rigid
 	if (rigidbody_0->num_joints == RigidBody::NUM_JOINTS || rigidbody_1->num_joints == RigidBody::NUM_JOINTS) {
 		rigidbody_0 = NULL;
 		rigidbody_1 = NULL;
-		fprintf(stderr, "Joint::Joint(): many joints in RigidBody\n");
-		return;
+		throw EngineException("Joint::Joint(): many joints in RigidBody");
 	}
 
 	rigidbody_0->joints[rigidbody_0->num_joints] = this;
@@ -60,8 +60,7 @@ Joint::~Joint() {
 
 
 int Joint::response(float) {
-	fprintf(stderr, "Joint::response()\n");
-	return 1;
+	throw EngineException("Joint::response()");
 }
 
 

@@ -6,6 +6,7 @@
 #include "graphics/Material.h"
 #include "graphics/PBuffer.h"
 #include "graphics/Texture.h"
+#include "EngineException.h"
 
 int Mirror::counter = 0;
 PBuffer *Mirror::pbuffers[3];
@@ -16,7 +17,7 @@ Mirror::Mirror(Mesh *mesh) : mesh(mesh), material(NULL) {
 	pos = getCenter();
 	
 	if(mesh->getNumSurfaces() == 0) {
-		fprintf(stderr,"Mirror::Mirror: bad mesh\n");
+		throw EngineException("Mirror::Mirror: bad mesh");
 	} else {
 		Mesh::Triangle *triangles = mesh->getTriangles(0);
 		plane = triangles[0].plane;

@@ -1,4 +1,5 @@
 #include "math/Spline.h"
+#include "EngineException.h"
 
 #include <cstdio>
 #include <cstring>
@@ -7,8 +8,7 @@ Spline::Spline(const char* name, float speed, int close, int follow) : num(0), p
 
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		fprintf(stderr, "Spline::Spline(): error open \"%s\" file\n", name);
-		return;
+		throw EngineException(std::string("Spline::Spline(): error open \"") + name + "\" file");
 	}
 
 	vec3 v;
@@ -19,6 +19,11 @@ Spline::Spline(const char* name, float speed, int close, int follow) : num(0), p
 	fseek(file, 0, SEEK_SET);
 	while (fscanf(file, "%f %f %f", &v.x, &v.y, &v.z) == 3) val[num++] = v;
 	fclose(file);
+
+	if (num < 2) {
+		delete[] val;
+		throw EngineException(std::string("Spline::Spline(): need at least 2 points in \"") + name + "\" file");
+	}
 
 	float tension = 0.0;
 	float bias = 0.0;

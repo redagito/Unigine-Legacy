@@ -99,7 +99,7 @@ std::map<std::string, Mesh*> Engine::meshes;
 void (*Engine::extern_load)(void*) = NULL;
 void* Engine::extern_load_data;
 
-int Engine::stderr_fd;
+
 
 static void define(int argc, char** argv, void*) {
 	if (argc == 1) {
@@ -155,79 +155,57 @@ static void extensions(int, char**, void*) {
 /*****************************************************************************/
 
 
-int Engine::init(Paths& paths, const char* config)
+void Engine::init(Paths& paths, const char* config)
 {
-
-	// bind system stderr to Engine::console
-#ifndef _WIN32
-	int fd[2];
-	pipe(fd);
-	stderr_fd = fd[0];
-	fcntl(stderr_fd, F_SETFL, O_NONBLOCK);
-	stderr = fdopen(fd[1], "w");
-	setbuf(stderr, NULL);
-#else
-	HANDLE read, write;
-	SECURITY_ATTRIBUTES security;
-
-	security.nLength = sizeof(security);
-	security.bInheritHandle = TRUE;
-	security.lpSecurityDescriptor = NULL;
-
-	CreatePipe(&read, &write, &security, 1024 - 1);
-
-	DWORD mode = PIPE_READMODE_BYTE | PIPE_NOWAIT;
-	SetNamedPipeHandleState(read, &mode, NULL, NULL);
-	SetNamedPipeHandleState(write, &mode, NULL, NULL);
-
-	stderr_fd = _open_osfhandle((intptr_t)read, O_RDONLY | O_BINARY);
-	FILE* file = fdopen(_open_osfhandle((intptr_t)write, O_WRONLY | O_BINARY), "w");
-	*stderr = *file;
-	setbuf(stderr, NULL);
-#endif
-
 	// load config
 	if (config) {
 		FILE* file = fopen(config, "rb");
-		if (!file) fprintf(stderr, "Engine::init(): error open \"%s\" file\n", config);
-		else {
-			char buf[1024];
-			while (fscanf(file, "%s", buf) == 1) {
-				if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) { while (fread(buf, 1, 1, file) == 1 && buf[0] != '\n'); }
-				else if (!strcmp(buf, "screen_width")) { if (fscanf(file, "%d", &screen_width) != 1) fprintf(stderr, "Engine::init(): error reading screen_width\n"); }
-				else if (!strcmp(buf, "screen_height")) { if (fscanf(file, "%d", &screen_height) != 1) fprintf(stderr, "Engine::init(): error reading screen_height\n"); }
-				else if (!strcmp(buf, "screen_multisample")) { if (fscanf(file, "%d", &screen_multisample) != 1) fprintf(stderr, "Engine::init(): error reading screen_multisample\n"); }
-				else if (!strcmp(buf, "texture_filter")) {
-					texture_filter = 0;
-					fgets(buf, sizeof(buf), file);
-					char* s = buf;
-					while (*s) {
-						if (isalpha(*s)) {
-							char* d = s;
-							while (*d && !strchr(" \t\n", *d)) d++;
-							if (*d) *d++ = '\0';
-							if (!strcmp(s, "nearest")) texture_filter |= Texture::NEAREST;
-							else if (!strcmp(s, "linear")) texture_filter |= Texture::LINEAR;
-							else if (!strcmp(s, "nearest_mipmap_nearest")) texture_filter |= Texture::NEAREST_MIPMAP_NEAREST;
-							else if (!strcmp(s, "linear_mipmap_nearest")) texture_filter |= Texture::LINEAR_MIPMAP_NEAREST;
-							else if (!strcmp(s, "linear_mipmap_linear")) texture_filter |= Texture::LINEAR_MIPMAP_LINEAR;
-							else if (!strcmp(s, "anisotropy_1")) texture_filter |= Texture::ANISOTROPY_1;
-							else if (!strcmp(s, "anisotropy_2")) texture_filter |= Texture::ANISOTROPY_2;
-							else if (!strcmp(s, "anisotropy_4")) texture_filter |= Texture::ANISOTROPY_4;
-							else if (!strcmp(s, "anisotropy_8")) texture_filter |= Texture::ANISOTROPY_8;
-							else if (!strcmp(s, "anisotropy_16")) texture_filter |= Texture::ANISOTROPY_16;
-							s = d;
-						}
-						else if (strchr(" \t", *s)) s++;
-						else {
-							fprintf(stderr, "Engine::init(): unknown token \"%s\" in \"%s\" file\n", s, config);
-							break;
-						}
+		if (!file) throw EngineException(std::string("Engine::init(): error open \"") + config + "\" file");
+		char buf[1024];
+		while (fscanf(file, "%s", buf) == 1) {
+			if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) { while (fread(buf, 1, 1, file) == 1 && buf[0] != '\n'); }
+			else if (!strcmp(buf, "screen_width")) {
+				if (fscanf(file, "%d", &screen_width) != 1)
+					throw EngineException("Engine::init(): error reading screen_width");
+			}
+			else if (!strcmp(buf, "screen_height")) {
+				if (fscanf(file, "%d", &screen_height) != 1)
+					throw EngineException("Engine::init(): error reading screen_height");
+			}
+			else if (!strcmp(buf, "screen_multisample")) {
+				if (fscanf(file, "%d", &screen_multisample) != 1)
+					throw EngineException("Engine::init(): error reading screen_multisample");
+			}
+			else if (!strcmp(buf, "texture_filter")) {
+				texture_filter = 0;
+				fgets(buf, sizeof(buf), file);
+				char* s = buf;
+				while (*s) {
+					if (isalpha(*s)) {
+						char* d = s;
+						while (*d && !strchr(" \t\n", *d)) d++;
+						if (*d) *d++ = '\0';
+						if (!strcmp(s, "nearest")) texture_filter |= Texture::NEAREST;
+						else if (!strcmp(s, "linear")) texture_filter |= Texture::LINEAR;
+						else if (!strcmp(s, "nearest_mipmap_nearest")) texture_filter |= Texture::NEAREST_MIPMAP_NEAREST;
+						else if (!strcmp(s, "linear_mipmap_nearest")) texture_filter |= Texture::LINEAR_MIPMAP_NEAREST;
+						else if (!strcmp(s, "linear_mipmap_linear")) texture_filter |= Texture::LINEAR_MIPMAP_LINEAR;
+						else if (!strcmp(s, "anisotropy_1")) texture_filter |= Texture::ANISOTROPY_1;
+						else if (!strcmp(s, "anisotropy_2")) texture_filter |= Texture::ANISOTROPY_2;
+						else if (!strcmp(s, "anisotropy_4")) texture_filter |= Texture::ANISOTROPY_4;
+						else if (!strcmp(s, "anisotropy_8")) texture_filter |= Texture::ANISOTROPY_8;
+						else if (!strcmp(s, "anisotropy_16")) texture_filter |= Texture::ANISOTROPY_16;
+						s = d;
+					}
+					else if (strchr(" \t", *s)) s++;
+					else {
+						throw EngineException(std::string("Engine::init(): unknown token \"") + s + "\" in \"" + config + "\" file");
 					}
 				}
-				else fprintf(stderr, "Engine::init(): unknown token \"%s\" in \"%s\" file\n", buf, config);
 			}
+			else throw EngineException(std::string("Engine::init(): unknown token \"") + buf + "\" in \"" + config + "\" file");
 		}
+		fclose(file);
 	}
 
 	// init OpenGL extensions win32 only
@@ -237,7 +215,7 @@ int Engine::init(Paths& paths, const char* config)
 
 	// console
 	FILE* log = fopen(ENGINE_LOG_NAME, "wb");
-	if (!log) fprintf(stderr, "Engine::init(): error creating \"%s\" log file\n", ENGINE_LOG_NAME);
+	if (!log) throw EngineException(std::string("Engine::init(): error creating \"") + ENGINE_LOG_NAME + "\" log file");
 	console = new Console(paths.findFile(ENGINE_FONT_NAME), log);
 
 	console->printf(1, 1, 1, "3D Engine\n");
@@ -262,13 +240,11 @@ int Engine::init(Paths& paths, const char* config)
 	physic_toggle = 1;
 
 	if (!extensions) {
-		console->printf("can`t get OpenGL extensions string");
-		return 0;
+		throw EngineException("can`t get OpenGL extensions string");
 	}
 
-	if (!strstr(extensions, "GL_ARB_vertex_program")) {	// fatal error
-		console->printf("can`t find GL_ARB_vertex_program extension");
-		return 0;
+	if (!strstr(extensions, "GL_ARB_vertex_program")) {
+		throw EngineException("can`t find GL_ARB_vertex_program extension");
 	}
 
 	if (strstr(extensions, "GL_ARB_occlusion_query")) {
@@ -306,8 +282,7 @@ int Engine::init(Paths& paths, const char* config)
 		console->printf("using GL_ARB_texture_env_combine \"shaders\" code\n");
 	}
 	else {
-		console->printf("pls upgrade you video card...\n");
-		return 0;
+		throw EngineException("pls upgrade your video card - no compatible fragment program extension found");
 	}
 
 	console->addBool("wireframe", &wireframe_toggle);
@@ -364,8 +339,6 @@ int Engine::init(Paths& paths, const char* config)
 	frame = 0;
 
 	console->printf("\ninit ok\n");
-
-	return 1;
 }
 
 void Engine::clear(const Paths& paths) {
@@ -600,18 +573,6 @@ void Engine::update(float ifps) {
 
 	// new frame
 	frame++;
-
-	// read stderr
-	char buf[1024];
-	while (1) {
-		int ret = read(stderr_fd, buf, sizeof(buf));
-		if (ret > 0) {
-			buf[ret] = '\0';
-			console->printf(1, 0, 0, "%s", buf);
-			if (console->getActivity() == 0) console->keyPress('`');
-		}
-		else break;
-	}
 
 	// update time
 	time += ifps;

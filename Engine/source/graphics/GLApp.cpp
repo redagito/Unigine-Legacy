@@ -1,3 +1,5 @@
+#include "EngineException.h"
+
 /* OpenGL App
  *
  * Copyright (C) 2003-2004, Alexander Zaprjagaev <frustum@frustum.org>
@@ -159,9 +161,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		glViewport(0,0,windowWidth,windowHeight);
 	}
 	catch(const char *error) {
-		window = 0;
-		exit(error);
-		return 0;
+		throw EngineException(error);
 	}
 	return 1;
 }
@@ -207,15 +207,9 @@ void GLApp::checkExtension(const char *extension) {
 
 
 void GLApp::error() {
-	GLenum error;
-	while((error = glGetError()) != GL_NO_ERROR) {
-#ifdef HAVE_GTK_2
-		GtkWidget *dialog = gtk_message_dialog_new(NULL,GTK_DIALOG_MODAL,GTK_MESSAGE_ERROR,GTK_BUTTONS_OK,"OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-#else
-		fprintf(stderr,"OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
-#endif
+	GLenum error = glGetError();
+	if (error != GL_NO_ERROR) {
+		throw EngineException(std::string("OpenGL error: ") + (const char*)gluErrorString(error));
 	}
 }
 
@@ -227,13 +221,7 @@ void GLApp::exit(const char *error,...) {
 		va_start(arg,error);
 		vsprintf(buf,error,arg);
 		va_end(arg);
-#ifdef HAVE_GTK_2
-		GtkWidget *dialog = gtk_message_dialog_new(NULL,GTK_DIALOG_MODAL,GTK_MESSAGE_ERROR,GTK_BUTTONS_OK,"GLApp exit: %s\n",buf);
-		gtk_dialog_run(GTK_DIALOG(dialog));
-		gtk_widget_destroy(dialog);
-#else
-		fprintf(stderr,"GLApp exit: %s\n",buf);
-#endif
+		throw EngineException(std::string("GLApp exit: ") + buf);
 	}
 	done = 1;
 }
@@ -611,9 +599,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		glViewport(0,0,glApp->windowWidth,glApp->windowHeight);
 	}
 	catch(const char *error) {
-		window = 0;
-		exit(error);
-		return 0;
+		throw EngineException(error);
 	}
 	ShowWindow(window,SW_SHOW);
 	UpdateWindow(window);
@@ -655,9 +641,9 @@ void GLApp::checkExtension(const char *extension) {
 
 
 void GLApp::error() {
-	GLenum error;
-	while((error = glGetError()) != GL_NO_ERROR) {
-		MessageBox(0,(char*)gluErrorString(error),"OpenGL error",MB_OK);
+	GLenum error = glGetError();
+	if (error != GL_NO_ERROR) {
+		throw EngineException(std::string("OpenGL error: ") + (const char*)gluErrorString(error));
 	}
 }
 
@@ -669,7 +655,7 @@ void GLApp::exit(const char *error,...) {
 		va_start(arg,error);
 		vsprintf(buf,error,arg);
 		va_end(arg);
-		MessageBox(0,buf,"GLApp exit",MB_OK);
+		throw EngineException(std::string("GLApp exit: ") + buf);
 	}
 	done = 1;
 }

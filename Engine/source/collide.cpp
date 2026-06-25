@@ -1,4 +1,5 @@
 #include "collide.h"
+#include "EngineException.h"
 
 //#include "engine.h"
 #include "object/Object.h"
@@ -313,8 +314,7 @@ int Collide::collide(Object* object) {
 			surfaces[num_surfaces].num_triangles = mesh->getNumTriangles(i);
 
 			if (surfaces[num_surfaces].num_triangles > NUM_TRIANGLES) {
-				fprintf(stderr, "Collide::collide(): many vertex %d\n", surfaces[num_surfaces].num_triangles);
-				continue;
+				throw EngineException(std::string("Collide::collide(): many vertex ") + std::to_string(surfaces[num_surfaces].num_triangles));
 			}
 
 			Mesh::Triangle* t = mesh->getTriangles(i);
@@ -355,13 +355,13 @@ int Collide::collide(Object* object) {
 			// new surface
 			num_surfaces++;
 			if (num_surfaces == NUM_SURFACES) {
-				fprintf(stderr, "Collide::collide(): many surfaces %d\n", NUM_SURFACES);
+				throw EngineException(std::string("Collide::collide(): many surfaces ") + std::to_string(NUM_SURFACES));
 				break;
 			}
 		}
 	}
 	else {
-		fprintf(stderr, "Collide::collide(): %d format isn`t supported\n", object->type);
+		throw EngineException(std::string("Collide::collide(): ") + std::to_string(object->type) + " format isn`t supported");
 	}
 
 	if (!num_surfaces) return 0;
