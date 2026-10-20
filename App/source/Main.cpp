@@ -1,9 +1,13 @@
 #include "GLAppMain.h"
+#include "engine.h"
 #include "util/Logger.h"
 #include "graphics/GLApp.h"
 #include "util/Error.h"
 
 int main(int argc, char** argv) {
+
+	// open the log before anything can fail
+	logger::init(ENGINE_LOG_NAME);
 
 	try {
 

@@ -6,7 +6,7 @@
 
 namespace logger {
 
-	// opens the console and file sinks
+	// opens the console and file sinks, does nothing if already open
 	void init(const char* file_name);
 
 	// adds a sink to the engine logger
