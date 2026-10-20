@@ -23,4 +23,9 @@ target_include_directories(${PROJECT_NAME}
 	PRIVATE source
 )
 
-file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+# the data has to sit next to the executable, which is in a per config folder
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${CMAKE_CURRENT_SOURCE_DIR}/data"
+		"$<TARGET_FILE_DIR:${PROJECT_NAME}>/data"
+)

@@ -401,9 +401,19 @@ void Engine::clear(const Paths& paths) {
 	for (meshes_it = meshes.begin(); meshes_it != meshes.end(); meshes_it++) delete meshes_it->second;
 	meshes.clear();
 
-	screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
-	sphere_mesh = loadMesh(ENGINE_SPHERE_MESH, paths);
-	shadow_volume_shader = loadShader(ENGINE_SHADOW_VOLUME_SHADER, paths);
+	// the engine wide assets are recreated for the next map, this must not throw
+	// because clear() runs from a destructor while an exception is in flight
+	try {
+		screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
+		sphere_mesh = loadMesh(ENGINE_SPHERE_MESH, paths);
+		shadow_volume_shader = loadShader(ENGINE_SHADOW_VOLUME_SHADER, paths);
+	}
+	catch (const std::exception& e) {
+		spdlog::error("Engine::clear(): {}", e.what());
+		screen_material = NULL;
+		sphere_mesh = NULL;
+		shadow_volume_shader = NULL;
+	}
 }
 
 void Engine::load(const char* name, Paths& paths) {

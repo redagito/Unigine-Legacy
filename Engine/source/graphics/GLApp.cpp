@@ -214,12 +214,11 @@ void GLApp::checkExtension(const char *extension) {
 void GLApp::error() {
 	GLenum error;
 	while((error = glGetError()) != GL_NO_ERROR) {
+		spdlog::error("OpenGL error 0x{:04X}: {}", error, (const char*)gluErrorString(error));
 #ifdef HAVE_GTK_2
 		GtkWidget *dialog = gtk_message_dialog_new(NULL,GTK_DIALOG_MODAL,GTK_MESSAGE_ERROR,GTK_BUTTONS_OK,"OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
-#else
-		THROW_ERROR("OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
 #endif
 	}
 }
@@ -664,6 +663,7 @@ void GLApp::checkExtension(const char *extension) {
 void GLApp::error() {
 	GLenum error;
 	while((error = glGetError()) != GL_NO_ERROR) {
+		spdlog::error("OpenGL error 0x{:04X}: {}", error, (const char*)gluErrorString(error));
 		MessageBox(0,(char*)gluErrorString(error),"OpenGL error",MB_OK);
 	}
 }

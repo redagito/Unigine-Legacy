@@ -1,9 +1,13 @@
 #include "audio/ALApp.h"
+#include "util/Logger.h"
 #include "util/Error.h"
+#include "util/Logger.h"
 
 #include <cstdio>
+#include "util/Logger.h"
 
 #include "audio/Sound.h"
+#include "util/Logger.h"
 
 std::vector<Sound*> ALApp::streams;
 
@@ -29,7 +33,7 @@ ALApp::~ALApp() {
 void ALApp::error() {
 	ALenum error;
 	while ((error = alGetError()) != AL_NO_ERROR) {
-		THROW_ERROR("ALApp::error(): 0x%04X\n", error);
+		spdlog::error("OpenAL error 0x{:04X}", error);
 	}
 }
 
