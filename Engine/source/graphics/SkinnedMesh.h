@@ -95,7 +95,7 @@ public:
 protected:
 
 	int load_binary(const char* name);
-	void read_string(FILE* file, char* string);
+	void read_string(FILE* file, char* string, int size);
 	int load_ascii(const char* name);
 
 	void calculate_tangent();

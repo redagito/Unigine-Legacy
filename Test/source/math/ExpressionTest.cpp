@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 #include "math/Expression.h"
+#include "AllocationTracker.h"
 
 using Catch::Approx;
 
@@ -44,4 +45,18 @@ TEST_CASE("Expression time-based", "[math][expression]") {
     vec3 r = m * v;
     REQUIRE(r.x == Approx(5.0f));
     REQUIRE(r.y == Approx(10.0f));
+}
+
+TEST_CASE("Expression releases its storage on destruction", "[math][expression]") {
+    long delta = 0;
+    {
+        alloc::Scope scope;
+        {
+            Expression exp("1,2,3, 0,0,0,1");
+            mat4 m = exp.to_matrix(0.0f);
+            REQUIRE(m[12] == Approx(1.0f));
+        }
+        delta = scope.delta();
+    }
+    REQUIRE(delta == 0);
 }

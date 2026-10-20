@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include "util/Error.h"
 #include <catch2/catch_approx.hpp>
 #include <cstdio>
 #include <cstring>
@@ -6,13 +7,8 @@
 
 using Catch::Approx;
 
-TEST_CASE("Spline with invalid file returns identity", "[math][spline]") {
-    Spline s("nonexistent_file.spline", 1.0f, 0, 0);
-    mat4 m = s.to_matrix(0.0f);
-    REQUIRE(m[0] == Approx(1.0f));
-    REQUIRE(m[5] == Approx(1.0f));
-    REQUIRE(m[10] == Approx(1.0f));
-    REQUIRE(m[15] == Approx(1.0f));
+TEST_CASE("Spline with invalid file throws", "[math][spline]") {
+    REQUIRE_THROWS_AS(Spline("nonexistent_file.spline", 1.0f, 0, 0), EngineError);
 }
 
 TEST_CASE("Spline from file with one point", "[math][spline]") {

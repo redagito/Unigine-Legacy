@@ -16,7 +16,7 @@ JointUniversal::JointUniversal(RigidBody* rigidbody_0, RigidBody* rigidbody_1, c
 	point_01 = rigidbody_1->itransform * point;
 
 	point_10 = rigidbody_0->itransform * (point + this->axis_0 * JOINT_DIST);
-	point_11 = rigidbody_1->itransform * (point + this->axis_0 * JOINT_DIST);
+	point_11 = rigidbody_1->itransform * (point + this->axis_1 * JOINT_DIST);
 
 	this->axis_0 = rigidbody_0->itransform.rotation() * this->axis_0;
 	this->axis_1 = rigidbody_1->itransform.rotation() * this->axis_1;
@@ -59,7 +59,7 @@ int JointUniversal::response(float ifps)
 		vec3 vel = (p0 - p1) * PenetrationSpeed / ifps + vel0 - vel1;
 
 		if (i == 1) {
-			vec3 ax0 = rigidbody_0->transform.rotation() * axis_1;
+			vec3 ax0 = rigidbody_0->transform.rotation() * axis_0;
 			vec3 ax1 = rigidbody_1->transform.rotation() * axis_1;
 
 			vec3 a = ax0 + ax1;
@@ -78,15 +78,13 @@ int JointUniversal::response(float ifps)
 		normal.normalize();
 
 		float impulse_numerator = -normal_vel;
-		float impulse_denominator = 1.0f / rigidbody_0->mass + 1.0f / rigidbody_1->mass
-			+ normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0)
-			+ normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
+		float impulse_denominator = 0.0f;
+			if (rigidbody_0->immovable == 0) impulse_denominator += 1.0f / rigidbody_0->mass + normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0);
+			if (rigidbody_1->immovable == 0) impulse_denominator += 1.0f / rigidbody_1->mass + normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
 
 		if (rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 		if (rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
 
-		if (rigidbody_0->immovable && rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
-		if (rigidbody_1->immovable && rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 	}
 
 	// angle restriction

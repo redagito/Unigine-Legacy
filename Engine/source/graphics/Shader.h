@@ -66,6 +66,7 @@ protected:
 
 	GLuint compileARBtec(const char* src);
 
+	void release();
 	void getMatrix(const char* name, Matrix* m);
 	void getLocalParameter(const char* name, LocalParameter* p);
 

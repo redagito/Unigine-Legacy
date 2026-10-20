@@ -1,4 +1,5 @@
 #include "map.h"
+#include "util/Error.h"
 
 #include "engine.h"
 #include "script/Parser.h"
@@ -21,8 +22,7 @@ char* Map::data;
 
 void Map::load(const char* name, Paths& paths) {
 	if (!name) {
-		fprintf(stderr, "Map::load(): null name\n");
-		return;
+		THROW_ERROR("Map::load(): null name\n");
 	}
 	Parser* parser = new Parser(name, Engine::defines);
 
@@ -44,7 +44,7 @@ void Map::load(const char* name, Paths& paths) {
 
 	char* data_block = (char*)Parser::interpret(parser->get("data"));
 	if (!data_block) {
-		fprintf(stderr, "Map::load(): can`t get data block in \"%s\" file\n", file_name);
+		THROW_ERROR("Map::load(): can`t get data block in \"%s\" file\n", file_name);
 		delete parser;
 		return;
 	}
@@ -61,27 +61,17 @@ void Map::load(const char* name, Paths& paths) {
 			else if (!strcmp(token, "mirror")) load_mirror(paths);
 			else if (!strcmp(token, "mesh")) load_mesh(paths);
 			else if (!strcmp(token, "particles")) load_particles(paths);
-			else throw(error("unknown token \"%s\"", token));
+			else THROW_ERROR("unknown token \"%s\"", token);
 		}
 	}
 	catch (const char* msg) {
-		fprintf(stderr, "Map::load(): %s in \"%s\" file\n", msg, file_name);
-		delete data_block;
+		delete[] data_block;
 		delete parser;
-		return;
+		THROW_ERROR("Map::load(): %s in \"%s\" file", msg, file_name);
 	}
 
-	delete data_block;
+	delete[] data_block;
 	delete parser;
-}
-
-const char* Map::error(const char* error, ...) {
-	static char buf[1024];
-	va_list arg;
-	va_start(arg, error);
-	vsprintf(buf, error, arg);
-	va_end(arg);
-	return buf;
 }
 
 
@@ -93,17 +83,17 @@ const char* Map::read_token(char* must) {
 	while (*data && !strchr(" \t\n\r", *data)) *s++ = *data++;
 	if (*data) data++;
 	*s = '\0';
-	if (must) if (strcmp(token, must)) throw("unknown token");
+	if (must) if (strcmp(token, must)) THROW_ERROR("unknown token");
 	return token;
 }
 
 int Map::read_bool() {
 	const char* token = read_token();
 	if (token) {
-		if (!*token) throw(error("empty token in read_bool"));
+		if (!*token) THROW_ERROR("empty token in read_bool");
 		if (!strcmp(token, "false") || !strcmp(token, "0")) return 0;
 		if (!strcmp(token, "true") || !strcmp(token, "1")) return 1;
-		throw(error("unknown token \"%s\" in read_bool", token));
+		THROW_ERROR("unknown token \"%s\" in read_bool", token);
 		return 1;
 	}
 	return 0;
@@ -112,8 +102,8 @@ int Map::read_bool() {
 int Map::read_int() {
 	const char* token = read_token();
 	if (token) {
-		if (!*token) throw(error("empty token in read_int"));
-		if (!strchr("-01234567890", *token)) throw(error("unknown token \"%s\" in read_int", token));
+		if (!*token) THROW_ERROR("empty token in read_int");
+		if (!strchr("-01234567890", *token)) THROW_ERROR("unknown token \"%s\" in read_int", token);
 		return atoi(token);
 	}
 	return 0;
@@ -122,8 +112,8 @@ int Map::read_int() {
 float Map::read_float() {
 	const char* token = read_token();
 	if (token) {
-		if (!*token) throw(error("empty token in read_float"));
-		if (!strchr("-01234567890.", *token)) throw(error("unknown token \"%s\" in read_float", token));
+		if (!*token) THROW_ERROR("empty token in read_float");
+		if (!strchr("-01234567890.", *token)) THROW_ERROR("unknown token \"%s\" in read_float", token);
 		return atof(token);
 	}
 	return 0.0;
@@ -172,17 +162,18 @@ const char* Map::read_string() {
 
 void Map::load_bsp(const Paths& paths) {
 	read_token("{");
+	if (Engine::bsp) delete Engine::bsp;
 	Engine::bsp = new Bsp();
 	while (1) {
 		const char* token = read_token();
 		if (!token || !strcmp(token, "}")) break;
-		else if (!strcmp(token, "mesh")) Engine::bsp->load(paths.findFile(read_string()));
+		else if (!strcmp(token, "mesh")) Engine::bsp->load(paths.findFile(read_string()).c_str());
 		else if (!strcmp(token, "save")) Engine::bsp->save(read_string());
 		else if (!strcmp(token, "material")) {
 			const char* name = read_string();
 			Engine::bsp->bindMaterial(name, Engine::loadMaterial(read_string(), paths));
 		}
-		else throw(error("unknown token \"%s\" in bsp block", token));
+		else THROW_ERROR("unknown token \"%s\" in bsp block", token);
 	}
 }
 
@@ -202,9 +193,9 @@ void Map::load_pos(Position& pos, mat4& matrix, const Paths& paths) {
 			else if (!strcmp(token, "speed")) speed = read_float();
 			else if (!strcmp(token, "close")) close = read_bool();
 			else if (!strcmp(token, "follow")) follow = read_bool();
-			else throw(error("unknown token \"%s\" in spline block", token));
+			else THROW_ERROR("unknown token \"%s\" in spline block", token);
 		}
-		Spline* spline = new Spline(paths.findFile(name), speed, close, follow);
+		Spline* spline = new Spline(paths.findFile(name).c_str(), speed, close, follow);
 		pos.setSpline(spline);
 		matrix = spline->to_matrix(0.0);
 		read_token("}");
@@ -274,7 +265,7 @@ void Map::load_light(const Paths& paths) {
 			read_string();
 			material = Engine::loadMaterial(read_string(), paths);
 		}
-		else throw(error("unknown token \"%s\" in light block", token));
+		else THROW_ERROR("unknown token \"%s\" in light block", token);
 	}
 	Light* light = new Light(vec3(0, 0, 0), radius, color, -1.0, shadows);
 	if (material) light->bindMaterial("*", material);
@@ -294,10 +285,10 @@ void Map::load_fog(const Paths& paths) {
 		if (!token || !strcmp(token, "}")) break;
 		else if (!strcmp(token, "mesh")) mesh = Engine::loadMesh(read_string(), paths);
 		else if (!strcmp(token, "color")) color = read_vec4();
-		else throw(error("unknown token \"%s\" in fog block", token));
+		else THROW_ERROR("unknown token \"%s\" in fog block", token);
 	}
 	if (mesh) Engine::addFog(new Fog(mesh, color, paths));
-	else fprintf(stderr, "Map::load_fog(): can`t find mesh\n");
+	else THROW_ERROR("Map::load_fog(): can`t find mesh\n");
 }
 
 
@@ -312,10 +303,10 @@ void Map::load_mirror(const Paths& paths) {
 			const char* name = read_string();
 			mirror->bindMaterial(name, Engine::loadMaterial(read_string(), paths));
 		}
-		else throw(error("unknown token \"%s\" in mirror block", token));
+		else THROW_ERROR("unknown token \"%s\" in mirror block", token);
 	}
 	if (mirror) Engine::addMirror(mirror);
-	else fprintf(stderr, "Map::load_mirror(): can`t find mesh\n");
+	else THROW_ERROR("Map::load_mirror(): can`t find mesh\n");
 }
 
 
@@ -349,33 +340,33 @@ void Map::load_mesh(const Paths& paths) {
 				if (!token || !strcmp(token, "}")) break;
 				else if (!strcmp(token, "pos")) load_pos(mesh->pos, matrix, paths);
 				else if (!strcmp(token, "mass")) mass = read_float();
-				else if (!strcmp(token, "restitution")) friction = read_float();
+				else if (!strcmp(token, "restitution")) restitution = read_float();
 				else if (!strcmp(token, "friction")) friction = read_float();
 				else if (!strcmp(token, "collide")) {
 					const char* collide = read_string();
 					if (!strcmp(collide, "mesh")) flag |= RigidBody::COLLIDE_MESH;
 					else if (!strcmp(collide, "sphere")) flag |= RigidBody::COLLIDE_SPHERE;
-					else throw(error("unknown collide \"%s\" in rigidbody block", collide));
+					else THROW_ERROR("unknown collide \"%s\" in rigidbody block", collide);
 				}
 				else if (!strcmp(token, "body")) {
 					const char* body = read_string();
 					if (!strcmp(body, "box")) flag |= RigidBody::BODY_BOX;
 					else if (!strcmp(body, "sphere")) flag |= RigidBody::BODY_SPHERE;
 					else if (!strcmp(body, "cylinder")) flag |= RigidBody::BODY_CYLINDER;
-					else throw(error("unknown body \"%s\" in rigidbody block", body));
+					else THROW_ERROR("unknown body \"%s\" in rigidbody block", body);
 				}
-				else throw(error("unknown token \"%s\" in rigidbody block", token));
+				else THROW_ERROR("unknown token \"%s\" in rigidbody block", token);
 			}
 			mesh->setRigidBody(new RigidBody(mesh, mass, restitution, friction, flag));
 			mesh->set(matrix);
 		}
-		else throw(error("unknown token \"%s\" in mesh block", token));
+		else THROW_ERROR("unknown token \"%s\" in mesh block", token);
 	}
 	if (mesh) {
 		mesh->setShadows(shadows);
 		Engine::addObject(mesh);
 	}
-	else fprintf(stderr, "Map::load_mesh(): can`t find mesh\n");
+	else THROW_ERROR("Map::load_mesh(): can`t find mesh\n");
 }
 
 void Map::load_skinnedmesh()
@@ -413,7 +404,7 @@ void Map::load_particles(const Paths& paths)
 			read_string();
 			material = Engine::loadMaterial(read_string(), paths);
 		}
-		else throw(error("unknown token \"%s\" in particles block", token));
+		else THROW_ERROR("unknown token \"%s\" in particles block", token);
 	}
 	ObjectParticles* particles = new ObjectParticles(new Particles(num, vec3(0, 0, 0), speed, rotation, force, time, radius, color));
 	if (material) particles->bindMaterial("*", material);

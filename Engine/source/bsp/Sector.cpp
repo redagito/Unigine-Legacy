@@ -103,6 +103,7 @@ int Sector::inside(Mesh* mesh, int s) {
 
 void Sector::addObject(Object* object) {
 	if (!objects) return;
+	if (num_objects >= NUM_OBJECTS) return;
 	int i = 0;
 	for (; i < num_objects; i++) if (objects[i] == object) return;
 	objects[num_objects++] = object;

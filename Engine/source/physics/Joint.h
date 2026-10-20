@@ -20,6 +20,7 @@ protected:
 	virtual int response(float ifps);
 
 	int restriction_response(float ifps, const vec3& point_0, const vec3& point_1, float min_dist);
+	void remove_from(RigidBody* body);
 
 	RigidBody* rigidbody_0;
 	RigidBody* rigidbody_1;

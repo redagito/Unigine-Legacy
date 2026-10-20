@@ -1,4 +1,5 @@
 #include "physics/RagDoll.h"
+#include "util/Error.h"
 
 #include "script/Parser.h"
 #include "engine.h"
@@ -16,20 +17,23 @@
 
 RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths) : skinnedmesh(skinnedmesh), num_bones(0), root(-1) {
 
-	Parser* parser = new Parser(paths.findFile(name), Engine::defines);
+	Parser* parser = new Parser(paths.findFile(name).c_str(), Engine::defines);
 
 	if (!parser->get("mesh")) {
-		fprintf(stderr, "RagDoll::RagDoll(): can`t find mesh in \"%s\" file\n", name);
+		THROW_ERROR("RagDoll::RagDoll(): can`t find mesh in \"%s\" file\n", name);
+		delete parser;
 		return;
 	}
 
 	if (!parser->get("rigidbodies")) {
-		fprintf(stderr, "RagDoll::RagDoll(): can`t find rigidbodies in \"%s\" file\n", name);
+		THROW_ERROR("RagDoll::RagDoll(): can`t find rigidbodies in \"%s\" file\n", name);
+		delete parser;
 		return;
 	}
 
 	if (!parser->get("joints")) {
-		fprintf(stderr, "RagDoll::RagDoll(): can`t find joints in \"%s\" file\n", name);
+		THROW_ERROR("RagDoll::RagDoll(): can`t find joints in \"%s\" file\n", name);
+		delete parser;
 		return;
 	}
 
@@ -44,8 +48,8 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 	ioffsets = new mat4[num_bones];
 
 	char buf[1024];
-	sscanf(parser->get("mesh"), "%s", buf);
-	Mesh* mesh = new Mesh(paths.findFile(buf));
+	sscanf(parser->get("mesh"), "%1023s", buf);
+	Mesh* mesh = new Mesh(paths.findFile(buf).c_str());
 
 	// scale objects
 	if (parser->get("scale")) {
@@ -59,13 +63,10 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 
 	// create bones
 	for (int i = 0; i < num_bones; i++) {
-		char bone_name[1024];
 		float mass = 1.0f;
 		float restitution = 0.3f;
 		float friction = 0.3f;
 		int flag = 0;
-
-		bone_name[0] = '\0';
 
 		// find bone description in rigidbodies section
 		char* s = parser->get("rigidbodies");
@@ -76,11 +77,12 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 			*d = '\0';
 
 			d = buf;
+			std::string bone_name;
 			d += Parser::read_string(d, bone_name);
 
-			if (!strcmp(bone_name, bones[i].name)) {
+			if (bone_name == bones[i].name) {
 				char body[1024];
-				sscanf(d, "%s %f %f %f", body, &mass, &restitution, &friction);
+				sscanf(d, "%1023s %f %f %f", body, &mass, &restitution, &friction);
 				if (!strcmp(body, "box")) flag = RigidBody::BODY_BOX;
 				else if (!strcmp(body, "sphere")) flag = RigidBody::BODY_SPHERE;
 				else if (!strcmp(body, "cylinder")) flag = RigidBody::BODY_CYLINDER;
@@ -89,13 +91,17 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 		}
 
 		if (flag == 0) {
-			fprintf(stderr, "RigidBody::RigidBody(): can`t find attributes for \"%s\" bone in \"%s\" file\n", bones[i].name, name);
+			THROW_ERROR("RigidBody::RigidBody(): can`t find attributes for \"%s\" bone in \"%s\" file\n", bones[i].name, name);
+			delete mesh;
+			delete parser;
 			return;
 		}
 
 		int surface = mesh->getSurface(bones[i].name);
 		if (surface < 0) {
-			fprintf(stderr, "RagDoll::RagDoll(): can`t find mesh for \"%s\" bone in \"%s\" file\n", bones[i].name, name);
+			THROW_ERROR("RagDoll::RagDoll(): can`t find mesh for \"%s\" bone in \"%s\" file\n", bones[i].name, name);
+			delete mesh;
+			delete parser;
 			return;
 		}
 
@@ -122,15 +128,13 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 
 		if (bones[i].parent == -1) {
 			if (root == -1) root = i;
-			else fprintf(stderr, "RagDoll::RagDoll(): many roots bones in \"%s\" file\n", name);
+			else THROW_ERROR("RagDoll::RagDoll(): many roots bones in \"%s\" file\n", name);
 		}
 	}
 
 	// create joints
 	char* s = parser->get("joints");
 	while (*s) {
-		char bone_0_name[1024];
-		char bone_1_name[1024];
 		int bone_0 = -1;
 		int bone_1 = -1;
 
@@ -140,28 +144,30 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 		*d = '\0';
 
 		d = buf;
+		std::string bone_0_name;
+		std::string bone_1_name;
 		d += Parser::read_string(d, bone_0_name);
 		d += Parser::read_string(d, bone_1_name);
 
 		for (int i = 0; i < num_bones; i++) {
-			if (!strcmp(bone_0_name, bones[i].name)) {
+			if (bone_0_name == bones[i].name) {
 				bone_0 = i;
 				break;
 			}
 		}
 		if (bone_0 == -1) {
-			fprintf(stderr, "RagDoll::RagDoll(): unknown bone \"%s\" in \"%s\" file\n", bone_0_name, name);
+			THROW_ERROR("RagDoll::RagDoll(): unknown bone \"%s\" in \"%s\" file\n", bone_0_name.c_str(), name);
 			continue;
 		}
 
 		for (int i = 0; i < num_bones; i++) {
-			if (!strcmp(bone_1_name, bones[i].name)) {
+			if (bone_1_name == bones[i].name) {
 				bone_1 = i;
 				break;
 			}
 		}
 		if (bone_1 == -1) {
-			fprintf(stderr, "RagDoll::RagDoll(): unknown bone \"%s\" in \"%s\" file\n", bone_1_name, name);
+			THROW_ERROR("RagDoll::RagDoll(): unknown bone \"%s\" in \"%s\" file\n", bone_1_name.c_str(), name);
 			continue;
 		}
 
@@ -175,14 +181,14 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 			bone_1 = i;
 		}
 		else {
-			fprintf(stderr, "RagDoll::RagDoll(): can`t joint \"%s\" and \"%s\" bones in \"%s\" file\n", bone_0_name, bone_1_name, name);
+			THROW_ERROR("RagDoll::RagDoll(): can`t joint \"%s\" and \"%s\" bones in \"%s\" file\n", bone_0_name.c_str(), bone_1_name.c_str(), name);
 			continue;
 		}
 
-		char type[1024];
+		std::string type;
 		d += Parser::read_string(d, type);
 
-		if (!strcmp(type, "ball")) {	// ball - socket joint
+		if (type == "ball") {	// ball - socket joint
 			vec3 restriction_axis_0, restriction_axis_1;
 			float restriction_angle;
 			int num = sscanf(d, "%f %f %f %f %f %f %f",
@@ -191,9 +197,9 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 				&restriction_angle);
 			if (num == 7) new JointBall(rigidbodies[bone_0], rigidbodies[bone_1], bones[bone_1].transform * vec3(0, 0, 0), restriction_axis_0, restriction_axis_1, restriction_angle);
 			else if (num == 0) new JointBall(rigidbodies[bone_0], rigidbodies[bone_1], bones[bone_1].transform * vec3(0, 0, 0));
-			else fprintf(stderr, "RagDoll::RagDoll(): bad arguments for \"%s\" \"%s\" bones in \"%s\" file\n", bone_0_name, bone_1_name, name);
+			else THROW_ERROR("RagDoll::RagDoll(): bad arguments for \"%s\" \"%s\" bones in \"%s\" file\n", bone_0_name.c_str(), bone_1_name.c_str(), name);
 		}
-		else if (!strcmp(type, "hinge")) {	// hinge joint
+		else if (type == "hinge") {	// hinge joint
 			vec3 axis, restriction_axis_0, restriction_axis_1;
 			float restriction_angle;
 			int num = sscanf(d, "%f %f %f %f %f %f %f %f %f %f",
@@ -203,9 +209,9 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 				&restriction_angle);
 			if (num == 10) new JointHinge(rigidbodies[bone_0], rigidbodies[bone_1], bones[bone_1].transform * vec3(0, 0, 0), axis, restriction_axis_0, restriction_axis_1, restriction_angle);
 			else if (num == 3) new JointHinge(rigidbodies[bone_0], rigidbodies[bone_1], bones[bone_1].transform * vec3(0, 0, 0), axis);
-			else fprintf(stderr, "RagDoll::RagDoll(): bad arguments for \"%s\" \"%s\" bones in \"%s\" file\n", bone_0_name, bone_1_name, name);
+			else THROW_ERROR("RagDoll::RagDoll(): bad arguments for \"%s\" \"%s\" bones in \"%s\" file\n", bone_0_name.c_str(), bone_1_name.c_str(), name);
 		}
-		else if (!strcmp(type, "universal")) {	// universal joint
+		else if (type == "universal") {	// universal joint
 			vec3 axis_0, axis_1, restriction_axis_0, restriction_axis_1;
 			float restriction_angle;
 			int num = sscanf(d, "%f %f %f %f %f %f %f %f %f %f %f %f %f",
@@ -215,10 +221,10 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 				&restriction_angle);
 			if (num == 13) new JointUniversal(rigidbodies[bone_0], rigidbodies[bone_1], bones[bone_1].transform * vec3(0, 0, 0), axis_0, axis_1, restriction_axis_0, restriction_axis_1, restriction_angle);
 			else if (num == 6) new JointUniversal(rigidbodies[bone_0], rigidbodies[bone_1], bones[bone_1].transform * vec3(0, 0, 0), axis_0, axis_1);
-			else fprintf(stderr, "RagDoll::RagDoll(): bad arguments for \"%s\" \"%s\" bones in \"%s\" file\n", bone_0_name, bone_1_name, name);
+			else THROW_ERROR("RagDoll::RagDoll(): bad arguments for \"%s\" \"%s\" bones in \"%s\" file\n", bone_0_name.c_str(), bone_1_name.c_str(), name);
 		}
 		else {
-			fprintf(stderr, "RagDoll::RagDoll(): unknown joint type \"%s\" in \"%s\" file\n", type, name);
+			THROW_ERROR("RagDoll::RagDoll(): unknown joint type \"%s\" in \"%s\" file\n", type.c_str(), name);
 			continue;
 		}
 	}

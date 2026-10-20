@@ -17,6 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "util/Error.h"
+#include "util/Logger.h"
+
 #ifndef _WIN32
 
 /*	linux
@@ -49,7 +52,6 @@ static int done;
 
 
 GLApp::GLApp() {
-	memset(this,0,sizeof(GLApp));
 #ifdef HAVE_GTK
 	gtk_init(NULL,NULL);
 	display = GDK_DISPLAY();
@@ -102,7 +104,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		Window rootWindow = RootWindow(display,screen);
 		
 		XVisualInfo *visual = glXChooseVisual(display,screen,attrib);
-		if(!visual) throw("couldn`t get an RGBA, double-buffered visual");
+		if(!visual) THROW_ERROR("couldn`t get an RGBA, double-buffered visual");
 		
 		if(fullScreen) {
 			int i,nmodes;
@@ -153,14 +155,15 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		XFlush(display);
 		
 		if(!context) context = glXCreateContext(display,visual,NULL,True);
-		if(!context) throw("glXCreateContext failed");
+		if(!context) THROW_ERROR("glXCreateContext failed");
 		
 		glXMakeCurrent(display,window,context);
 		glViewport(0,0,windowWidth,windowHeight);
 	}
-	catch(const char *error) {
+	catch(const EngineError& e) {
 		window = 0;
-		exit(error);
+		spdlog::error("{}", e.getMessage());
+		exit("%s", e.what());
 		return 0;
 	}
 	return 1;
@@ -168,7 +171,8 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 
 
 void GLApp::setTitle(const char *title) {
-	strcpy(this->title,title);
+	strncpy(this->title,title,sizeof(this->title) - 1);
+	this->title[sizeof(this->title) - 1] = 0;
 	XStoreName(display,window,title);
 	XSetIconName(display,window,title);
 }
@@ -199,10 +203,11 @@ void GLApp::showCursor(int show) {
 void GLApp::checkExtension(const char *extension) {
 	static char *extensions = NULL;
 	if(!extensions) extensions = (char*)glGetString(GL_EXTENSIONS);
-	if(strstr(extensions,extension)) return;
-	char error[1024];
-	sprintf(error,"OpenGL extension \"%s\" is not supported by current hardware",extension);
-	exit(error);
+	if(!extensions || !strstr(extensions,extension)) {
+		char error[1024];
+		snprintf(error,sizeof(error),"OpenGL extension \"%s\" is not supported by current hardware",extension);
+		exit("%s",error);
+	}
 }
 
 
@@ -214,7 +219,7 @@ void GLApp::error() {
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 #else
-		fprintf(stderr,"OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
+		THROW_ERROR("OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
 #endif
 	}
 }
@@ -225,14 +230,15 @@ void GLApp::exit(const char *error,...) {
 		char buf[1024];
 		va_list arg;
 		va_start(arg,error);
-		vsprintf(buf,error,arg);
+		vsnprintf(buf,sizeof(buf),error,arg);
 		va_end(arg);
+		spdlog::critical("GLApp exit: {}", buf);
 #ifdef HAVE_GTK_2
 		GtkWidget *dialog = gtk_message_dialog_new(NULL,GTK_DIALOG_MODAL,GTK_MESSAGE_ERROR,GTK_BUTTONS_OK,"GLApp exit: %s\n",buf);
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 #else
-		fprintf(stderr,"GLApp exit: %s\n",buf);
+		MessageBox(0,buf,"GLApp exit",MB_OK);
 #endif
 	}
 	done = 1;
@@ -272,7 +278,7 @@ int GLApp::selectFile(const char *title,char *name) {
 #else
 
 int GLApp::selectFile(const char *title,char *name) {
-	printf("%s\n",title);
+	spdlog::info("{}", title);
 	fscanf(stdin,"%s",name);
 	return 1;
 }
@@ -411,7 +417,6 @@ static int done;
 
 
 GLApp::GLApp() {
-	memset(this,0,sizeof(GLApp));
 }
 
 GLApp::~GLApp() {
@@ -578,7 +583,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 			wc.hbrBackground = NULL;
 			wc.lpszMenuName = NULL;
 			wc.lpszClassName = "GLApp";
-			if(!RegisterClass(&wc)) throw("RegisterClass() fail");
+			if(!RegisterClass(&wc)) THROW_ERROR("RegisterClass() fail");
 		}
 
 		if(fullScreen) {
@@ -589,7 +594,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 			settings.dmPelsHeight = h;
 			settings.dmBitsPerPel = 32;
 			settings.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
-			if(ChangeDisplaySettings(&settings,CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) throw("ChangeDisplaySettings() fail");
+			if(ChangeDisplaySettings(&settings,CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) THROW_ERROR("ChangeDisplaySettings() fail");
 			window = CreateWindowEx(0,"GLApp","GLApp",WS_POPUP,0,0,windowWidth,windowHeight,NULL,NULL,hInstance,NULL);
 		} else {
 			RECT windowRect = {0, 0, windowWidth, windowHeight };
@@ -599,20 +604,21 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 			window = CreateWindowEx(0,"GLApp","GLApp",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,windowWidth,windowHeight,NULL,NULL,hInstance,NULL);
 		}
 		
-		if(!window) throw("CreateWindowEx() fail");
-		if(!(hdc = GetDC(window))) throw("GetDC() fail");
+		if(!window) THROW_ERROR("CreateWindowEx() fail");
+		if(!(hdc = GetDC(window))) THROW_ERROR("GetDC() fail");
 		
-		if(!(pixelformat = ChoosePixelFormat(hdc,&pfd))) throw("ChoosePixelFormat() fail");
-		if(!(SetPixelFormat(hdc,pixelformat,&pfd))) throw("SetPixelFormat() fail");
+		if(!(pixelformat = ChoosePixelFormat(hdc,&pfd))) THROW_ERROR("ChoosePixelFormat() fail");
+		if(!(SetPixelFormat(hdc,pixelformat,&pfd))) THROW_ERROR("SetPixelFormat() fail");
 		
 		if(!context) context = wglCreateContext(hdc);
-		if(!context) throw("wglCreateContext() fail");
-		if(!wglMakeCurrent(hdc,context)) throw("wglMakeCurrent() fail");
+		if(!context) THROW_ERROR("wglCreateContext() fail");
+		if(!wglMakeCurrent(hdc,context)) THROW_ERROR("wglMakeCurrent() fail");
 		glViewport(0,0,glApp->windowWidth,glApp->windowHeight);
 	}
-	catch(const char *error) {
+	catch(const EngineError& e) {
 		window = 0;
-		exit(error);
+		spdlog::error("{}", e.getMessage());
+		exit("%s", e.what());
 		return 0;
 	}
 	ShowWindow(window,SW_SHOW);
@@ -647,10 +653,11 @@ void GLApp::showCursor(int show) {
 void GLApp::checkExtension(const char *extension) {
 	static char *extensions = NULL;
 	if(!extensions) extensions = (char*)glGetString(GL_EXTENSIONS);
-	if(strstr(extensions,extension)) return;
-	char error[1024];
-	sprintf(error,"OpenGL extension \"%s\" is not supported by current hardware",extension);
-	exit(error);
+	if(!extensions || !strstr(extensions,extension)) {
+		char error[1024];
+		snprintf(error,sizeof(error),"OpenGL extension \"%s\" is not supported by current hardware",extension);
+		exit("%s",error);
+	}
 }
 
 
@@ -667,8 +674,9 @@ void GLApp::exit(const char *error,...) {
 		char buf[1024];
 		va_list arg;
 		va_start(arg,error);
-		vsprintf(buf,error,arg);
+		vsnprintf(buf,sizeof(buf),error,arg);
 		va_end(arg);
+		spdlog::critical("GLApp exit: {}", buf);
 		MessageBox(0,buf,"GLApp exit",MB_OK);
 	}
 	done = 1;

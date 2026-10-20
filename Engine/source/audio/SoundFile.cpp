@@ -1,9 +1,16 @@
 #include "audio/SoundFile.h"
+#include "util/Error.h"
 
 #include <cstdio>
 #include <cstring>
 
 #include <vorbis/vorbisfile.h>
+
+static bool has_extension(const char* name, const char* extension) {
+	size_t len = strlen(name);
+	size_t ext = strlen(extension);
+	return len >= ext && !strcmp(name + len - ext, extension);
+}
 #include <mad.h>
 
 class SoundFileOgg : public SoundFile {
@@ -24,11 +31,10 @@ protected:
 SoundFileOgg::SoundFileOgg(const char* name) {
 	file = fopen(name, "rb");
 	if (!file) {
-		fprintf(stderr, "SoundFileOgg::SoundFileOgg(): error open \"%s\" file\n", name);
-		return;
+		THROW_ERROR("SoundFileOgg::SoundFileOgg(): error open \"%s\" file\n", name);
 	}
 	if (ov_open(file, &vf, NULL, 0) < 0) {
-		fprintf(stderr, "SoundFileOgg::SoundFileOgg(): \"%s\" is not ogg bitstream\n", name);
+		THROW_ERROR("SoundFileOgg::SoundFileOgg(): \"%s\" is not ogg bitstream\n", name);
 		fclose(file);
 		file = NULL;
 		return;
@@ -105,8 +111,7 @@ protected:
 SoundFileMp3::SoundFileMp3(const char* name) {
 	file = fopen(name, "rb");
 	if (!file) {
-		fprintf(stderr, "SoundFileMp3::SoundFileMp3(): error open \"%s\" file\n", name);
-		return;
+		THROW_ERROR("SoundFileMp3::SoundFileMp3(): error open \"%s\" file\n", name);
 	}
 
 	fseek(file, 0, SEEK_END);
@@ -117,7 +122,7 @@ SoundFileMp3::SoundFileMp3(const char* name) {
 	mad_stream_init(&stream);
 	mad_frame_init(&frame);
 	if (read_frame() == 0) {
-		fprintf(stderr, "SoundFileMp3::SoundFileMp3(): can`t find frame\n");
+		THROW_ERROR("SoundFileMp3::SoundFileMp3(): can`t find frame\n");
 		fclose(file);
 		file = NULL;
 		mad_synth_finish(&synth);
@@ -156,6 +161,9 @@ int SoundFileMp3::read_frame() {
 			}
 			if (ret == 0) return 1;
 			if (stream.error == MAD_ERROR_BUFLEN) break;
+			if (stream.error != MAD_ERROR_NONE) {
+				THROW_ERROR("SoundFileMp3::read_frame(): decoder error\n");
+			}
 		}
 	}
 	return 0;
@@ -172,7 +180,8 @@ inline int SoundFileMp3::scale(mad_fixed_t sample) {
 
 int SoundFileMp3::size() {
 	if (!file) return 0;
-	return file_size * 8 / bitrate * channels * freq * 2;
+	if (bitrate <= 0) return 0;
+	return (int)((long long)file_size * 8 / bitrate * channels * freq * 2);
 }
 
 int SoundFileMp3::read(char* buffer, int size) {
@@ -186,11 +195,13 @@ int SoundFileMp3::read(char* buffer, int size) {
 		mad_fixed_t* right = pcm->samples[1];
 		unsigned short* data = (unsigned short*)(buffer + read);
 		for (unsigned int length = pcm->length; length > 0; length--) {
+			if (read + channels * 2 > size) break;
 			*data++ = scale(*left++);
 			if (channels == 2) *data++ = scale(*right++);
+			read += channels * 2;
 		}
-		read += pcm->length * channels * 2;
-		if (!read_frame()) return read;
+		if (read >= size) break;
+		if (!read_frame()) break;
 	}
 	return read;
 }
@@ -243,32 +254,31 @@ SoundFileWav::SoundFileWav(const char* name) {
 	memset(&fmt, 0, sizeof(Fmt));
 	file = fopen(name, "rb");
 	if (!file) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): error open \"%s\" file\n", name);
-		return;
+		THROW_ERROR("SoundFileWav::SoundFileWav(): error open \"%s\" file\n", name);
 	}
 	unsigned int magic;
 	unsigned int length;
 	if (fread(&magic, sizeof(unsigned int), 1, file) != 1 ||
 		fread(&length, sizeof(unsigned int), 1, file) != 1) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading header from \"%s\" file\n", name);
+		THROW_ERROR("SoundFileWav::SoundFileWav(): error reading header from \"%s\" file\n", name);
 		fclose(file);
 		file = NULL;
 		return;
 	}
 	if (magic != RIFF) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): wrong main chunk\n");
+		THROW_ERROR("SoundFileWav::SoundFileWav(): wrong main chunk\n");
 		fclose(file);
 		file = NULL;
 		return;
 	}
 	if (fread(&magic, sizeof(unsigned int), 1, file) != 1) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading WAVE header from \"%s\" file\n", name);
+		THROW_ERROR("SoundFileWav::SoundFileWav(): error reading WAVE header from \"%s\" file\n", name);
 		fclose(file);
 		file = NULL;
 		return;
 	}
 	if (magic != WAVE) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): unknown file type\n");
+		THROW_ERROR("SoundFileWav::SoundFileWav(): unknown file type\n");
 		fclose(file);
 		file = NULL;
 		return;
@@ -278,19 +288,19 @@ SoundFileWav::SoundFileWav(const char* name) {
 		if (fread(&length, sizeof(unsigned int), 1, file) != 1) break;
 		if (magic == FMT) {
 			if (fread(&fmt, sizeof(Fmt), 1, file) != 1) {
-				fprintf(stderr, "SoundFileWav::SoundFileWav(): error reading FMT chunk from \"%s\" file\n", name);
+				THROW_ERROR("SoundFileWav::SoundFileWav(): error reading FMT chunk from \"%s\" file\n", name);
 				fclose(file);
 				file = NULL;
 				return;
 			}
 			if (fmt.encoding != 1) {
-				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open compressed waveform data\n");
+				THROW_ERROR("SoundFileWav::SoundFileWav(): can`t open compressed waveform data\n");
 				fclose(file);
 				file = NULL;
 				return;
 			}
 			if (fmt.bitspersample != 16) {
-				fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t open %d bit per sample format\n", fmt.bitspersample);
+				THROW_ERROR("SoundFileWav::SoundFileWav(): can`t open %d bit per sample format\n", fmt.bitspersample);
 				fclose(file);
 				file = NULL;
 				return;
@@ -308,7 +318,7 @@ SoundFileWav::SoundFileWav(const char* name) {
 		}
 	}
 	if (channels == 0 || freq == 0 || data_offset == 0 || data_length == 0) {
-		fprintf(stderr, "SoundFileWav::SoundFileWav(): can`t find FMT or DATA block\n");
+		THROW_ERROR("SoundFileWav::SoundFileWav(): can`t find FMT or DATA block\n");
 		fclose(file);
 		file = NULL;
 	}
@@ -349,9 +359,8 @@ void SoundFileWav::seek(double time) {
 /*****************************************************************************/
 
 SoundFile* SoundFile::load(const char* name) {
-	if (strstr(name, ".ogg")) return new SoundFileOgg(name);
-	if (strstr(name, ".mp3")) return new SoundFileMp3(name);
-	if (strstr(name, ".wav")) return new SoundFileWav(name);
-	fprintf(stderr, "\"%s\" is not supported\n", name);
-	return nullptr;
+	if (has_extension(name, ".ogg")) return new SoundFileOgg(name);
+	if (has_extension(name, ".mp3")) return new SoundFileMp3(name);
+	if (has_extension(name, ".wav")) return new SoundFileWav(name);
+	THROW_ERROR("\"%s\" is not supported\n", name);
 }

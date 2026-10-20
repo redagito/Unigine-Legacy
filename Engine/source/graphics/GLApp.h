@@ -63,7 +63,7 @@ public:
 		BUTTON_DOWN = 1 << 4
 	};
 
-	int keys[512];
+	int keys[512] = { 0 };
 
 	int windowWidth = 0;
 	int windowHeight = 0;

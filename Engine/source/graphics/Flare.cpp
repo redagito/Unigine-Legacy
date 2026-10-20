@@ -14,7 +14,7 @@ Flare::Flare(float min_radius, float max_radius, float sphere_radius, const Path
 {
 
 	if (counter++ == 0) {
-		flare_tex = new Texture(paths.findFile(FLARE_TEX), Texture::TEXTURE_2D, Texture::RGB | Texture::LINEAR_MIPMAP_LINEAR | Texture::CLAMP);
+		flare_tex = new Texture(paths.findFile(FLARE_TEX).c_str(), Texture::TEXTURE_2D, Texture::RGB | Texture::LINEAR_MIPMAP_LINEAR | Texture::CLAMP);
 	}
 }
 

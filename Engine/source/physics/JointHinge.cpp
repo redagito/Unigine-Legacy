@@ -46,14 +46,18 @@ void JointHinge::setAxis1(const vec3& axis) {
 
 
 void JointHinge::setAngularVelocity0(float velocity) {
-	rigidbody_0->angularMomentum = rigidbody_0->orienation * (axis_0 * velocity);
-	rigidbody_0->angularVelocity = rigidbody_0->iWorldInertiaTensor * rigidbody_0->angularMomentum;
+	mat3 inertia = rigidbody_0->iWorldInertiaTensor.inverse();
+	vec3 momentum = inertia * (axis_0 * velocity);
+	rigidbody_0->angularMomentum = momentum;
+	rigidbody_0->angularVelocity = rigidbody_0->iWorldInertiaTensor * momentum;
 }
 
 
 void JointHinge::setAngularVelocity1(float velocity) {
-	rigidbody_1->angularMomentum = rigidbody_1->orienation * (axis_1 * velocity);
-	rigidbody_1->angularVelocity = rigidbody_1->iWorldInertiaTensor * rigidbody_1->angularMomentum;
+	mat3 inertia = rigidbody_1->iWorldInertiaTensor.inverse();
+	vec3 momentum = inertia * (axis_1 * velocity);
+	rigidbody_1->angularMomentum = momentum;
+	rigidbody_1->angularVelocity = rigidbody_1->iWorldInertiaTensor * momentum;
 }
 
 
@@ -87,15 +91,13 @@ int JointHinge::response(float ifps) {
 		normal.normalize();
 
 		float impulse_numerator = -normal_vel;
-		float impulse_denominator = 1.0f / rigidbody_0->mass + 1.0f / rigidbody_1->mass
-			+ normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0)
-			+ normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
+		float impulse_denominator = 0.0f;
+			if (rigidbody_0->immovable == 0) impulse_denominator += 1.0f / rigidbody_0->mass + normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0);
+			if (rigidbody_1->immovable == 0) impulse_denominator += 1.0f / rigidbody_1->mass + normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
 
 		if (rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 		if (rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
 
-		if (rigidbody_0->immovable && rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
-		if (rigidbody_1->immovable && rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 	}
 
 	// angle restriction

@@ -1,4 +1,5 @@
 #include "graphics/Font.h"
+#include "util/Error.h"
 
 #include <cstdio>
 #include <cstdarg>
@@ -10,8 +11,7 @@ Font::Font(const char* name)
 	int width = 0, height = 0;
 	unsigned char* data = Texture::load(name, width, height);
 	if (!data) {
-		fprintf(stderr, "Font::Font(): can`t open \"%s\" file\n", name);
-		return;
+		THROW_ERROR("Font::Font(): can`t open \"%s\" file\n", name);
 	}
 
 	glGenTextures(1, &tex_id);
@@ -150,7 +150,7 @@ void Font::printf(float x, float y, const char* format, ...) {
 	char buf[1024];
 	va_list argptr;
 	va_start(argptr, format);
-	vsprintf(buf, format, argptr);
+	vsnprintf(buf, sizeof(buf), format, argptr);
 	va_end(argptr);
 	puts(x, y, buf);
 }
@@ -160,7 +160,7 @@ void Font::printfc(float x, float y, const char* format, ...) {
 	char buf[1024];
 	va_list argptr;
 	va_start(argptr, format);
-	vsprintf(buf, format, argptr);
+	vsnprintf(buf, sizeof(buf), format, argptr);
 	va_end(argptr);
 	char* s = buf;
 	char* line = buf;

@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include "script/Defines.h"
+#include "AllocationTracker.h"
 
 TEST_CASE("Defines starts empty", "[script][defines]") {
     Defines d;
@@ -64,4 +65,19 @@ TEST_CASE("Defines case sensitivity", "[script][defines]") {
     d.define("FOO");
     REQUIRE(d.isDefine("foo") == 0);
     REQUIRE(d.isDefine("FOO") == 1);
+}
+
+TEST_CASE("Defines releases its storage on destruction", "[script][defines]") {
+    long delta = 0;
+    {
+        alloc::Scope scope;
+        {
+            Defines d;
+            d.define("A");
+            d.define("B");
+            d.define("C");
+        }
+        delta = scope.delta();
+    }
+    REQUIRE(delta == 0);
 }

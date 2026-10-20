@@ -1,4 +1,4 @@
-#include "video.h"
+#include "Video.h"
 
 // TODO Stubbed until FFMPEG lib works for conan 2.x
 //#include <avcodec.h>

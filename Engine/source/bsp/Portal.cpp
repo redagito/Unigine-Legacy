@@ -1,4 +1,5 @@
 #include "bsp/Portal.h"
+#include "util/Error.h"
 
 #include "graphics/OpenGL.h"
 #include "graphics/Mesh.h"
@@ -18,10 +19,10 @@ Portal::~Portal() {
 void Portal::create(Mesh* mesh, int s) {
 	center = mesh->getCenter(s);
 	radius = mesh->getRadius(s);
+	for (int i = 0; i < 4; i++) points[i] = vec3(0, 0, 0);
 	int num_vertex = mesh->getNumVertex(s);
 	if (num_vertex != 6) {
-		fprintf(stderr, "Portal::create(): portal mesh must have only two triangle\n");
-		return;
+		THROW_ERROR("Portal::create(): portal mesh must have only two triangle\n");
 	}
 	Mesh::Vertex* v = mesh->getVertex(s);
 	int flag[6] = { 0 };	// create quad from the six vertexes
@@ -35,8 +36,7 @@ void Portal::create(Mesh* mesh, int s) {
 	for (int i = 0, j = 0; i < 6; i++) {
 		if (flag[i] == 0) points[j++] = v[i].xyz;
 		if (i == 5 && j != 2) {
-			fprintf(stderr, "Portal::create(): can`t find two similar vertexes for create quad\n");
-			return;
+			THROW_ERROR("Portal::create(): can`t find two similar vertexes for create quad\n");
 		}
 	}
 	points[2] = points[1];
@@ -88,7 +88,7 @@ void Portal::getScissor(int* scissor) const
 	if (scissor[1] < Engine::viewport[1]) scissor[1] = Engine::viewport[1];
 	else if (scissor[1] > Engine::viewport[1] + Engine::viewport[3]) scissor[1] = Engine::viewport[1] + Engine::viewport[3];
 	if (scissor[2] < Engine::viewport[0]) scissor[2] = Engine::viewport[0];
-	else if (scissor[2] > Engine::viewport[2] + Engine::viewport[3]) scissor[2] = Engine::viewport[0] + Engine::viewport[2];
+	else if (scissor[2] > Engine::viewport[0] + Engine::viewport[2]) scissor[2] = Engine::viewport[0] + Engine::viewport[2];
 	if (scissor[3] < Engine::viewport[1]) scissor[3] = Engine::viewport[1];
 	else if (scissor[3] > Engine::viewport[1] + Engine::viewport[3]) scissor[3] = Engine::viewport[1] + Engine::viewport[3];
 	scissor[2] -= scissor[0];

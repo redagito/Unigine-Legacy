@@ -39,6 +39,9 @@ TEST_CASE("Light setFlare nullptr", "[graphics][light]") {
 TEST_CASE("Light set with vec3", "[graphics][light]") {
     Light l(vec3(0,0,0), 5.0f, vec4(1,1,1,1), -1.0f, 0);
     l.set(vec3(100,200,300));
+    REQUIRE(l.transform[12] == Approx(100.0f));
+    REQUIRE(l.transform[13] == Approx(200.0f));
+    REQUIRE(l.transform[14] == Approx(300.0f));
 }
 
 TEST_CASE("Light update increments time", "[graphics][light]") {

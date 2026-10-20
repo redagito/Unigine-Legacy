@@ -68,7 +68,10 @@ void Particles::update(float ifps) {
 		vertex[j + 3].xyz = vertex[j + 0].xyz;
 
 		// update color
-		vertex[j + 0].color = color * times[i] / time;
+		if (time > 0.0f) {
+			vertex[j + 0].color = color * times[i] / time;
+		}
+		else vertex[j + 0].color = color;
 		vertex[j + 1].color = vertex[j + 0].color;
 		vertex[j + 2].color = vertex[j + 0].color;
 		vertex[j + 3].color = vertex[j + 0].color;

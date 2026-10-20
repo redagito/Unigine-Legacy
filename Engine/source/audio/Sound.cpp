@@ -24,11 +24,13 @@ Sound::Sound(const char* name, int flag) : flag(flag) {
 		alSourcei(source, AL_BUFFER, buffers[0]);
 		alSourcei(source, AL_LOOPING, flag & LOOP ? AL_TRUE : AL_FALSE);
 		delete[] buffer;
+		buffer = NULL;
 	}
 }
 
 Sound::~Sound() {
 	if (!file) return;
+	ALApp::removeStream(this);
 	delete file;
 	if (flag & STREAM) delete[] buffer;
 	alDeleteSources(1, &source);
@@ -43,10 +45,10 @@ void Sound::play() {
 	alGetSourcei(source, AL_SOURCE_STATE, &state);
 	if (state == AL_PLAYING) return;
 	if (state != AL_PAUSED && flag & STREAM) {
-		file->read(buffer, BUFFER_SIZE);
-		alBufferData(buffers[0], format, buffer, BUFFER_SIZE, file->freq);
-		file->read(buffer, BUFFER_SIZE);
-		alBufferData(buffers[1], format, buffer, BUFFER_SIZE, file->freq);
+		int size = file->read(buffer, BUFFER_SIZE);
+		alBufferData(buffers[0], format, buffer, size, file->freq);
+		size = file->read(buffer, BUFFER_SIZE);
+		alBufferData(buffers[1], format, buffer, size, file->freq);
 		alSourceQueueBuffers(source, 2, buffers);
 		ALApp::addStream(this);
 	}
@@ -67,7 +69,7 @@ void Sound::stop() {
 	if (flag & STREAM) {
 		ALint queued;
 		alGetSourcei(source, AL_BUFFERS_QUEUED, &queued);
-		if (queued > 0) alSourceUnqueueBuffers(source, 2, buffers);
+		if (queued > 0) alSourceUnqueueBuffers(source, queued, buffers);
 		ALApp::removeStream(this);
 		current_buffer = 0;
 	}

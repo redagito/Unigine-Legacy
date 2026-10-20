@@ -14,8 +14,6 @@ public:
 protected:
 	static char* data;
 
-	static const char* error(const char* error, ...);
-
 	static const char* read_token(char* must = NULL);
 	static int read_bool();
 	static int read_int();

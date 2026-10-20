@@ -19,7 +19,7 @@ ObjectSkinnedMesh::ObjectSkinnedMesh(SkinnedMesh* skinnedmesh) : Object(OBJECT_S
 }
 
 ObjectSkinnedMesh::ObjectSkinnedMesh(const char* name, const Paths& paths) : Object(OBJECT_SKINNEDMESH), ragdoll(NULL), skin_time(0.0) {
-	skinnedmesh = new SkinnedMesh(paths.findFile(name));
+	skinnedmesh = new SkinnedMesh(paths.findFile(name).c_str());
 	materials = new Material * [getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];

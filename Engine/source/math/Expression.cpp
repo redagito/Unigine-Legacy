@@ -1,4 +1,5 @@
 #include "math/Expression.h"
+#include "util/Error.h"
 
 #include "script/Parser.h"
 
@@ -17,8 +18,7 @@ Expression::Expression(const char* str) {
 		d = exp[i];
 		if (*s == '\0') {
 			if (i == 7) return;
-			fprintf(stderr, "Expression::Expression(): missing argument %d \"%s\"\n", i, str);
-			return;
+			THROW_ERROR("Expression::Expression(): missing argument %d \"%s\"\n", i, str);
 		}
 		while (1) {
 			if (*s && *s != ',') {
@@ -28,8 +28,7 @@ Expression::Expression(const char* str) {
 			else {
 				if (*d == '\0' && *s != ',') {
 					if (i == 6) return;
-					fprintf(stderr, "Expression::Expression(): missing argument %d \"%s\"\n", i, str);
-					return;
+					THROW_ERROR("Expression::Expression(): missing argument %d \"%s\"\n", i, str);
 				}
 				else *d = '\0';
 				if (*s) s++;
@@ -47,7 +46,7 @@ Expression::Expression(const Expression& expression) {
 }
 
 Expression::~Expression() {
-	for (int i = 0; i < 14; i++) delete exp[i];
+	for (int i = 0; i < 14; i++) delete[] exp[i];
 }
 
 mat4 Expression::to_matrix(float time) const {

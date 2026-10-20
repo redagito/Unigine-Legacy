@@ -133,7 +133,7 @@ void extern_load(void* data) {
 		glapp->lamp = mesh;
 		glapp->lamp_light = new Light(vec3(0, 0, 1000), 6, vec4(0.9, 0.9, 0.9, 1.0), -1.0, 1);
 		glapp->lamp_light->bindMaterial("*", Engine::loadMaterial("lamp_light.mat", glapp->paths));
-		Engine::lights.addLight(glapp->lamp_light);
+		Engine::lights.addLight(glapp->lamp_light, false);
 
 		glapp->lamp_light->setFlare(new Flare(0, 0.6, 0.12, glapp->paths));
 	}
@@ -337,7 +337,7 @@ void GLAppMain::idle() {
 				shoot_particles->set(point - dir * 0.2);
 				shoot_particles->setOffTime(0.2);
 				shoot_time = time;
-				Engine::lights.addLight(shoot_light);
+				Engine::lights.addLight(shoot_light, false);
 			}
 			shoot = 1;
 		}
@@ -446,7 +446,7 @@ void GLAppMain::idle() {
 
 	if (flash_light_toggle) {
 		if (flash == 0) {
-			Engine::lights.addLight(flash_light);
+			Engine::lights.addLight(flash_light, false);
 			flash = 1;
 		}
 	}

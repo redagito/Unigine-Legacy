@@ -8,7 +8,9 @@ class Paths
 {
 public:
 	void addPath(const char* path);
-	const char* findFile(const char* name) const;
+	std::string findFile(const char* name) const;
+
+	const std::vector<std::string>& getPaths() const { return paths; }
 
 private:
 	// path

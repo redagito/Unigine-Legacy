@@ -1,4 +1,5 @@
 #include "math/Spline.h"
+#include "util/Error.h"
 
 #include <cstdio>
 #include <cstring>
@@ -7,8 +8,7 @@ Spline::Spline(const char* name, float speed, int close, int follow) : num(0), p
 
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		fprintf(stderr, "Spline::Spline(): error open \"%s\" file\n", name);
-		return;
+		THROW_ERROR("Spline::Spline(): error open \"%s\" file\n", name);
 	}
 
 	vec3 v;
@@ -27,7 +27,12 @@ Spline::Spline(const char* name, float speed, int close, int follow) : num(0), p
 	params = new vec3[num * 4];
 	for (int i = 0; i < num; i++) {
 		vec3 prev, cur, next;
-		if (i == 0) {
+		if (num == 1) {
+			prev = val[i];
+			cur = val[i];
+			next = val[i];
+		}
+		else if (i == 0) {
 			if (close) prev = val[num - 1];
 			else prev = val[i];
 			cur = val[i];
@@ -84,7 +89,12 @@ Spline::~Spline() {
 
 
 mat4 Spline::to_matrix(float time) {
-	if (!params) return mat4();
+	if (!params || num == 0) return mat4();
+	if (length <= 0.0f) {
+		mat4 transform;
+		transform.translate(params[0]);
+		return transform;
+	}
 	time *= speed / length * (float)num;
 	int i = (int)time;
 	time -= i;

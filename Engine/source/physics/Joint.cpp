@@ -1,4 +1,5 @@
 #include "physics/Joint.h"
+#include "util/Error.h"
 #include "physics/Constants.h"
 
 //
@@ -11,10 +12,9 @@
 Joint::Joint(RigidBody* rigidbody_0, RigidBody* rigidbody_1) : rigidbody_0(rigidbody_0), rigidbody_1(rigidbody_1) {
 
 	if (rigidbody_0->num_joints == RigidBody::NUM_JOINTS || rigidbody_1->num_joints == RigidBody::NUM_JOINTS) {
-		rigidbody_0 = NULL;
-		rigidbody_1 = NULL;
-		fprintf(stderr, "Joint::Joint(): many joints in RigidBody\n");
-		return;
+		this->rigidbody_0 = NULL;
+		this->rigidbody_1 = NULL;
+		THROW_ERROR("Joint::Joint(): many joints in RigidBody\n");
 	}
 
 	rigidbody_0->joints[rigidbody_0->num_joints] = this;
@@ -24,7 +24,7 @@ Joint::Joint(RigidBody* rigidbody_0, RigidBody* rigidbody_1) : rigidbody_0(rigid
 	rigidbody_1->joined_rigidbodies[rigidbody_1->num_joints++] = rigidbody_0;
 
 	Joint** j = new Joint * [++Physic::all_joints];
-	memcpy(j, Physic::joints, sizeof(Joint*) * (Physic::all_joints - 1));
+	if (Physic::joints) memcpy(j, Physic::joints, sizeof(Joint*) * (Physic::all_joints - 1));
 	if (Physic::joints) delete[] Physic::joints;
 	Physic::joints = j;
 }
@@ -33,35 +33,36 @@ Joint::~Joint() {
 
 	if (!rigidbody_0 || !rigidbody_1) return;
 
-	for (int i = 0, j = 0; i < rigidbody_0->num_joints; i++) {
-		if (i != j) {
-			rigidbody_0->joints[j] = rigidbody_0->joints[i];
-			rigidbody_0->joined_rigidbodies[j] = rigidbody_0->joined_rigidbodies[i];
-		}
-		if (rigidbody_0->joints[i] != this) j++;
-	}
-	rigidbody_0->num_joints--;
+	remove_from(rigidbody_0);
+	remove_from(rigidbody_1);
 
-	for (int i = 0, j = 0; i < rigidbody_1->num_joints; i++) {
-		if (i != j) {
-			rigidbody_1->joints[j] = rigidbody_1->joints[i];
-			rigidbody_1->joined_rigidbodies[j] = rigidbody_1->joined_rigidbodies[i];
+	if (Physic::all_joints) {
+		Physic::all_joints--;
+		if (Physic::all_joints == 0) {
+			delete[] Physic::joints;
+			Physic::joints = NULL;
 		}
-		if (rigidbody_1->joints[i] != this) j++;
 	}
-	rigidbody_1->num_joints--;
+}
 
-	if (Physic::all_joints) Physic::all_joints--;
-	else {
-		delete[] Physic::joints;
-		Physic::joints = NULL;
+void Joint::remove_from(RigidBody* body) {
+	if (body->destroyed) {
+		body->num_joints--;
+		return;
 	}
+	for (int i = 0, j = 0; i < body->num_joints; i++) {
+		if (i != j) {
+			body->joints[j] = body->joints[i];
+			body->joined_rigidbodies[j] = body->joined_rigidbodies[i];
+		}
+		if (body->joints[i] != this) j++;
+	}
+	body->num_joints--;
 }
 
 
 int Joint::response(float) {
-	fprintf(stderr, "Joint::response()\n");
-	return 1;
+	THROW_ERROR("Joint::response()\n");
 }
 
 
@@ -88,15 +89,12 @@ int Joint::restriction_response(float ifps, const vec3& point_0, const vec3& poi
 	float normal_vel = normal * vel;
 
 	float impulse_numerator = -normal_vel + (min_dist - dist) * PenetrationSpeed / ifps;
-	float impulse_denominator = 1.0f / rigidbody_0->mass + 1.0f / rigidbody_1->mass
-		+ normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0)
-		+ normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
+	float impulse_denominator = 0.0f;
+	if (rigidbody_0->immovable == 0) impulse_denominator += 1.0f / rigidbody_0->mass + normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0);
+	if (rigidbody_1->immovable == 0) impulse_denominator += 1.0f / rigidbody_1->mass + normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
 
 	if (rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 	if (rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
-
-	if (rigidbody_0->immovable && rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
-	if (rigidbody_1->immovable && rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 
 	return 0;
 }

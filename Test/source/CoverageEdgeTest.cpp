@@ -118,7 +118,12 @@ TEST_CASE("Frustum inside_all point behind camera", "[graphics][frustum]") {
 
 TEST_CASE("Frustum remove portal on empty frustum", "[graphics][frustum]") {
     Frustum f;
+    mat4 proj;
+    proj.perspective(90.0f, 1.0f, 0.1f, 100.0f);
+    f.set(proj);
     f.removePortal();
+    REQUIRE(f.inside(vec3(0, 0, 5), 1.0f) == 0);
+    REQUIRE(f.inside(vec3(0, 0, -5), 1.0f) == 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -165,9 +170,9 @@ TEST_CASE("Lights update only visible lights", "[graphics][lights]") {
 TEST_CASE("Particles set and get color", "[graphics][particles]") {
     Particles p(10, vec3(), 1.0f, 0.0f, vec3(), 1.0f, 1.0f, vec4(1,1,1,1));
     p.setColor(vec4(0.2f, 0.4f, 0.6f, 0.8f));
-    // setColor sets the member 'color' which is protected - we can only test
-    // that it doesn't crash by calling update
     p.update(0.016f);
+    REQUIRE(p.getMin().x <= p.getMax().x);
+    REQUIRE(p.getCenter().x == Approx((p.getMin().x + p.getMax().x) / 2.0f));
 }
 
 // ---------------------------------------------------------------------------

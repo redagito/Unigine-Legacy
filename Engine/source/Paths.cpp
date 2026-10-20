@@ -1,12 +1,12 @@
 #include "Paths.h"
+#include "util/Error.h"
 
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 
 void Paths::addPath(const char* path) {
 	if (!path) {
-		fprintf(stderr, "Paths::addPath(): null path\n");
-		return;
+		THROW_ERROR("Paths::addPath(): null path\n");
 	}
 	char* s = (char*)path;
 	while (1) {
@@ -20,50 +20,36 @@ void Paths::addPath(const char* path) {
 		while (*t != '\0' && *t != ',') *d++ = *t++;
 		*d = '\0';
 		paths.push_back(p);
+		delete[] p;
 		if (*t == '\0') break;
 		s = t + 1;
 	}
 }
 
-const char* Paths::findFile(const char* name) const {
+std::string Paths::findFile(const char* name) const {
 	if (!name) {
-		fprintf(stderr, "Paths::findFile(): null name\n");
-		return NULL;
+		THROW_ERROR("Paths::findFile(): null name\n");
 	}
-	static char buf[1024] = { '\0' };
 
-	for (const char* s = name; *s != '\0'; s++) {
-		if (*s == '%' && *(s + 1) == 's') {
-			static char complex_name[1024];
-			sprintf(complex_name, name, "px");
-			const char* result = findFile(complex_name);
-			if (!result) break;
-			s = result;
-			if (strcmp(s, name)) {
-				char* p = buf + strlen(buf);
-				for (; p > buf; p--) {
-					if (*p == 'x' && *(p - 1) == 'p') {
-						*p = 's';
-						*(p - 1) = '%';
-						break;
-					}
-				}
-				return buf;
-			}
-			break;
-		}
-	}
-	for (int i = (int)paths.size() - 1; i >= -1; i--) 
-	{
-		if (i == -1) sprintf(buf, "%s", name);
-		else sprintf(buf, "%s%s", paths[i].c_str(), name);
+	// a name may carry a "%s" placeholder for a texture face suffix
+	std::string pattern = name;
+	size_t placeholder = pattern.find("%s");
+	std::string probe = pattern;
+	if (placeholder != std::string::npos) probe.replace(placeholder, 2, "px");
 
-		FILE* file = fopen(buf, "rb");
+	for (int i = (int)paths.size() - 1; i >= -1; i--) {
+		std::string candidate = (i == -1) ? probe : paths[i] + probe;
+
+		FILE* file = fopen(candidate.c_str(), "rb");
 		if (file) {
 			fclose(file);
-			return buf;
+			if (placeholder != std::string::npos) {
+				// keep the placeholder so the caller can substitute other suffixes
+				size_t px = candidate.rfind("px");
+				if (px != std::string::npos) candidate.replace(px, 2, "%s");
+			}
+			return candidate;
 		}
 	}
-	fprintf(stderr, "Paths::findFile(): can`t find \"%s\" file\n", name);
-	return name;
+	THROW_ERROR("Paths::findFile(): can`t find \"%s\" file\n", name);
 }

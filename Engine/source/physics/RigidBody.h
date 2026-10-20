@@ -67,8 +67,8 @@ protected:
 
 	Object* object = nullptr;
 
-	int collide_type;
-	Collide* collide;
+	int collide_type = 0;
+	Collide* collide = nullptr;
 
 	float mass;	// physical values
 	float restitution;
@@ -99,7 +99,9 @@ protected:
 	RigidBody* joined_rigidbodies[NUM_JOINTS];
 
 	int simulated;
+	int simulated_frame = -1;
 	int immovable;
+	int destroyed = 0;
 };
 
 #endif /* __RIGID_BODY_H__ */

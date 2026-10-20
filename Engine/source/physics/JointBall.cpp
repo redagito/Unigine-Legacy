@@ -45,15 +45,13 @@ int JointBall::response(float ifps) {
 	normal.normalize();
 
 	float impulse_numerator = -normal_vel;
-	float impulse_denominator = 1.0f / rigidbody_0->mass + 1.0f / rigidbody_1->mass
-		+ normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0)
-		+ normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
+	float impulse_denominator = 0.0f;
+	if (rigidbody_0->immovable == 0) impulse_denominator += 1.0f / rigidbody_0->mass + normal * cross(rigidbody_0->iWorldInertiaTensor * cross(r0, normal), r0);
+	if (rigidbody_1->immovable == 0) impulse_denominator += 1.0f / rigidbody_1->mass + normal * cross(rigidbody_1->iWorldInertiaTensor * cross(r1, normal), r1);
 
 	if (rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 	if (rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
 
-	if (rigidbody_0->immovable && rigidbody_1->immovable == 0) rigidbody_1->addImpulse(p1, -normal * impulse_numerator / impulse_denominator);
-	if (rigidbody_1->immovable && rigidbody_0->immovable == 0) rigidbody_0->addImpulse(p0, normal * impulse_numerator / impulse_denominator);
 
 	// angle restriction
 	restriction_response(ifps, restriction_point_0, restriction_point_1, restriction_min_dist);

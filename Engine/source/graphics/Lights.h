@@ -8,7 +8,7 @@ public:
 	Lights(int growth = 256);
 	~Lights();
 
-	void addLight(Light* light);
+	void addLight(Light* light, bool owned = true);
 	void removeLight(Light* light);
 
 	void clear();
@@ -17,7 +17,7 @@ public:
 	// lights
 	int num_lights = 0;
 	Light** lights = nullptr;
-	
+
 	int num_visible_lights = 0;
 	Light** visible_lights = nullptr;
 
@@ -25,4 +25,7 @@ public:
 
 private:
 	const int growth = 256;
+
+	// lights added by the owner of this object are deleted by clear()
+	bool* owned_lights = nullptr;
 };

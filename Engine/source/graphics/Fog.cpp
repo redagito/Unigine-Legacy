@@ -60,9 +60,6 @@ Fog::~Fog() {
 			delete depth_texes[i];
 			delete fog_texes[i];
 		}
-		delete depth_to_rgb_shader;
-		delete pass_shader;
-		delete fail_shader;
 	}
 }
 

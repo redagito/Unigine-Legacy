@@ -44,6 +44,7 @@ public:
 	~Texture();
 
 	void load(const char* name, GLuint target = TEXTURE_2D, int flag = RGB | LINEAR_MIPMAP_LINEAR);
+	void release();
 
 	void enable();
 	void disable();

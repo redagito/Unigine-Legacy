@@ -12,10 +12,17 @@ TEST_CASE("Particles OFF static", "[graphics][particles]") {
 
 TEST_CASE("Particles constructor zero particles", "[graphics][particles]") {
     Particles p(0, vec3(0,0,0), 0.0f, 0.0f, vec3(0,0,0), 1.0f, 1.0f, vec4(1,1,1,1));
+    REQUIRE(p.getMin().x == Approx(0.0f));
+    REQUIRE(p.getMax().x == Approx(0.0f));
+    REQUIRE(p.getCenter().x == Approx(0.0f));
+    REQUIRE(p.getRadius() == Approx(0.0f));
 }
 
 TEST_CASE("Particles constructor non-zero", "[graphics][particles]") {
     Particles p(10, vec3(50,60,70), 1.0f, 0.5f, vec3(0,-9.8f,0), 2.0f, 3.0f, vec4(0.5f,0.5f,0.5f,1.0f));
+    REQUIRE(p.getMin().x == Approx(0.0f));
+    REQUIRE(p.getMax().x == Approx(0.0f));
+    REQUIRE(p.getRadius() == Approx(0.0f));
 }
 
 TEST_CASE("Particles set changes position", "[graphics][particles]") {
@@ -23,6 +30,10 @@ TEST_CASE("Particles set changes position", "[graphics][particles]") {
     p.set(vec3(100,200,300));
     p.setForce(vec3(0,0,0));
     p.setColor(vec4(1,0,0,1));
+    p.update(2.0f);
+    REQUIRE(p.getCenter().x == Approx(100.0f).margin(5.0f));
+    REQUIRE(p.getCenter().y == Approx(200.0f).margin(5.0f));
+    REQUIRE(p.getCenter().z == Approx(300.0f).margin(5.0f));
 }
 
 TEST_CASE("Particles update respawns expired particles at pos", "[graphics][particles]") {

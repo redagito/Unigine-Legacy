@@ -1,4 +1,5 @@
 #include "math/Position.h"
+#include "util/Error.h"
 //
 #include "math/Expression.h"
 #include "object/Object.h"
@@ -79,8 +80,7 @@ Position& Position::operator=(const vec3& pos)
 
 void Position::find(int sector, float r) {
 	if (num_sectors == NUM_SECTORS) {
-		fprintf(stderr, "Position::find(): this object presents in %d sectors\n", num_sectors);
-		return;
+		THROW_ERROR("Position::find(): this object presents in %d sectors\n", num_sectors);
 	}
 	sectors[num_sectors++] = sector;
 	if (radius < 0.0) return;

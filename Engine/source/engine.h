@@ -2,13 +2,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <io.h>
-#include <fcntl.h>
 #pragma warning(disable: 4244)
 #pragma warning(disable: 4305)
-#else
-#include <unistd.h>
-#include <fcntl.h>
 #endif
 
 #include <GL/gl.h>
@@ -188,7 +183,4 @@ public:
 
 	static void (*extern_load)(void*);
 	static void* extern_load_data;
-
-	// new stderr descriptor
-	static int stderr_fd;
 };

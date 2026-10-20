@@ -1,4 +1,6 @@
 #include "graphics/Shader.h"
+#include "util/Logger.h"
+#include "util/Error.h"
 
 #include "engine.h"
 #include "light.h"
@@ -16,6 +18,17 @@ Shader::Shader(const char* name, const Defines& defines) {
 }
 
 Shader::~Shader() {
+	release();
+}
+
+/*****************************************************************************/
+/*                                                                           */
+/* load shader                                                               */
+/*                                                                           */
+/*****************************************************************************/
+
+
+void Shader::release() {
 	if (vertex_target == GL_VERTEX_PROGRAM_ARB) {
 		if (vertex_id) glDeleteProgramsARB(1, &vertex_id);
 	}
@@ -28,16 +41,15 @@ Shader::~Shader() {
 	else if (fragment_target == GL_COMBINE) {
 		glDeleteLists(fragment_id, 1);
 	}
+	vertex_target = 0;
+	vertex_id = 0;
+	fragment_target = 0;
+	fragment_id = 0;
 }
-
-/*****************************************************************************/
-/*                                                                           */
-/* load shader                                                               */
-/*                                                                           */
-/*****************************************************************************/
 
 
 void Shader::load(const char* name, const Defines& defines) {
+	release();
 	Parser* parser = new Parser(name, defines);
 	// matrixes
 	num_matrixes = 0;
@@ -91,7 +103,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* s = data;
 			while (*s != '\0' && *s != '\n') s++;
 			*s = '\0';
-			fprintf(stderr, "Shader::Shader(): unknown vertex program header \"%s\" in \"%s\" file\n", data, name);
+			THROW_ERROR("Shader::Shader(): unknown vertex program header \"%s\" in \"%s\" file\n", data, name);
 		}
 		if (error != -1) {
 			int line = 0;
@@ -101,7 +113,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* e = ++s;
 			while (*e != '\0' && *e != '\n') e++;
 			*e = '\0';
-			fprintf(stderr, "Shader::Shader(): vertex program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
+			THROW_ERROR("Shader::Shader(): vertex program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
 		}
 	}
 	// fragment program
@@ -131,7 +143,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* s = data;
 			while (*s != '\0' && *s != '\n') s++;
 			*s = '\0';
-			fprintf(stderr, "Shader::Shader(): unknown fragment program header \"%s\" in \"%s\" file\n", data, name);
+			THROW_ERROR("Shader::Shader(): unknown fragment program header \"%s\" in \"%s\" file\n", data, name);
 		}
 		if (error != -1) {
 			int line = 0;
@@ -141,7 +153,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* e = ++s;
 			while (*e != '\0' && *e != '\n') e++;
 			*e = '\0';
-			fprintf(stderr, "Shader::Shader(): fragment program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
+			THROW_ERROR("Shader::Shader(): fragment program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
 		}
 	}
 	delete parser;
@@ -153,7 +165,7 @@ GLuint Shader::compileARBtec(const char* src) {
 	GLuint list = glGenLists(1);
 	glNewList(list, GL_COMPILE);
 	if (strncmp("!!ARBtec1.0", s, 11)) {
-		fprintf(stderr, "Shader::compileARBtec(): unknown header\n");
+		THROW_ERROR("Shader::compileARBtec(): unknown header\n");
 		glEndList();
 		return list;
 	}
@@ -213,12 +225,12 @@ GLuint Shader::compileARBtec(const char* src) {
 				else if (!strncmp("scale4", s, 6) && (s += 6)) glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE, 4);
 				else if (*s == '\n' && s++) break;
 				else {
-					printf("%s\n", s);
+					spdlog::error("Shader::compileARBtec(): unknown token \"{}\"", s);
 					char buf[1024];
 					char* d = buf;
 					while (*s && !strchr(" \t\n\r", *s)) *d++ = *s++;
 					*d = '\0';
-					fprintf(stderr, "Shader::compileARBtec(): unknown token \"%s\"\n", buf);
+					THROW_ERROR("Shader::compileARBtec(): unknown token \"%s\"\n", buf);
 					glEndList();
 					return list;
 				}
@@ -239,7 +251,7 @@ void Shader::getMatrix(const char* name, Matrix* m) {
 	else if (!strcmp(name, "transform")) m->type = TRANSFORM;
 	else if (!strcmp(name, "itransform")) m->type = ITRANSFORM;
 	else if (!strcmp(name, "light_transform")) m->type = LIGHT_TRANSFORM;
-	else fprintf(stderr, "Shader::getMatrix(): unknown matrix \"%s\"\n", name);
+	else THROW_ERROR("Shader::getMatrix(): unknown matrix \"%s\"\n", name);
 }
 
 void Shader::getLocalParameter(const char* name, Shader::LocalParameter* p) {
@@ -256,12 +268,12 @@ void Shader::getLocalParameter(const char* name, Shader::LocalParameter* p) {
 	else if (!strncmp(name, "parameter", 9)) {
 		p->type = PARAMETER;
 		sscanf(name + 9, "%d", &p->parameter);
-		if (p->parameter >= NUM_PARAMETERS) {
-			fprintf(stderr, "Shader::getLocalParameter(): number of parameters is big\n");
+		if (p->parameter < 0 || p->parameter >= NUM_PARAMETERS) {
+			THROW_ERROR("Shader::getLocalParameter(): number of parameters is big\n");
 			p->parameter = 0;
 		}
 	}
-	else fprintf(stderr, "Shader::getLocalParameter(): unknown parameter \"%s\"\n", name);
+	else THROW_ERROR("Shader::getLocalParameter(): unknown parameter \"%s\"\n", name);
 }
 
 
@@ -371,9 +383,9 @@ void Shader::bind()
 	}
 
 	for (int i = 0; i < num_fragment_parameters; i++) {
-		if (vertex_parameters[i].type == TIME) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(Engine::time, Engine::time / 2.0f, Engine::time / 3.0f, Engine::time / 5.0f));
-		else if (vertex_parameters[i].type == SIN) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(sin(Engine::time), sin(Engine::time / 2.0f), sin(Engine::time / 3.0f), sin(Engine::time / 5.0f)));
-		else if (vertex_parameters[i].type == COS) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(cos(Engine::time), cos(Engine::time / 2.0f), cos(Engine::time / 3.0f), cos(Engine::time / 5.0f)));
+		if (fragment_parameters[i].type == TIME) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(Engine::time, Engine::time / 2.0f, Engine::time / 3.0f, Engine::time / 5.0f));
+		else if (fragment_parameters[i].type == SIN) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(sin(Engine::time), sin(Engine::time / 2.0f), sin(Engine::time / 3.0f), sin(Engine::time / 5.0f)));
+		else if (fragment_parameters[i].type == COS) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(cos(Engine::time), cos(Engine::time / 2.0f), cos(Engine::time / 3.0f), cos(Engine::time / 5.0f)));
 		else if (fragment_parameters[i].type == CAMERA) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(Engine::camera, 1));
 		else if (fragment_parameters[i].type == ICAMERA) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, vec4(Engine::itransform * Engine::camera, 1));
 		else if (fragment_parameters[i].type == LIGHT) glProgramLocalParameter4fvARB(fragment_target, fragment_parameters[i].num, Engine::light);

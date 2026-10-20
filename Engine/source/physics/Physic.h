@@ -33,4 +33,7 @@ protected:
 	static int all_rigidbodies;
 	static int num_rigidbodies;
 	static RigidBody **rigidbodies;
+
+	// identifies the current simulation step
+	static int frame_id;
 };

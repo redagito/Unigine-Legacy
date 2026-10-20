@@ -1,24 +1,40 @@
 #include "script/Parser.h"
+#include "util/Logger.h"
+#include "util/Error.h"
 #include "script/Defines.h"
 
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+
 float Parser::variables[26];
+
+namespace {
+
+bool defines_enabled(const std::vector<int>& define_ok) {
+	for (size_t i = 0; i < define_ok.size(); i++) if (!define_ok[i]) return false;
+	return true;
+}
+
+}
 
 
 Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		fprintf(stderr, "Parser::Parser(): error open \"%s\" file\n", name);
-		return;
+		THROW_ERROR("Parser::Parser(): error open \"%s\" file\n", name);
 	}
 	if (fseek(file, 0, SEEK_END) != 0) {
-		fprintf(stderr, "Parser::Parser(): error seeking in \"%s\" file\n", name);
+		THROW_ERROR("Parser::Parser(): error seeking in \"%s\" file\n", name);
 		fclose(file);
 		return;
 	}
 	long size = ftell(file);
 	if (size < 0) {
-		fprintf(stderr, "Parser::Parser(): error getting size of \"%s\" file\n", name);
+		THROW_ERROR("Parser::Parser(): error getting size of \"%s\" file\n", name);
 		fclose(file);
 		return;
 	}
@@ -26,7 +42,7 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 	data = new char[size + 1];
 	memset(data, 0, sizeof(char) * (size + 1));
 	if (fread(data, sizeof(char), size, file) == 0) {
-		fprintf(stderr, "Parser::Parser(): error reading \"%s\" file\n", name);
+		THROW_ERROR("Parser::Parser(): error reading \"%s\" file\n", name);
 		delete[] data;
 		data = NULL;
 		fclose(file);
@@ -36,33 +52,34 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
 	char* s = data;
 	char* d = data;
-	int define_ok[32];
-	int depth = 0;
+	std::vector<int> define_ok;
 
 	while (*s) {
 
 		// #ifdef, #ifndef, #else, #endif preprocessor
 		if (*s == '#' && !strncmp(s + 1, "ifdef", 5)) {
-			char define[1024];
-			sscanf(s + 6, "%s", define);
+			std::string define;
+			s += 6;
+			while (*s && strchr(" \t", *s)) s++;
+			while (*s && !strchr(" \t\n\r", *s)) define.push_back(*s++);
 			while (*s != '\0' && *s != '\n') s++;
-			if (defines.isDefine(define) == 1) define_ok[depth++] = 1;
-			else define_ok[depth++] = 0;
+			define_ok.push_back(defines.isDefine(define.c_str()) == 1);
 		}
 		else if (*s == '#' && !strncmp(s + 1, "ifndef", 6)) {
-			char define[1024];
-			sscanf(s + 7, "%s", define);
+			std::string define;
+			s += 7;
+			while (*s && strchr(" \t", *s)) s++;
+			while (*s && !strchr(" \t\n\r", *s)) define.push_back(*s++);
 			while (*s != '\0' && *s != '\n') s++;
-			if (defines.isDefine(define) == 0) define_ok[depth++] = 1;
-			else define_ok[depth++] = 0;
+			define_ok.push_back(defines.isDefine(define.c_str()) == 0);
 		}
 		else if (*s == '#' && !strncmp(s + 1, "else", 4)) {
 			while (*s != '\0' && *s != '\n') s++;
-			define_ok[depth - 1] = !define_ok[depth - 1];
+			if (!define_ok.empty()) define_ok.back() = !define_ok.back();
 		}
 		else if (*s == '#' && !strncmp(s + 1, "endif", 5)) {
 			while (*s != '\0' && *s != '\n') s++;
-			depth--;
+			if (!define_ok.empty()) define_ok.pop_back();
 		}
 
 		// C-like comments // and /* */
@@ -80,9 +97,7 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
 		// blocks
 		else if (*s == '<' && isalpha(*(s + 1))) {
-			int i = 0;
-			for (; i < depth; i++) if (define_ok[i] == 0) break;
-			if (i == depth) {
+			if (defines_enabled(define_ok)) {
 				while (d > data && *(d - 1) == '\n') d--;
 				*d++ = *s = '\0';
 				char* name = ++s;
@@ -98,15 +113,10 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 				s++;
 			}
 		}
-		else 
+		else
 		{
-			if (depth == 0) *d++ = *s++;
-			else {
-				int i = 0;
-				for (; i < depth; i++) if (define_ok[i] == 0) break;
-				if (i == depth) *d++ = *s++;
-				else s++;
-			}
+			if (defines_enabled(define_ok)) *d++ = *s++;
+			else s++;
 		}
 	}
 	while (d > data && *(d - 1) == '\n') d--;
@@ -115,7 +125,7 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
 Parser::~Parser() {
 	for (std::map<std::string, Block>::iterator it = blocks.begin(); it != blocks.end(); it++) {
-		if (!it->second.use) fprintf(stderr, "Parser::~Parser(): warning unused block \"%s\"\n", it->first.c_str());
+		if (!it->second.use) spdlog::warn("Parser::~Parser(): warning unused block \"{}\"", it->first.c_str());
 	}
 	blocks.clear();
 	delete[] data;
@@ -141,19 +151,17 @@ char* Parser::get(const char* name) {
 /*                                                                           */
 /*****************************************************************************/
 
-int Parser::read_string(const char* str, char* dest) {
+int Parser::read_string(const char* str, std::string& dest) {
 	const char* s = str;
-	char* d = dest;
+	dest.clear();
 	while (*s && strchr(" \t", *s)) s++;
 	if (*s == '"') {
 		s++;
-		while (*s && *s != '"') *d++ = *s++;
-		s++;
-		*d = '\0';
+		while (*s && *s != '"') dest.push_back(*s++);
+		if (*s == '"') s++;
 	}
 	else {
-		while (*s && !strchr(" \t", *s)) *d++ = *s++;
-		*d = '\0';
+		while (*s && !strchr(" \t", *s)) dest.push_back(*s++);
 	}
 	return s - str;
 }
@@ -169,19 +177,18 @@ int Parser::priority(char op) {
 	if (strchr("sScCtTleqfr", op)) return 4;
 	if (strchr("*/%", op)) return 3;
 	if (strchr("+-", op)) return 2;
-	if (strchr("<>!=&|", op)) return 1;
+	if (strchr("<>LG!=&|", op)) return 1;
 	return 0;
 }
 
 
 float Parser::expression(const char* str, const char* variable, float value) {
-	static struct {
+	struct StackItem {
 		char op;
 		float num;
-	} stack[1024];
-	int stack_depth = 0;
-	static char stack_op[1024];
-	int stack_op_depth = 0;
+	};
+	std::vector<StackItem> stack;
+	std::vector<char> stack_op;
 	const char* s = str;
 	int brackets = 0;
 	while (*s) {
@@ -190,117 +197,126 @@ float Parser::expression(const char* str, const char* variable, float value) {
 		s++;
 	}
 	if (brackets != 0) {
-		fprintf(stderr, "Paser::expression(): parse error before '%c'\n", brackets > 0 ? '(' : ')');
-		return 0.0;
+		THROW_ERROR("Paser::expression(): parse error before '%c'\n", brackets > 0 ? '(' : ')');
 	}
 	s = str;
 	while (*s) {
 		if (*s == '(') {
-			stack_op[stack_op_depth++] = *s++;
+			stack_op.push_back(*s++);
 		}
 		else if (*s == ')') {
-			while (stack_op_depth > 0 && stack_op[--stack_op_depth] != '(') stack[stack_depth++].op = stack_op[stack_op_depth];
+			while (!stack_op.empty() && stack_op.back() != '(') {
+				stack.push_back({ stack_op.back(), 0.0f });
+				stack_op.pop_back();
+			}
+			if (!stack_op.empty()) stack_op.pop_back();
 			s++;
 		}
-		else if (strchr("<>+-*/%", *s)) {
-			while (stack_op_depth > 0 && priority(*s) <= priority(stack_op[stack_op_depth - 1])) {
-				stack[stack_depth++].op = stack_op[--stack_op_depth];
-			}
-			stack_op[stack_op_depth++] = *s++;
-		}
 		else if (!strncmp("==", s, 2)) {
-			stack_op[stack_op_depth++] = '=';
+			stack_op.push_back('=');
 			s += 2;
 		}
 		else if (!strncmp("!=", s, 2)) {
-			stack_op[stack_op_depth++] = '!';
+			stack_op.push_back('!');
+			s += 2;
+		}
+		else if (!strncmp("<=", s, 2)) {
+			stack_op.push_back('L');
+			s += 2;
+		}
+		else if (!strncmp(">=", s, 2)) {
+			stack_op.push_back('G');
 			s += 2;
 		}
 		else if (!strncmp("&&", s, 2)) {
-			stack_op[stack_op_depth++] = '&';
+			stack_op.push_back('&');
 			s += 2;
 		}
 		else if (!strncmp("||", s, 2)) {
-			stack_op[stack_op_depth++] = '|';
+			stack_op.push_back('|');
 			s += 2;
 		}
+		else if (strchr("<>+-*/%", *s)) {
+			while (!stack_op.empty() && priority(*s) <= priority(stack_op.back())) {
+				stack.push_back({ stack_op.back(), 0.0f });
+				stack_op.pop_back();
+			}
+			stack_op.push_back(*s++);
+		}
 		else if (!strncmp("sin", s, 3)) {
-			stack_op[stack_op_depth++] = 's';
+			stack_op.push_back('s');
 			s += 3;
 		}
 		else if (!strncmp("asin", s, 4)) {
-			stack_op[stack_op_depth++] = 'S';
+			stack_op.push_back('S');
 			s += 4;
 		}
 		else if (!strncmp("cos", s, 3)) {
-			stack_op[stack_op_depth++] = 'c';
+			stack_op.push_back('c');
 			s += 3;
 		}
 		else if (!strncmp("acos", s, 4)) {
-			stack_op[stack_op_depth++] = 'C';
+			stack_op.push_back('C');
 			s += 4;
 		}
 		else if (!strncmp("tan", s, 3)) {
-			stack_op[stack_op_depth++] = 't';
+			stack_op.push_back('t');
 			s += 3;
 		}
 		else if (!strncmp("atan", s, 4)) {
-			stack_op[stack_op_depth++] = 'T';
+			stack_op.push_back('T');
 			s += 4;
 		}
 		else if (!strncmp("log", s, 3)) {
-			stack_op[stack_op_depth++] = 'l';
+			stack_op.push_back('l');
 			s += 3;
 		}
 		else if (!strncmp("exp", s, 3)) {
-			stack_op[stack_op_depth++] = 'e';
+			stack_op.push_back('e');
 			s += 3;
 		}
 		else if (!strncmp("sqrt", s, 4)) {
-			stack_op[stack_op_depth++] = 'q';
+			stack_op.push_back('q');
 			s += 4;
 		}
 		else if (!strncmp("fabs", s, 4)) {
-			stack_op[stack_op_depth++] = 'f';
+			stack_op.push_back('f');
 			s += 4;
 		}
 		else if (!strncmp("rand", s, 4)) {
-			stack_op[stack_op_depth++] = 'r';
+			stack_op.push_back('r');
 			s += 4;
 		}
 		else if (strchr("0123456789.", *s)) {
-			char buf[1024];
-			char* b = buf;
-			*b++ = *s++;
-			while (*s && strchr("0123456789.", *s)) *b++ = *s++;
-			*b = '\0';
-			stack[stack_depth].op = 'n';
-			stack[stack_depth++].num = atof(buf);
+			std::string number;
+			number.push_back(*s++);
+			while (*s && strchr("0123456789.", *s)) number.push_back(*s++);
+			stack.push_back({ 'n', (float)atof(number.c_str()) });
 		}
-		else if (variable && !strncmp(variable, s, strlen(variable))) {
-			stack[stack_depth].op = 'n';
-			stack[stack_depth++].num = value;
-			s += 4;
+		else if (variable && *variable && !strncmp(variable, s, strlen(variable))) {
+			stack.push_back({ 'n', value });
+			s += strlen(variable);
 		}
 		else if (!variable && *s == '$') {
 			s++;
 			if (!isalpha(*s)) {
-				fprintf(stderr, "Paser::expression(): unknown variable \"%c\"\n", *s);
-				return 0.0;
+				THROW_ERROR("Paser::expression(): unknown variable \"%c\"\n", *s);
 			}
-			stack[stack_depth].op = 'n';
-			stack[stack_depth++].num = variables[tolower(*s++) - 'a'];
+			stack.push_back({ 'n', variables[tolower(*s++) - 'a'] });
 		}
 		else if (strchr(" \t\n\r", *s)) s++;
 		else {
-			fprintf(stderr, "Paser::expression(): unknown token \"%s\"\n", s);
-			return 0.0;
+			THROW_ERROR("Paser::expression(): unknown token \"%s\"\n", s);
 		}
 	}
-	while (stack_op_depth--) stack[stack_depth++].op = stack_op[stack_op_depth];
-	for (int tries = 0; tries < 1024; tries++) {
+	while (!stack_op.empty()) {
+		stack.push_back({ stack_op.back(), 0.0f });
+		stack_op.pop_back();
+	}
+	int tries = (int)stack.size() + 2;
+	for (int try_count = 0; try_count < tries; try_count++) {
 		int end = 0;
-		for (int i = 0, a = -1, b = -1, num = 0; i < stack_depth; i++) {
+		for (int i = 0, a = -1, b = -1, num = 0; i < (int)stack.size(); i++) {
 			if (!stack[i].op) continue;
 			end++;
 			if (num >= 1 && strchr("sScCtTleqfr", stack[i].op)) {
@@ -324,10 +340,12 @@ float Parser::expression(const char* str, const char* variable, float value) {
 				end += 10;
 				break;
 			}
-			else if (num >= 2 && strchr("<>!=&|+-*/%", stack[i].op)) {
+			else if (num >= 2 && strchr("<>LG!=&|+-*/%", stack[i].op)) {
 				switch (stack[i].op) {
 				case '<': stack[i].num = stack[a].num < stack[b].num; break;
+				case 'L': stack[i].num = stack[a].num <= stack[b].num; break;
 				case '>': stack[i].num = stack[a].num > stack[b].num; break;
+				case 'G': stack[i].num = stack[a].num >= stack[b].num; break;
 				case '=': stack[i].num = stack[a].num == stack[b].num; break;
 				case '!': stack[i].num = stack[a].num != stack[b].num; break;
 				case '&': stack[i].num = stack[a].num && stack[b].num; break;
@@ -336,7 +354,11 @@ float Parser::expression(const char* str, const char* variable, float value) {
 				case '-': stack[i].num = stack[a].num - stack[b].num; break;
 				case '*': stack[i].num = stack[a].num * stack[b].num; break;
 				case '/': stack[i].num = stack[a].num / stack[b].num; break;
-				case '%': stack[i].num = (int)stack[a].num % (int)stack[b].num; break;
+				case '%': {
+					int divisor = (int)stack[b].num;
+					stack[i].num = divisor != 0 ? (float)((int)stack[a].num % divisor) : 0.0f;
+					break;
+				}
 				}
 				stack[i].op = 'n';
 				stack[a].op = stack[b].op = 0;
@@ -359,7 +381,7 @@ float Parser::expression(const char* str, const char* variable, float value) {
 			else num = 0;
 		}
 		if (end < 3) {
-			for (int i = 0; i < stack_depth; i++) {
+			for (int i = 0; i < (int)stack.size(); i++) {
 				if (stack[i].op == 'n') return stack[i].num;
 			}
 		}
@@ -374,20 +396,20 @@ float Parser::expression(const char* str, const char* variable, float value) {
 /*****************************************************************************/
 
 
-int Parser::read_token(const char* src, char* dest) {
+int Parser::read_token(const char* src, std::string* dest) {
 	const char* s = src;
 	int brackets_0 = 0;
 	int brackets_1 = 0;
+	std::string token;
 	while (*s) {
 		if (*s == '(') brackets_0++;
 		else if (*s == ')' && --brackets_0 < 0) break;
 		else if (*s == '{') brackets_1++;
 		else if (*s == '}' && --brackets_1 < 0) break;
 		else if (*s == ';') break;
-		if (dest) *dest++ = *s++;
-		else s++;
+		token.push_back(*s++);
 	}
-	if (dest) *dest = '\0';
+	if (dest) *dest = token;
 	return s - src;
 }
 
@@ -396,10 +418,10 @@ int Parser::interpret_eq(const char* src) {
 	const char* s = src;
 
 	while (*s && strchr(" \t", *s)) s++;
-	if (*s++ != '$') throw("Parser::interpret_eq(): missing '$'");
+	if (*s++ != '$') THROW_ERROR("Parser::interpret_eq(): missing '$'");
 
 	char var = *s++;
-	if (!isalpha(var)) throw("Parser::interpret_eq(): unknown variable");
+	if (!isalpha(var)) THROW_ERROR("Parser::interpret_eq(): unknown variable");
 	var = tolower(var);
 
 	int op = 0;
@@ -409,54 +431,54 @@ int Parser::interpret_eq(const char* src) {
 	else if (!strncmp("-=", s, 2)) { s += 2; op = 2; }
 	else if (!strncmp("++", s, 2)) { s += 2; op = 3; }
 	else if (!strncmp("--", s, 2)) { s += 2; op = 4; }
-	else throw("Parser::interpret_eq(): missing '='");
+	else THROW_ERROR("Parser::interpret_eq(): missing '='");
 
-	char exp[1024];
-	s += read_token(s, exp);
+	std::string exp;
+	s += read_token(s, &exp);
 	if (*s) *s++;
 
-	if (op == 0) variables[var - 'a'] = expression(exp);
-	else if (op == 1) variables[var - 'a'] += expression(exp);
-	else if (op == 2) variables[var - 'a'] -= expression(exp);
+	if (op == 0) variables[var - 'a'] = expression(exp.c_str());
+	else if (op == 1) variables[var - 'a'] += expression(exp.c_str());
+	else if (op == 2) variables[var - 'a'] -= expression(exp.c_str());
 	else if (op == 3) variables[var - 'a'] += 1.0f;
-	else if (op == 4) variables[var - 'a'] -= 1.0f; // fix: was op == 3 (duplicate, x-- became x++)
+	else if (op == 4) variables[var - 'a'] -= 1.0f;
 
 	return s - src;
 }
 
 
-int Parser::interpret_if(const char* src, char** dest) {
+int Parser::interpret_if(const char* src, std::string* dest) {
 	const char* s = src + 2;
-	char condition[1024];
+	std::string condition;
 
 	while (*s && strchr(" \t", *s)) s++;
-	if (*s++ != '(') throw("Parser::interpret_if(): can`t find '('");
+	if (*s++ != '(') THROW_ERROR("Parser::interpret_if(): can`t find '('");
 
-	s += read_token(s, condition);
-	if (*s++ != ')') throw("Parser::interpret_if(): can`t find ')'");
+	s += read_token(s, &condition);
+	if (*s++ != ')') THROW_ERROR("Parser::interpret_if(): can`t find ')'");
 
 	while (*s && strchr(" \t", *s)) s++;
-	if (*s++ != '{') throw("Parser::interpret_if(): can`t find '{'");
+	if (*s++ != '{') THROW_ERROR("Parser::interpret_if(): can`t find '{'");
 
-	if (expression(condition)) {
+	if (expression(condition.c_str())) {
 		s += interpret_main(s, dest);
 		while (*s && strchr(" \t", *s)) s++;
 		if (!strncmp("else", s, 4)) {
 			s += 4;
 			while (*s && strchr(" \t", *s)) s++;
-			if (*s++ != '{') throw("Parser::interpret_if(): can`t find '{'");
+			if (*s++ != '{') THROW_ERROR("Parser::interpret_if(): can`t find '{'");
 			s += read_token(s, NULL);
-			if (*s++ != '}') throw("Parser::interpret_if(): can`t find '}'");
+			if (*s++ != '}') THROW_ERROR("Parser::interpret_if(): can`t find '}'");
 		}
 	}
 	else {
 		s += read_token(s, NULL);
-		if (*s++ != '}') throw("Parser::interpret_if(): can`t find '}'");
+		if (*s++ != '}') THROW_ERROR("Parser::interpret_if(): can`t find '}'");
 		while (*s && strchr(" \t", *s)) s++;
 		if (!strncmp("else", s, 4)) {
 			s += 4;
 			while (*s && strchr(" \t", *s)) s++;
-			if (*s++ != '{') throw("Parser::interpret_if(): can`t find '{'");
+			if (*s++ != '{') THROW_ERROR("Parser::interpret_if(): can`t find '{'");
 			s += interpret_main(s, dest);
 		}
 	}
@@ -464,41 +486,42 @@ int Parser::interpret_if(const char* src, char** dest) {
 }
 
 
-int Parser::interpret_for(const char* src, char** dest) {
+int Parser::interpret_for(const char* src, std::string* dest) {
 	const char* s = src + 3;
-	char condition[1024];
-	char addition[1024];
+	std::string condition;
+	std::string addition;
 
 	while (*s && strchr(" \t", *s)) s++;
-	if (*s++ != '(') throw("Parser::interpret_for(): can`t find '('");
+	if (*s++ != '(') THROW_ERROR("Parser::interpret_for(): can`t find '('");
 	s += interpret_eq(s);
 
-	s += read_token(s, condition);
-	if (*s++ != ';') throw("Parser::interpret_for(): can`t find ';'");
+	s += read_token(s, &condition);
+	if (*s++ != ';') THROW_ERROR("Parser::interpret_for(): can`t find ';'");
 
-	s += read_token(s, addition);
-	if (*s++ != ')') throw("Parser::interpret_for(): can`t find ')'");
+	s += read_token(s, &addition);
+	if (*s++ != ')') THROW_ERROR("Parser::interpret_for(): can`t find ')'");
 
 	while (*s && strchr(" \t", *s)) s++;
-	if (*s++ != '{') throw("Parser::interpret_for(): can`t find '{'");
+	if (*s++ != '{') THROW_ERROR("Parser::interpret_for(): can`t find '{'");
 
 	const char* begin = NULL;
-	do {
+	while (expression(condition.c_str())) {
 		if (!begin) {
 			begin = s;
 			s += interpret_main(begin, dest);
 		}
 		else interpret_main(begin, dest);
-		interpret_eq(addition);
-	} while (expression(condition));
+		interpret_eq(addition.c_str());
+	}
 	return s - src;
 }
 
 
-int Parser::interpret_main(const char* src, char** dest) {
+int Parser::interpret_main(const char* src, std::string* dest) {
 	const char* s = src;
 	int brackets = 0;
 	int new_word = 1;
+	char buffer[64];
 	while (*s) {
 		if (new_word && !strncmp("if", s, 2) && strchr("( \t", *(s + 2))) {
 			s += interpret_if(s, dest);
@@ -509,16 +532,23 @@ int Parser::interpret_main(const char* src, char** dest) {
 		else if (*s == '$' && (*(s + 1) == '(' || isalpha(*(s + 1)))) {
 			if (*(s + 1) == '(') {
 				s += 2;
-				char exp[1024];
-				s += read_token(s, exp);
+				std::string exp;
+				s += read_token(s, &exp);
 				if (*s) *s++;
-				(*dest) += sprintf(*dest, "%g", expression(exp));
+				snprintf(buffer, sizeof(buffer), "%g", expression(exp.c_str()));
+				dest->append(buffer);
 			}
 			else {
 				const char* e = ++s;
 				while (*e && !strchr("=(){};\n\r", *e)) e++;
-				if (*e == '=') s += interpret_eq(s - 1);
-				else (*dest) += sprintf(*dest, "%g", variables[tolower(*s++ - 'a')]);
+				if (*e == '=') {
+					const char* dollar = s - 1;
+					s = dollar + interpret_eq(dollar);
+				}
+				else {
+					snprintf(buffer, sizeof(buffer), "%g", variables[tolower(*s++ - 'a')]);
+					dest->append(buffer);
+				}
 			}
 		}
 		else {
@@ -532,7 +562,7 @@ int Parser::interpret_main(const char* src, char** dest) {
 			}
 			if (strchr(" \t\n\r", *s)) new_word = 1;
 			else new_word = 0;
-			*(*dest)++ = *s++;
+			dest->push_back(*s++);
 		}
 	}
 	return s - src;
@@ -542,18 +572,16 @@ int Parser::interpret_main(const char* src, char** dest) {
 const char* Parser::interpret(const char* src) {
 	if (!src) return NULL;
 
-	char* dest = new char[2 * 1024 * 1024];	// 2 Mb
+	std::string out;
 
 	try {
-		char* d = dest;
-		interpret_main(src, &d);
-		*d = '\0';
+		interpret_main(src, &out);
 	}
 	catch (const char* msg) {
-		fprintf(stderr, "%s\n", msg);
-		delete[] dest;
-		return NULL;
+		THROW_ERROR("%s", msg);
 	}
 
+	char* dest = new char[out.size() + 1];
+	memcpy(dest, out.c_str(), out.size() + 1);
 	return dest;
 }

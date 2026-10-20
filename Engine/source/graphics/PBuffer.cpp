@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "graphics/PBuffer.h"
+#include "util/Logger.h"
+#include "util/Error.h"
+
 #ifndef _WIN32
 
 /* linux
@@ -24,8 +28,6 @@
 #include <vector>
 #include <GL/gl.h>
 #include <GL/glx.h>
-
-#include "graphics/PBuffer.h"
 
 
 struct PBuffer_data {
@@ -108,13 +110,13 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 			pattrib.push_back(0);
 			
 			config = glXChooseFBConfigSGIX(display,screen,&attrib[0],&count);
-			if(!config) throw("glXChooseFBConfigSGIX() failed");
+			if(!config) THROW_ERROR("glXChooseFBConfigSGIX() failed");
 			
 			pbuffer = glXCreateGLXPbufferSGIX(display,config[0],width,height,&pattrib[0]);
-			if(!pbuffer) throw("glXCreateGLXPbufferSGIX() failed");
+			if(!pbuffer) THROW_ERROR("glXCreateGLXPbufferSGIX() failed");
 			
 			context = glXCreateContextWithConfigSGIX(display,config[0],GLX_RGBA_TYPE,old_context,true);
-			if(!context) throw("glXCreateContextWithConfigSGIX() failed");
+			if(!context) THROW_ERROR("glXCreateContextWithConfigSGIX() failed");
 			
 		} else {
 			pattrib.push_back(GLX_PBUFFER_WIDTH);
@@ -124,22 +126,22 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 			pattrib.push_back(0);
 			
 			config = glXChooseFBConfig(display,screen,&attrib[0],&count);	
-			if(!config) throw("glXChooseFBConfig() failed");
+			if(!config) THROW_ERROR("glXChooseFBConfig() failed");
 			
 			pbuffer = glXCreatePbuffer(display,config[0],&pattrib[0]);
-			if(!pbuffer) throw("glXCreatePbuffer() failed");
+			if(!pbuffer) THROW_ERROR("glXCreatePbuffer() failed");
 			
 			XVisualInfo *visual = glXGetVisualFromFBConfig(display,config[0]);
-			if(!visual) throw("glXGetVisualFromFBConfig() failed");
+			if(!visual) THROW_ERROR("glXGetVisualFromFBConfig() failed");
 			
 			context = glXCreateContext(display,visual,old_context,true);
-			if(!context) throw("glXCreateContext() failed");
+			if(!context) THROW_ERROR("glXCreateContext() failed");
 		}
 	}
-	catch(const char *error) {
-		fprintf(stderr,"PBuffer::PBuffer: %s\n",error);
+	catch(const EngineError& e) {
 		pbuffer = glXGetCurrentDrawable();
 		context = old_context;
+		THROW_ERROR("PBuffer::PBuffer: %s", e.getMessage().c_str());
 	}
 	
 	data = new PBuffer_data;
@@ -167,7 +169,7 @@ void PBuffer::enable() {
 	data->old_context = glXGetCurrentContext();
 	
 	if(!glXMakeCurrent(data->display,data->pbuffer,data->context)) {
-		fprintf(stderr,"PBuffer::enable(): glXMakeCurrent() failed\n");
+		THROW_ERROR("PBuffer::enable(): glXMakeCurrent() failed\n");
 	}
 }
 
@@ -175,7 +177,7 @@ void PBuffer::enable() {
 void PBuffer::disable() {
 	glXWaitGL();
 	if(!glXMakeCurrent(data->display,data->old_pbuffer,data->old_context)) {
-		fprintf(stderr,"PBuffer::disable(): glXMakeCurrent() failed\n");
+		THROW_ERROR("PBuffer::disable(): glXMakeCurrent() failed\n");
 	}
 }
 
@@ -257,65 +259,70 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 	attrib.push_back(WGL_TYPE_RGBA_ARB);
 	attrib.push_back(0);
 	
-	HDC hdc;
-	HPBUFFERARB pbuffer;
-	HGLRC context;
-	
+	HDC hdc = NULL;
+	HPBUFFERARB pbuffer = NULL;
+	HGLRC context = NULL;
+
 	try {
 		if(!wglChoosePixelFormatARB) wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
-		if(!wglChoosePixelFormatARB) throw("wglGetProcAddress(\"wglChoosePixelFormatARB\") failed");
+		if(!wglChoosePixelFormatARB) THROW_ERROR("wglGetProcAddress(\"wglChoosePixelFormatARB\") failed");
 		
 		if(!wglCreatePbufferARB) wglCreatePbufferARB = (PFNWGLCREATEPBUFFERARBPROC)wglGetProcAddress("wglCreatePbufferARB");
-		if(!wglCreatePbufferARB) throw("wglGetProcAddress(\"wglCreatePbufferARB\") failed");
+		if(!wglCreatePbufferARB) THROW_ERROR("wglGetProcAddress(\"wglCreatePbufferARB\") failed");
 		
 		if(!wglGetPbufferDCARB) wglGetPbufferDCARB = (PFNWGLGETPBUFFERDCARBPROC)wglGetProcAddress("wglGetPbufferDCARB");
-		if(!wglGetPbufferDCARB) throw("wglGetProcAddress(\"wglGetPbufferDCARB\") failed");
+		if(!wglGetPbufferDCARB) THROW_ERROR("wglGetProcAddress(\"wglGetPbufferDCARB\") failed");
 		
 		if(!wglReleasePbufferDCARB) wglReleasePbufferDCARB = (PFNWGLRELEASEPBUFFERDCARBPROC)wglGetProcAddress("wglReleasePbufferDCARB");
-		if(!wglReleasePbufferDCARB) throw("wglGetProcAddress(\"wglReleasePbufferDCARB\") failed\n");
+		if(!wglReleasePbufferDCARB) THROW_ERROR("wglGetProcAddress(\"wglReleasePbufferDCARB\") failed\n");
 		
 		if(!wglDestroyPbufferARB) wglDestroyPbufferARB = (PFNWGLDESTROYPBUFFERARBPROC)wglGetProcAddress("wglDestroyPbufferARB");
-		if(!wglDestroyPbufferARB) throw("wglGetProcAddress(\"wglDestroyPbufferARB\") failed\n");
+		if(!wglDestroyPbufferARB) THROW_ERROR("wglGetProcAddress(\"wglDestroyPbufferARB\") failed\n");
 		
 		int format;
 		unsigned int count;
 		wglChoosePixelFormatARB(old_hdc,&attrib[0],NULL,1,&format,&count);
-		if(count == 0) throw("wglChoosePixelFormatARB() failed");
+		if(count == 0) THROW_ERROR("wglChoosePixelFormatARB() failed");
 		
 		int pattrib[] = { 0 };
 		
 		pbuffer = wglCreatePbufferARB(old_hdc,format,width,height,pattrib);
-		if(!pbuffer) throw("wglCreatePbufferARB() failed");
+		if(!pbuffer) THROW_ERROR("wglCreatePbufferARB() failed");
 		
 		hdc = wglGetPbufferDCARB(pbuffer);
-		if(!hdc) throw("wglGetPbufferDCARB() failed");
+		if(!hdc) THROW_ERROR("wglGetPbufferDCARB() failed");
 		
 		context = wglCreateContext(hdc);
-		if(!context) throw("wglCreateContext() failed");
+		if(!context) THROW_ERROR("wglCreateContext() failed");
 		
-		if(!wglShareLists(old_context,context)) throw("wglShareLists() failed");
+		if(!wglShareLists(old_context,context)) THROW_ERROR("wglShareLists() failed");
 	}
-	catch(const char *error) {
-		fprintf(stderr,"PBuffer::PBuffer: %s\n",error);
-		hdc = old_hdc;
-		context = old_context;
+	catch(const EngineError& e) {
+		if (pbuffer) {
+			if (hdc) wglReleasePbufferDCARB(pbuffer, hdc);
+			wglDestroyPbufferARB(pbuffer);
+		}
+		if (context) wglDeleteContext(context);
+		THROW_ERROR("PBuffer::PBuffer: %s", e.getMessage().c_str());
 	}
-	
+
 	data = new PBuffer_data;
 	data->hdc = hdc;
 	data->pbuffer = pbuffer;
 	data->context = context;
-	
+
 	data->old_hdc = old_hdc;
 	data->old_context = old_context;
 }
 
 
 PBuffer::~PBuffer() {
-	wglDeleteContext(data->context);
-	wglReleasePbufferDCARB(data->pbuffer,data->hdc);
-	wglDestroyPbufferARB(data->pbuffer);
-	wglMakeCurrent(data->hdc,data->context);
+	if (data->context && data->context != data->old_context) wglDeleteContext(data->context);
+	if (data->pbuffer) {
+		if (data->hdc && data->hdc != data->old_hdc) wglReleasePbufferDCARB(data->pbuffer, data->hdc);
+		wglDestroyPbufferARB(data->pbuffer);
+	}
+	delete data;
 }
 
 
@@ -324,14 +331,14 @@ void PBuffer::enable() {
 	data->old_context = wglGetCurrentContext();
 	
 	if(!wglMakeCurrent(data->hdc,data->context)) {
-		fprintf(stderr,"PBuffer::disable(): wglMakeCurrent() failed\n");
+		THROW_ERROR("PBuffer::disable(): wglMakeCurrent() failed\n");
 	}
 }
 
 
 void PBuffer::disable() {
 	if(!wglMakeCurrent(data->old_hdc,data->old_context)) {
-		fprintf(stderr,"PBuffer::disable(): wglMakeCurrent() failed\n");
+		THROW_ERROR("PBuffer::disable(): wglMakeCurrent() failed\n");
 	}
 }
 

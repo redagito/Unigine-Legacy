@@ -1,4 +1,5 @@
 #include "graphics/Material.h"
+#include "util/Error.h"
 
 //
 #include "light.h"
@@ -34,16 +35,16 @@ void Material::load(const char* name, const Paths& paths) {
 	Parser* parser = new Parser(name, Engine::defines);
 	if (parser->get("blend")) {
 		blend = 1;
-		char s[1024];
-		char d[1024];
-		sscanf(parser->get("blend"), "%s %s", s, d);
+		char s[1024] = { 0 };
+		char d[1024] = { 0 };
+		sscanf(parser->get("blend"), "%1023s %1023s", s, d);
 		sfactor = getBlendFactor(s);
 		dfactor = getBlendFactor(d);
 	}
 	if (parser->get("alpha_test")) {
 		alpha_test = 1;
-		char func[1024];
-		sscanf(parser->get("alpha_test"), "%s %f", func, &alpha_ref);
+		char func[1024] = { 0 };
+		sscanf(parser->get("alpha_test"), "%1023s %f", func, &alpha_ref);
 		alpha_func = getAlphaFunc(func);
 	}
 	for (int i = 0; i < Shader::NUM_PARAMETERS; i++) {
@@ -109,7 +110,7 @@ void Material::load(const char* name, const Paths& paths) {
 					else if (!strcmp(buf, "ANISOTROPY_8")) flag |= Texture::ANISOTROPY_8;
 					else if (!strcmp(buf, "ANISOTROPY_16")) flag |= Texture::ANISOTROPY_16;
 
-					else fprintf(stderr, "Material::Material(): unknown texture%d flag \"%s\"\n", i, buf);
+					else THROW_ERROR("Material::Material(): unknown texture%d flag \"%s\"\n", i, buf);
 				}
 				else *d++ = *s++;
 			}
@@ -134,8 +135,7 @@ GLuint Material::getBlendFactor(const char* factor) {
 	if (!strcmp(factor, "ONE_MINUS_DST_ALPHA")) return GL_ONE_MINUS_DST_ALPHA;
 	if (!strcmp(factor, "DST_COLOR")) return GL_DST_COLOR;
 	if (!strcmp(factor, "ONE_MINUS_DST_COLOR")) return GL_ONE_MINUS_DST_COLOR;
-	fprintf(stderr, "Material::getBlendFactor() unknown blend factor \"%s\"\n", factor);
-	return 0;
+	THROW_ERROR("Material::getBlendFactor() unknown blend factor \"%s\"\n", factor);
 }
 
 
@@ -148,8 +148,7 @@ GLuint Material::getAlphaFunc(const char* func) {
 	if (!strcmp(func, "NOTEQUAL")) return GL_NOTEQUAL;
 	if (!strcmp(func, "GEQUAL")) return GL_GEQUAL;
 	if (!strcmp(func, "ALWAYS")) return GL_ALWAYS;
-	fprintf(stderr, "Material::getAlphaFunc() unknown alpha function \"%s\"\n", func);
-	return 0;
+	THROW_ERROR("Material::getAlphaFunc() unknown alpha function \"%s\"\n", func);
 }
 
 /*****************************************************************************/

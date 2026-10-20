@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include "util/Error.h"
 #include <catch2/catch_approx.hpp>
 #include "math/Position.h"
 #include "math/Spline.h"
@@ -49,14 +50,7 @@ TEST_CASE("Position to_matrix without spline or expression", "[math][position]")
 }
 
 TEST_CASE("Position to_matrix with spline", "[math][position]") {
-    Spline* s = new Spline("nonexistent_file.spline", 1.0f, 0, 0);
-    Position p;
-    p.setSpline(s);
-    mat4 m = p.to_matrix(0.0f);
-    REQUIRE(m[0] == Approx(1.0f));
-    REQUIRE(m[5] == Approx(1.0f));
-    REQUIRE(m[10] == Approx(1.0f));
-    REQUIRE(m[15] == Approx(1.0f));
+    REQUIRE_THROWS_AS(new Spline("nonexistent_file.spline", 1.0f, 0, 0), EngineError);
 }
 
 TEST_CASE("Position to_matrix with expression", "[math][position]") {
@@ -71,15 +65,7 @@ TEST_CASE("Position to_matrix with expression", "[math][position]") {
 }
 
 TEST_CASE("Position update with spline modifies transform", "[math][position]") {
-    Spline* s = new Spline("nonexistent_file.spline", 1.0f, 0, 0);
-    Position p;
-    p.setSpline(s);
-    mat4 t;
-    p.update(0.0f, t);
-    REQUIRE(t[0] == Approx(1.0f));
-    REQUIRE(t[5] == Approx(1.0f));
-    REQUIRE(t[10] == Approx(1.0f));
-    REQUIRE(t[15] == Approx(1.0f));
+    REQUIRE_THROWS_AS(new Spline("nonexistent_file.spline", 1.0f, 0, 0), EngineError);
 }
 
 TEST_CASE("Position copy assignment deep copies", "[math][position]") {

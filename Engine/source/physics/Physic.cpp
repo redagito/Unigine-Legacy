@@ -22,6 +22,7 @@ Joint **Physic::joints = NULL;
 int Physic::all_rigidbodies = 0;
 int Physic::num_rigidbodies = 0;
 RigidBody **Physic::rigidbodies = NULL;
+int Physic::frame_id = 0;
 
 
 int rigidbody_cmp(const void *a,const void *b) {
@@ -116,7 +117,8 @@ void Physic::update(float ifps) {
 		rigidbodies[i]->simulated = 0;
 		rigidbodies[i]->immovable = 0;
 	}
-	
+
 	num_rigidbodies = 0;
 	num_joints = 0;
+	frame_id++;
 }

@@ -1,4 +1,6 @@
 #include "engine.h"
+#include "util/Logger.h"
+#include "util/Error.h"
 
 #include "graphics/PBuffer.h"
 #include "graphics/Console.h"
@@ -97,17 +99,16 @@ std::map<std::string, Material*> Engine::materials;
 std::map<std::string, Mesh*> Engine::meshes;
 
 void (*Engine::extern_load)(void*) = NULL;
-void* Engine::extern_load_data;
+	void* Engine::extern_load_data;
 
-int Engine::stderr_fd;
 
 static void define(int argc, char** argv, void*) {
 	if (argc == 1) {
-		Engine::console->printf("defines: ");
+		spdlog::info("defines: ");
 		for (int i = 0; i < (int)Engine::defines.data.size(); i++) {
-			Engine::console->printf("%s%s", Engine::defines.data[i], i == (int)Engine::defines.data.size() - 1 ? "" : ", ");
+			spdlog::info("{}{}", Engine::defines.data[i], i == (int)Engine::defines.data.size() - 1 ? "" : ", ");
 		}
-		Engine::console->printf("\n");
+		spdlog::info("\n");
 	}
 	else {
 		for (int i = 1; i < argc; i++) Engine::defines.define(argv[i]);
@@ -115,7 +116,7 @@ static void define(int argc, char** argv, void*) {
 }
 
 static void undef(int argc, char** argv, void*) {
-	if (argc == 1) Engine::console->printf("undef: missing argument\n");
+	if (argc == 1) spdlog::error("undef: missing argument");
 	else {
 		for (int i = 1; i < argc; i++) Engine::defines.undef(argv[i]);
 	}
@@ -123,7 +124,7 @@ static void undef(int argc, char** argv, void*) {
 
 static void load(int argc, char** argv, void* p) {
 	Paths& paths = *(Paths*)p;
-	if (argc == 1) Engine::console->printf("load: missing argument\n");
+	if (argc == 1) spdlog::error("load: missing argument");
 	else Engine::load(argv[1], paths);
 }
 
@@ -135,17 +136,17 @@ static void reload(int argc, char** argv, void* p) {
 		if (!strcmp(argv[1], "shaders")) Engine::reload_shaders(paths);
 		else if (!strcmp(argv[1], "textures")) Engine::reload_textures(paths);
 		else if (!strcmp(argv[1], "materials")) Engine::reload_materials(paths);
-		else Engine::console->printf("reload: unknown argument (shaders, textures, materials)\n");
+		else spdlog::error("reload: unknown argument (shaders, textures, materials)");
 	}
 }
 
 static void status(int, char**, void*) {
-	Engine::console->printf("lights: %d\nfogs: %d\nmirrors: %d\nobjects: %d\n",
+	spdlog::info("lights: {}\nfogs: {}\nmirrors: {}\nobjects: {}",
 		Engine::lights.num_lights, Engine::num_fogs, Engine::num_mirrors, Engine::num_objects);
 }
 
 static void extensions(int, char**, void*) {
-	Engine::console->printf("%s\n", Engine::extensions);
+	spdlog::info("{}", Engine::extensions);
 }
 
 /*****************************************************************************/
@@ -158,45 +159,19 @@ static void extensions(int, char**, void*) {
 int Engine::init(Paths& paths, const char* config)
 {
 
-	// bind system stderr to Engine::console
-#ifndef _WIN32
-	int fd[2];
-	pipe(fd);
-	stderr_fd = fd[0];
-	fcntl(stderr_fd, F_SETFL, O_NONBLOCK);
-	stderr = fdopen(fd[1], "w");
-	setbuf(stderr, NULL);
-#else
-	HANDLE read, write;
-	SECURITY_ATTRIBUTES security;
-
-	security.nLength = sizeof(security);
-	security.bInheritHandle = TRUE;
-	security.lpSecurityDescriptor = NULL;
-
-	CreatePipe(&read, &write, &security, 1024 - 1);
-
-	DWORD mode = PIPE_READMODE_BYTE | PIPE_NOWAIT;
-	SetNamedPipeHandleState(read, &mode, NULL, NULL);
-	SetNamedPipeHandleState(write, &mode, NULL, NULL);
-
-	stderr_fd = _open_osfhandle((intptr_t)read, O_RDONLY | O_BINARY);
-	FILE* file = fdopen(_open_osfhandle((intptr_t)write, O_WRONLY | O_BINARY), "w");
-	*stderr = *file;
-	setbuf(stderr, NULL);
-#endif
+	logger::init(ENGINE_LOG_NAME);
 
 	// load config
 	if (config) {
 		FILE* file = fopen(config, "rb");
-		if (!file) fprintf(stderr, "Engine::init(): error open \"%s\" file\n", config);
+		if (!file) THROW_ERROR("Engine::init(): error open \"%s\" file\n", config);
 		else {
 			char buf[1024];
 			while (fscanf(file, "%s", buf) == 1) {
 				if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) { while (fread(buf, 1, 1, file) == 1 && buf[0] != '\n'); }
-				else if (!strcmp(buf, "screen_width")) { if (fscanf(file, "%d", &screen_width) != 1) fprintf(stderr, "Engine::init(): error reading screen_width\n"); }
-				else if (!strcmp(buf, "screen_height")) { if (fscanf(file, "%d", &screen_height) != 1) fprintf(stderr, "Engine::init(): error reading screen_height\n"); }
-				else if (!strcmp(buf, "screen_multisample")) { if (fscanf(file, "%d", &screen_multisample) != 1) fprintf(stderr, "Engine::init(): error reading screen_multisample\n"); }
+				else if (!strcmp(buf, "screen_width")) { if (fscanf(file, "%d", &screen_width) != 1) THROW_ERROR("Engine::init(): error reading screen_width\n"); }
+				else if (!strcmp(buf, "screen_height")) { if (fscanf(file, "%d", &screen_height) != 1) THROW_ERROR("Engine::init(): error reading screen_height\n"); }
+				else if (!strcmp(buf, "screen_multisample")) { if (fscanf(file, "%d", &screen_multisample) != 1) THROW_ERROR("Engine::init(): error reading screen_multisample\n"); }
 				else if (!strcmp(buf, "texture_filter")) {
 					texture_filter = 0;
 					fgets(buf, sizeof(buf), file);
@@ -220,12 +195,12 @@ int Engine::init(Paths& paths, const char* config)
 						}
 						else if (strchr(" \t", *s)) s++;
 						else {
-							fprintf(stderr, "Engine::init(): unknown token \"%s\" in \"%s\" file\n", s, config);
+							THROW_ERROR("Engine::init(): unknown token \"%s\" in \"%s\" file\n", s, config);
 							break;
 						}
 					}
 				}
-				else fprintf(stderr, "Engine::init(): unknown token \"%s\" in \"%s\" file\n", buf, config);
+				else THROW_ERROR("Engine::init(): unknown token \"%s\" in \"%s\" file\n", buf, config);
 			}
 		}
 	}
@@ -236,11 +211,10 @@ int Engine::init(Paths& paths, const char* config)
 #endif
 
 	// console
-	FILE* log = fopen(ENGINE_LOG_NAME, "wb");
-	if (!log) fprintf(stderr, "Engine::init(): error creating \"%s\" log file\n", ENGINE_LOG_NAME);
-	console = new Console(paths.findFile(ENGINE_FONT_NAME), log);
+	console = new Console(paths.findFile(ENGINE_FONT_NAME).c_str());
+	logger::add_sink(console->createSink());
 
-	console->printf(1, 1, 1, "3D Engine\n");
+	spdlog::info("3D Engine");
 
 	// renderer abilities
 	vendor = (char*)glGetString(GL_VENDOR);
@@ -248,7 +222,7 @@ int Engine::init(Paths& paths, const char* config)
 	version = (char*)glGetString(GL_VERSION);
 	extensions = (char*)glGetString(GL_EXTENSIONS);
 
-	console->printf("vendor: %s\nrenderer: %s\nversion: %s\n\n", vendor, renderer, version);
+	spdlog::info("vendor: {}\nrenderer: {}\nversion: {}\n", vendor, renderer, version);
 
 	have_occlusion = 0;
 	have_stencil_two_side = 0;
@@ -262,26 +236,26 @@ int Engine::init(Paths& paths, const char* config)
 	physic_toggle = 1;
 
 	if (!extensions) {
-		console->printf("can`t get OpenGL extensions string");
+		spdlog::error("can`t get OpenGL extensions string");
 		return 0;
 	}
 
 	if (!strstr(extensions, "GL_ARB_vertex_program")) {	// fatal error
-		console->printf("can`t find GL_ARB_vertex_program extension");
+		spdlog::error("can`t find GL_ARB_vertex_program extension");
 		return 0;
 	}
 
 	if (strstr(extensions, "GL_ARB_occlusion_query")) {
 		have_occlusion = 1;
-		console->printf("find GL_ARB_occlusion_query extension\n");
+		spdlog::info("find GL_ARB_occlusion_query extension");
 	}
 	if (strstr(extensions, "GL_EXT_stencil_two_side")) {
 		have_stencil_two_side = 1;
-		console->printf("find GL_EXT_stencil_two_side extension\n");
+		spdlog::info("find GL_EXT_stencil_two_side extension");
 	}
 	if (strstr(extensions, "GL_NV_depth_clamp")) {
 		defines.define("DEPTH_CLAMP");
-		console->printf("find GL_NV_depth_clamp extension\n");
+		spdlog::info("find GL_NV_depth_clamp extension");
 	}
 
 	if (strstr(extensions, "GL_NV_fragment_program")) {			// nv3x cards
@@ -289,24 +263,24 @@ int Engine::init(Paths& paths, const char* config)
 		defines.define("TEYLOR");
 		defines.define("OFFSET");
 		defines.define("HORIZON");
-		console->printf("using GL_NV_fragment_program shaders code\n");
+		spdlog::info("using GL_NV_fragment_program shaders code");
 	}
 	else if (strstr(extensions, "GL_ARB_fragment_program")) {		// radeons
 		defines.define("RADEON");
 		defines.define("TEYLOR");
 		defines.define("OFFSET");
 		defines.define("HORIZON");
-		console->printf("using GL_ARB_fragment_program shaders code\n");
+		spdlog::info("using GL_ARB_fragment_program shaders code");
 	}
 	else if (strstr(extensions, "GL_ARB_texture_env_combine")) {	// hm
 		defines.define("VERTEX");
 		if (!defines.isDefine("DEPTH_CLAMP")) shadows_toggle = 0;
 		fog_toggle = 0;
 		mirror_toggle = 0;
-		console->printf("using GL_ARB_texture_env_combine \"shaders\" code\n");
+		spdlog::info("using GL_ARB_texture_env_combine \"shaders\" code");
 	}
 	else {
-		console->printf("pls upgrade you video card...\n");
+		spdlog::error("pls upgrade you video card...");
 		return 0;
 	}
 
@@ -363,7 +337,7 @@ int Engine::init(Paths& paths, const char* config)
 	time = 0;
 	frame = 0;
 
-	console->printf("\ninit ok\n");
+	spdlog::info("init ok");
 
 	return 1;
 }
@@ -394,7 +368,7 @@ void Engine::clear(const Paths& paths) {
 
 	// mirrors
 	if (num_mirrors) {
-		for (int i = 0; i < num_fogs; i++) delete mirrors[i];
+		for (int i = 0; i < num_mirrors; i++) delete mirrors[i];
 		delete[] mirrors;
 		mirrors = NULL;
 		num_mirrors = 0;
@@ -434,16 +408,16 @@ void Engine::clear(const Paths& paths) {
 
 void Engine::load(const char* name, Paths& paths) {
 	clear(paths);
-	Map::load(paths.findFile(name), paths);
+	Map::load(paths.findFile(name).c_str(), paths);
 	if (extern_load) extern_load(extern_load_data);
-	console->printf("load \"%s\" ok\n", name);
+	spdlog::info("load \"{}\" ok", name);
 }
 
 
 Shader* Engine::loadShader(const char* name, const Paths& paths) {
 	std::map<std::string, Shader*>::iterator it = shaders.find(name);
 	if (it == shaders.end()) {
-		Shader* shader = new Shader(paths.findFile(name), defines);
+		Shader* shader = new Shader(paths.findFile(name).c_str(), defines);
 		shaders[name] = shader;
 		return shader;
 	}
@@ -453,7 +427,7 @@ Shader* Engine::loadShader(const char* name, const Paths& paths) {
 Texture* Engine::loadTexture(const char* name, const Paths& paths, GLuint target, int flag) {
 	std::map<std::string, Texture*>::iterator it = textures.find(name);
 	if (it == textures.end()) {
-		Texture* texture = new Texture(paths.findFile(name), target, flag);
+		Texture* texture = new Texture(paths.findFile(name).c_str(), target, flag);
 		textures[name] = texture;
 		return texture;
 	}
@@ -463,7 +437,7 @@ Texture* Engine::loadTexture(const char* name, const Paths& paths, GLuint target
 Material* Engine::loadMaterial(const char* name, const Paths& paths) {
 	std::map<std::string, Material*>::iterator it = materials.find(name);
 	if (it == materials.end()) {
-		Material* material = new Material(paths.findFile(name), paths);
+		Material* material = new Material(paths.findFile(name).c_str(), paths);
 		materials[name] = material;
 		return material;
 	}
@@ -473,7 +447,7 @@ Material* Engine::loadMaterial(const char* name, const Paths& paths) {
 Mesh* Engine::loadMesh(const char* name, const Paths& paths) {
 	std::map<std::string, Mesh*>::iterator it = meshes.find(name);
 	if (it == meshes.end()) {
-		Mesh* mesh = new MeshVBO(paths.findFile(name));
+		Mesh* mesh = new MeshVBO(paths.findFile(name).c_str());
 		meshes[name] = mesh;
 		return mesh;
 	}
@@ -491,24 +465,21 @@ void Engine::reload(const Paths& paths) {
 void Engine::reload_shaders(const Paths& paths) {
 	std::map<std::string, Shader*>::iterator it;
 	for (it = shaders.begin(); it != shaders.end(); it++) {
-		it->second->~Shader();
-		it->second->load(paths.findFile(it->first.c_str()), defines);
+		it->second->load(paths.findFile(it->first.c_str()).c_str(), defines);
 	}
 }
 
 void Engine::reload_textures(const Paths& paths) {
 	std::map<std::string, Texture*>::iterator it;
 	for (it = textures.begin(); it != textures.end(); it++) {
-		it->second->~Texture();
-		it->second->load(paths.findFile(it->first.c_str()), it->second->target, it->second->flag);
+		it->second->load(paths.findFile(it->first.c_str()).c_str(), it->second->target, it->second->flag);
 	}
 }
 
 void Engine::reload_materials(const Paths& paths) {
 	std::map<std::string, Material*>::iterator it;
 	for (it = materials.begin(); it != materials.end(); it++) {
-		it->second->~Material();
-		it->second->load(paths.findFile(it->first.c_str()), paths);
+		it->second->load(paths.findFile(it->first.c_str()).c_str(), paths);
 	}
 }
 
@@ -549,7 +520,7 @@ void Engine::addFog(Fog* fog) {
 
 		Engine::fogs = fogs;
 		if (visible_fogs) delete[] visible_fogs;
-		visible_fogs = new Fog * [num_visible_fogs + ENGINE_GAP_SIZE];
+		visible_fogs = new Fog * [num_fogs + ENGINE_GAP_SIZE];
 	}
 	fogs[num_fogs++] = fog;
 }
@@ -600,18 +571,6 @@ void Engine::update(float ifps) {
 
 	// new frame
 	frame++;
-
-	// read stderr
-	char buf[1024];
-	while (1) {
-		int ret = read(stderr_fd, buf, sizeof(buf));
-		if (ret > 0) {
-			buf[ret] = '\0';
-			console->printf(1, 0, 0, "%s", buf);
-			if (console->getActivity() == 0) console->keyPress('`');
-		}
-		else break;
-	}
 
 	// update time
 	time += ifps;

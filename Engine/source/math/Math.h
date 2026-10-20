@@ -138,6 +138,16 @@ inline vec3 cross(const vec3& v1, const vec3& v2) {
 	return ret;
 }
 
+// grow an axis aligned box so that it contains p
+inline void accumulate_bounds(vec3& min, vec3& max, const vec3& p) {
+	if (min.x > p.x) min.x = p.x;
+	if (max.x < p.x) max.x = p.x;
+	if (min.y > p.y) min.y = p.y;
+	if (max.y < p.y) max.y = p.y;
+	if (min.z > p.z) min.z = p.z;
+	if (max.z < p.z) max.z = p.z;
+}
+
 /*****************************************************************************/
 /*                                                                           */
 /* vec4                                                                      */

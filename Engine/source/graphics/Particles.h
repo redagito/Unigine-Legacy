@@ -52,7 +52,7 @@ protected:
 	int num_vertex = 0;
 	Vertex* vertex = nullptr;
 
-	vec3 min;			// bound box
-	vec3 max;
-	vec3 center;
+	vec3 min = vec3(0, 0, 0);			// bound box
+	vec3 max = vec3(0, 0, 0);
+	vec3 center = vec3(0, 0, 0);
 };

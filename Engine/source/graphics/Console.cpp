@@ -1,8 +1,36 @@
 #include "graphics/Console.h"
+#include "util/Logger.h"
+
+#include <spdlog/sinks/sink.h>
 
 #define CONSOLE_CMD	"~# "
 
-Console::Console(const char* name, FILE* file) : Font(name), current_line(0), last_history(0), current_history(0), activity(0), time(1.0), file(file) {
+namespace {
+
+class ConsoleSink : public spdlog::sinks::sink {
+public:
+
+	explicit ConsoleSink(Console* console) : console(console) {}
+
+	void log(const spdlog::details::log_msg& msg) override {
+		float r = 1.0f, g = 1.0f, b = 1.0f;
+		if (msg.level >= spdlog::level::err) { r = 1.0f; g = 0.0f; b = 0.0f; }
+		else if (msg.level == spdlog::level::warn) { r = 1.0f; g = 1.0f; b = 0.0f; }
+		console->push(std::string(msg.payload.data(), msg.payload.size()), r, g, b);
+	}
+
+	void flush() override {}
+
+	void set_pattern(const std::string&) override {}
+
+	void set_formatter(std::unique_ptr<spdlog::formatter>) override {}
+
+	Console* console;
+};
+
+}
+
+Console::Console(const char* name) : Font(name), current_line(0), last_history(0), current_history(0), activity(0), time(1.0) {
 	for (int i = 0; i < NUM_LINES; i++) {
 		lines[i].str = new char[1024];
 		lines[i].str[0] = '\0';
@@ -21,11 +49,69 @@ Console::~Console() {
 }
 
 
+std::shared_ptr<spdlog::sinks::sink> Console::createSink() {
+	return std::make_shared<ConsoleSink>(this);
+}
+
+
+void Console::push(const std::string& text, float r, float g, float b) {
+	std::lock_guard<std::mutex> lock(mutex);
+	Message message;
+	message.text = text;
+	message.r = r;
+	message.g = g;
+	message.b = b;
+	pending.push_back(message);
+}
+
+
+void Console::drain() {
+	std::vector<Message> messages;
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		messages.swap(pending);
+	}
+	for (size_t i = 0; i < messages.size(); i++) {
+		const Message& message = messages[i];
+		Line* line = &lines[current_line];
+		line->r = message.r;
+		line->g = message.g;
+		line->b = message.b;
+		char* d = line->str;
+		while (*d) d++;	// end of line
+
+		const char* s = message.text.c_str();
+		for (; *s; s++) {
+			if (*s != '\n' && d - line->str < 100) *d++ = *s;
+			else {
+				if (*s != '\n') {
+					char* e = d - 1;
+					while (e > line->str && !strchr(" \t", *e)) e--;
+					if (e > line->str) {
+						s -= d - e;
+						d = e;
+					}
+				}
+				*d = '\0';
+				if (++current_line == NUM_LINES) current_line = 0;
+				line = &lines[current_line];
+				line->r = message.r;
+				line->g = message.g;
+				line->b = message.b;
+				d = line->str;
+				*d = '\0';
+			}
+		}
+		*d = '\0';
+	}
+}
+
+
 void Console::printf(float x, float y, const char* str, ...) {
 	char buf[4096];
 	va_list argptr;
 	va_start(argptr, str);
-	vsprintf(buf, str, argptr);
+	vsnprintf(buf, sizeof(buf), str, argptr);
 	va_end(argptr);
 	puts(x, y, buf);
 }
@@ -35,7 +121,7 @@ void Console::printf(const char* str, ...) {
 	char buf[4096];
 	va_list argptr;
 	va_start(argptr, str);
-	vsprintf(buf, str, argptr);
+	vsnprintf(buf, sizeof(buf), str, argptr);
 	va_end(argptr);
 	printf(0, 1, 0, "%s", buf);
 }
@@ -44,44 +130,11 @@ void Console::printf(float r, float g, float b, const char* str, ...) {
 	char buf[4096];
 	va_list argptr;
 	va_start(argptr, str);
-	vsprintf(buf, str, argptr);
+	vsnprintf(buf, sizeof(buf), str, argptr);
 	va_end(argptr);
-
-	Line* line = &lines[current_line];
-	line->r = r;
-	line->g = g;
-	line->b = b;
-	char* d = line->str;
-	while (*d) d++;	// end of line
-
-	for (char* s = buf; *s; s++) {
-		if (*s != '\n' && d - line->str < 100) *d++ = *s;
-		else {
-			if (*s != '\n') {
-				char* e = d - 1;
-				while (e > line->str && !strchr(" \t", *e)) e--;
-				if (e > line->str) {
-					s -= d - e;
-					d = e;
-				}
-			}
-			*d = '\0';
-			if (++current_line == NUM_LINES) current_line = 0;
-			line = &lines[current_line];
-			line->r = r;
-			line->g = g;
-			line->b = b;
-			d = line->str;
-			*d = '\0';
-		}
-	}
-	*d = '\0';
-
-	::printf("%s", buf);
-	if (file) {
-		fprintf(file, "%s", buf);
-		fflush(file);
-	}
+	auto console_logger = spdlog::get("console");
+	if (console_logger) console_logger->info("{}", buf);
+	push(buf, r, g, b);
 }
 
 
@@ -89,7 +142,9 @@ void Console::render(float ifps, int num) {
 
 	time += ifps;
 
-	if (height < step * num + step) num = height / step - 1;	// fluent on/off
+	drain();
+
+	if (step > 0 && height < step * num + step) num = height / step - 1;	// fluent on/off
 	if (activity && time < 0.1) num = (int)((float)num * time * 10.0);
 	else if (!activity) {
 		if (time > 0.1) return;
@@ -108,6 +163,7 @@ void Console::render(float ifps, int num) {
 	glEnable(GL_TEXTURE_2D);
 
 	for (int i = 0; i < num; i++) {
+		if (num > NUM_LINES) break;
 		if (current_line - num + i < 0) {
 			Line* line = &lines[NUM_LINES + current_line - num + i];
 			glColor3f(line->r, line->g, line->b);
@@ -216,7 +272,8 @@ void Console::keyPress(int key) {
 				if (!c) printf(1, 0, 0, "unknown command \"%s\"\n", argv[0]);
 				else c->func(argc, argv, c->data);
 			}
-			strcpy(history[current_history++], cmd);
+			strncpy(history[current_history++], cmd, sizeof(history[0]) - 1);
+			history[current_history - 1][sizeof(history[0]) - 1] = '\0';
 			if (current_history == HISTORY) current_history = 0;
 			last_history = current_history;
 			cmd[0] = '\0';
@@ -236,7 +293,8 @@ void Console::keyPress(int key) {
 			last_history++;
 			if (last_history == HISTORY) last_history = 0;
 		}
-		strcpy(cmd, history[last_history]);
+		strncpy(cmd, history[last_history], sizeof(cmd) - 1);
+		cmd[sizeof(cmd) - 1] = '\0';
 		cmd_ptr = cmd + strlen(cmd);
 	}
 	else if (key == '\2') {
@@ -247,13 +305,16 @@ void Console::keyPress(int key) {
 		else {
 			last_history++;
 			if (last_history == HISTORY) last_history = 0;
-			strcpy(cmd, history[last_history]);
+			strncpy(cmd, history[last_history], sizeof(cmd) - 1);
+			cmd[sizeof(cmd) - 1] = '\0';
 			cmd_ptr = cmd + strlen(cmd);
 		}
 	}
 	else {
-		*cmd_ptr++ = key;
-		*cmd_ptr = '\0';
+		if (cmd_ptr - cmd < (int)sizeof(cmd) - 1) {
+			*cmd_ptr++ = key;
+			*cmd_ptr = '\0';
+		}
 	}
 }
 

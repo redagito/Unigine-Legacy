@@ -1,4 +1,5 @@
 #include "collide.h"
+#include "util/Error.h"
 
 //#include "engine.h"
 #include "object/Object.h"
@@ -52,10 +53,11 @@ Collide::~Collide() {
 /*****************************************************************************/
 
 int Collide::addContact(Object* object, Material* material, const vec3& point, const vec3& normal, float depth, int min_depth) {
+	if (num_contacts == NUM_CONTACTS) return 0;
 	Contact* c = &contacts[num_contacts++];
 	if (min_depth) {
 		vec3 p = object->is_identity ? point : object->transform * point;
-		for (int i = 0; i < num_contacts; i++) {
+		for (int i = 0; i < num_contacts - 1; i++) {
 			if (contacts[i].point == p) {
 				num_contacts--;
 				if (contacts[i].depth < depth) return 1;
@@ -64,18 +66,15 @@ int Collide::addContact(Object* object, Material* material, const vec3& point, c
 			}
 		}
 	}
-	if (num_contacts == NUM_CONTACTS) {
-		num_contacts--;
-		return 0;
-	}
-	if (num_objects == 0) {
-		objects[num_objects++] = object;
-	}
-	else {
+	if (num_objects < NUM_OBJECTS) {
+		bool found = false;
 		for (int i = 0; i < num_objects; i++) {
-			if (objects[i] == object) break;
-			else if (i == num_objects - 1) objects[num_objects++] = object;
+			if (objects[i] == object) {
+				found = true;
+				break;
+			}
 		}
+		if (!found) objects[num_objects++] = object;
 	}
 	c->object = object;
 	c->material = material;
@@ -313,7 +312,7 @@ int Collide::collide(Object* object) {
 			surfaces[num_surfaces].num_triangles = mesh->getNumTriangles(i);
 
 			if (surfaces[num_surfaces].num_triangles > NUM_TRIANGLES) {
-				fprintf(stderr, "Collide::collide(): many vertex %d\n", surfaces[num_surfaces].num_triangles);
+				THROW_ERROR("Collide::collide(): many vertex %d\n", surfaces[num_surfaces].num_triangles);
 				continue;
 			}
 
@@ -336,14 +335,7 @@ int Collide::collide(Object* object) {
 				ct[j].c[1] = vec4(normal, -ct[j].v[1] * normal);
 				normal = rotate * vec4(t[j].c[2]);
 				ct[j].c[2] = vec4(normal, -ct[j].v[2] * normal);
-				for (int k = 0; k < 3; k++) {
-					if (min.x > ct[j].v[k].x) min.x = ct[j].v[k].x;
-					else if (max.x < ct[j].v[k].x) max.x = ct[j].v[k].x;
-					if (min.y > ct[j].v[k].y) min.y = ct[j].v[k].y;
-					else if (max.y < ct[j].v[k].y) max.y = ct[j].v[k].y;
-					if (min.z > ct[j].v[k].z) min.z = ct[j].v[k].z;
-					else if (max.z < ct[j].v[k].z) max.z = ct[j].v[k].z;
-				}
+				for (int k = 0; k < 3; k++) accumulate_bounds(min, max, ct[j].v[k]);
 			}
 			// bound sphere
 			surfaces[num_surfaces].center = (max + min) / 2.0f;
@@ -355,13 +347,13 @@ int Collide::collide(Object* object) {
 			// new surface
 			num_surfaces++;
 			if (num_surfaces == NUM_SURFACES) {
-				fprintf(stderr, "Collide::collide(): many surfaces %d\n", NUM_SURFACES);
+				THROW_ERROR("Collide::collide(): many surfaces %d\n", NUM_SURFACES);
 				break;
 			}
 		}
 	}
 	else {
-		fprintf(stderr, "Collide::collide(): %d format isn`t supported\n", object->type);
+		THROW_ERROR("Collide::collide(): %d format isn`t supported\n", object->type);
 	}
 
 	if (!num_surfaces) return 0;
@@ -420,14 +412,7 @@ int Collide::collide(Object* object) {
 						ct[l].v[0] = transform * t[l].v[0];
 						ct[l].v[1] = transform * t[l].v[1];
 						ct[l].v[2] = transform * t[l].v[2];
-						for (int m = 0; m < 3; m++) {
-							if (min.x > ct[l].v[m].x) min.x = ct[l].v[m].x;
-							else if (max.x < ct[l].v[m].x) max.x = ct[l].v[m].x;
-							if (min.y > ct[l].v[m].y) min.y = ct[l].v[m].y;
-							else if (max.y < ct[l].v[m].y) max.y = ct[l].v[m].y;
-							if (min.z > ct[l].v[m].z) min.z = ct[l].v[m].z;
-							else if (max.z < ct[l].v[m].z) max.z = ct[l].v[m].z;
-						}
+						for (int m = 0; m < 3; m++) accumulate_bounds(min, max, ct[l].v[m]);
 					}
 					// bound sphere
 					surfaces[num_surfaces].center = (max + min) / 2.0f;

@@ -1,4 +1,5 @@
 #include "graphics/Mirror.h"
+#include "util/Error.h"
 
 #include "engine.h"
 #include "graphics/Frustum.h"
@@ -16,7 +17,9 @@ Mirror::Mirror(Mesh *mesh) : mesh(mesh), material(NULL) {
 	pos = getCenter();
 	
 	if(mesh->getNumSurfaces() == 0) {
-		fprintf(stderr,"Mirror::Mirror: bad mesh\n");
+		THROW_ERROR("Mirror::Mirror: bad mesh\n");
+	} else if (mesh->getNumTriangles(0) == 0) {
+		THROW_ERROR("Mirror::Mirror: bad mesh\n");
 	} else {
 		Mesh::Triangle *triangles = mesh->getTriangles(0);
 		plane = triangles[0].plane;
@@ -39,6 +42,7 @@ Mirror::Mirror(Mesh *mesh) : mesh(mesh), material(NULL) {
 }
 
 Mirror::~Mirror() {
+	for(int i = 0; i < 3; i++) delete mirror_texes[i];
 	if(--counter == 0) {
 		for(int i = 0; i < 3; i++) delete pbuffers[i];
 	}

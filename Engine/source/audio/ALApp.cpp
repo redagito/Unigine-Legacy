@@ -1,4 +1,5 @@
 #include "audio/ALApp.h"
+#include "util/Error.h"
 
 #include <cstdio>
 
@@ -11,26 +12,24 @@ constexpr const int NotFound = -1;
 ALApp::ALApp() {
 	device = alcOpenDevice(NULL);
 	if (!device) {
-		fprintf(stderr, "ALApp::ALApp(): invalid device\n");
-		return;
+		THROW_ERROR("ALApp::ALApp(): invalid device\n");
 	}
 	context = alcCreateContext(device, NULL);
 	if (!context) {
-		fprintf(stderr, "ALApp::ALApp(): invalid context\n");
-		return;
+		THROW_ERROR("ALApp::ALApp(): invalid context\n");
 	}
 	alcMakeContextCurrent(context);
 }
 
 ALApp::~ALApp() {
-	alcDestroyContext(context);
-	alcCloseDevice(device);
+	if (context) alcDestroyContext(context);
+	if (device) alcCloseDevice(device);
 }
 
 void ALApp::error() {
 	ALenum error;
 	while ((error = alGetError()) != AL_NO_ERROR) {
-		fprintf(stderr, "ALApp::error(): 0x%04X\n", error);
+		THROW_ERROR("ALApp::error(): 0x%04X\n", error);
 	}
 }
 

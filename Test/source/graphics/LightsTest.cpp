@@ -2,6 +2,9 @@
 #include "graphics/Lights.h"
 #include "graphics/Light.h"
 #include "math/Math.h"
+#include <catch2/catch_approx.hpp>
+
+using Catch::Approx;
 
 TEST_CASE("Lights default constructor", "[graphics][lights]") {
     Lights l;
@@ -58,5 +61,25 @@ TEST_CASE("Lights custom growth", "[graphics][lights]") {
     l.addLight(c);
     REQUIRE(l.num_lights == 3);
     l.clear();
-    // clear() deletes all lights, so don't delete them again
+}
+
+TEST_CASE("Lights clear keeps lights it does not own", "[graphics][lights]") {
+    Lights l;
+    Light* external = new Light(vec3(0,0,0), 10.0f, vec4(1,1,1,1), -1.0f, 0);
+    l.addLight(external, false);
+    REQUIRE(l.num_lights == 1);
+    l.clear();
+    REQUIRE(l.num_lights == 0);
+    external->update(0.016f);
+    REQUIRE(external->time == Approx(0.016f));
+    delete external;
+}
+
+TEST_CASE("Lights addLight ignores a light that is already added", "[graphics][lights]") {
+    Lights l;
+    Light* a = new Light(vec3(0,0,0), 10.0f, vec4(1,1,1,1), -1.0f, 0);
+    l.addLight(a);
+    l.addLight(a);
+    REQUIRE(l.num_lights == 1);
+    l.clear();
 }

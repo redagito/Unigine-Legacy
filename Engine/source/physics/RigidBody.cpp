@@ -19,17 +19,15 @@ RigidBody::RigidBody(Object* object, float mass, float restitution, float fricti
 	else if (flag & COLLIDE_SPHERE) collide_type = COLLIDE_SPHERE;
 	collide = new Collide();
 
-	if (flag && BODY_BOX) {
-		vec3 min = object->getMin();
-		vec3 max = object->getMax();
-		vec3 v = (max - min) / 2.0;
+	if (flag & RigidBody::BODY_BOX) {
+		vec3 size = object->getMax() - object->getMin();
 		mat3 inertiaTensor;
-		inertiaTensor[0] = 1.0f / 12.0f * mass * (v.y * v.y + v.z * v.z);
-		inertiaTensor[4] = 1.0f / 12.0f * mass * (v.x * v.x + v.z * v.z);
-		inertiaTensor[8] = 1.0f / 12.0f * mass * (v.x * v.x + v.y * v.y);
+		inertiaTensor[0] = 1.0f / 12.0f * mass * (size.y * size.y + size.z * size.z);
+		inertiaTensor[4] = 1.0f / 12.0f * mass * (size.x * size.x + size.z * size.z);
+		inertiaTensor[8] = 1.0f / 12.0f * mass * (size.x * size.x + size.y * size.y);
 		iBodyInertiaTensor = inertiaTensor.inverse();
 	}
-	else if (flag && BODY_SPHERE) {
+	else if (flag & RigidBody::BODY_SPHERE) {
 		float radius = object->getRadius();
 		mat3 inertiaTensor;
 		inertiaTensor[0] = 2.0f / 5.0f * mass * radius * radius;
@@ -37,14 +35,13 @@ RigidBody::RigidBody(Object* object, float mass, float restitution, float fricti
 		inertiaTensor[8] = 2.0f / 5.0f * mass * radius * radius;
 		iBodyInertiaTensor = inertiaTensor.inverse();
 	}
-	else if (flag && BODY_CYLINDER) {
-		vec3 min = object->getMin();
-		vec3 max = object->getMax();
-		float radius = max.x - min.x;
-		float height = max.z - min.z;
+	else if (flag & RigidBody::BODY_CYLINDER) {
+		vec3 size = object->getMax() - object->getMin();
+		float radius = size.x * 0.5f;
+		float height = size.z;
 		mat3 inertiaTensor;
-		inertiaTensor[0] = 1.0f / 12.0f * mass * height * height;
-		inertiaTensor[4] = 1.0f / 12.0f * mass * height * height;
+		inertiaTensor[0] = 1.0f / 12.0f * mass * (3.0f * radius * radius + height * height);
+		inertiaTensor[4] = 1.0f / 12.0f * mass * (3.0f * radius * radius + height * height);
 		inertiaTensor[8] = 1.0f / 2.0f * mass * radius * radius;
 		iBodyInertiaTensor = inertiaTensor.inverse();
 	}
@@ -52,20 +49,24 @@ RigidBody::RigidBody(Object* object, float mass, float restitution, float fricti
 	set(object->transform);
 
 	RigidBody** rb = new RigidBody * [++Physic::all_rigidbodies];
-	memcpy(rb, Physic::rigidbodies, sizeof(RigidBody*) * (Physic::all_rigidbodies - 1));
-	if (Physic::rigidbodies) delete Physic::rigidbodies;
+	if (Physic::rigidbodies) memcpy(rb, Physic::rigidbodies, sizeof(RigidBody*) * (Physic::all_rigidbodies - 1));
+	if (Physic::rigidbodies) delete[] Physic::rigidbodies;
 	Physic::rigidbodies = rb;
 }
 
 RigidBody::~RigidBody() {
+	destroyed = 1;
+
 	delete collide;
 
-	if (num_joints) delete joints[0];
+	while (num_joints > 0) delete joints[0];
 
-	if (Physic::all_rigidbodies) Physic::all_rigidbodies--;
-	else {
-		delete Physic::rigidbodies;
-		Physic::rigidbodies = NULL;
+	if (Physic::all_rigidbodies) {
+		Physic::all_rigidbodies--;
+		if (Physic::all_rigidbodies == 0) {
+			delete[] Physic::rigidbodies;
+			Physic::rigidbodies = NULL;
+		}
 	}
 }
 
@@ -95,7 +96,8 @@ void RigidBody::set(const mat4& m) {
 	angularVelocity = vec3(0, 0, 0);
 	angularMomentum = vec3(0, 0, 0);
 
-	iWorldInertiaTensor.identity();
+	mat3 rotation = mat3(m);
+	iWorldInertiaTensor = rotation * iBodyInertiaTensor * rotation.transpose();
 
 	frozen = 0;
 	frozen_time = 0.0f;
@@ -104,7 +106,8 @@ void RigidBody::set(const mat4& m) {
 
 
 void RigidBody::simulate() {
-	if (simulated) return;
+	if (simulated_frame == Physic::frame_id) return;
+	simulated_frame = Physic::frame_id;
 	simulated = 1;
 	Physic::rigidbodies[Physic::num_rigidbodies++] = this;
 	for (int i = 0; i < num_joints; i++) {	// add all joined rigid bodies
@@ -274,13 +277,13 @@ int RigidBody::contactsResponse(float ifps, int zero_restitution) {
 
 			impulse = tangent * friction_numerator / friction_denominator;
 
-			if (!frozen) {
+			if (!frozen && immovable == 0) {
 				velocity += impulse / mass;
 				angularMomentum += cross(r0, impulse);
 				angularVelocity = iWorldInertiaTensor * angularMomentum;
 			}
 
-			if (!rb->frozen) {
+			if (!rb->frozen && rb->immovable == 0) {
 				rb->velocity -= impulse / rb->mass;
 				rb->angularMomentum -= cross(r1, impulse);
 				rb->angularVelocity = rb->iWorldInertiaTensor * rb->angularMomentum;

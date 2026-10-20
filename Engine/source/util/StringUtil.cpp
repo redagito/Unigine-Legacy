@@ -24,7 +24,13 @@ int match(const char* mask, const char* name)
 			}
 			return match(m + 1, n);
 		}
-		if (*m != '?' && *m != *n) return 0;
+		if (*m == '?') {
+			if (!*n) return 0;
+			n++;
+			m++;
+			continue;
+		}
+		if (*m != *n) return 0;
 		if (*n) n++;
 		m++;
 	}

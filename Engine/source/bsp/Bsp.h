@@ -22,6 +22,8 @@ public:
 	void saveState();
 	void restoreState(int frame);
 
+	static void release();
+
 	static int num_portals;
 	static Portal* portals;
 

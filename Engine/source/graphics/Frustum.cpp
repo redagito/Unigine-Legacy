@@ -1,4 +1,5 @@
 #include "graphics/Frustum.h"
+#include "util/Error.h"
 
 #include <cstdio>
 
@@ -29,11 +30,10 @@ void Frustum::set(const mat4& m)
 
 
 void Frustum::addPortal(const vec3& point, const vec3* points, const Position& camera) {
-	depth++;
-	if (depth > DEPTH) {
-		fprintf(stderr, "Frustum::addPortal(): stack overflow\n");
-		return;
+	if (depth >= DEPTH) {
+		THROW_ERROR("Frustum::addPortal(): stack overflow\n");
 	}
+	depth++;
 
 #define PLANE(n,v0,v1,v2) { \
 	vec3 normal; \

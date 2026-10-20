@@ -721,3 +721,17 @@ TEST_CASE("DEG2RAD / RAD2DEG conversion", "[math]") {
     REQUIRE(DEG2RAD * 180.0f == Approx(PI));
     REQUIRE(RAD2DEG * PI == Approx(180.0f));
 }
+
+TEST_CASE("accumulate_bounds grows a box in every direction", "[math]") {
+    vec3 min = vec3(1000000, 1000000, 1000000);
+    vec3 max = vec3(-1000000, -1000000, -1000000);
+    accumulate_bounds(min, max, vec3(2, 0, 0));
+    accumulate_bounds(min, max, vec3(0, 2, 0));
+    accumulate_bounds(min, max, vec3(1, 0, 0));
+    REQUIRE(min.x == Approx(0.0f));
+    REQUIRE(max.x == Approx(2.0f));
+    REQUIRE(min.y == Approx(0.0f));
+    REQUIRE(max.y == Approx(2.0f));
+    REQUIRE(min.z == Approx(0.0f));
+    REQUIRE(max.z == Approx(0.0f));
+}
