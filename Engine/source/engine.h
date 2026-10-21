@@ -41,6 +41,7 @@ class RenderDevice;
 #define ENGINE_FONT_NAME			"font.png"
 #define ENGINE_SPHERE_MESH			"sphere.mesh"
 #define ENGINE_SHADOW_VOLUME_SHADER	"shadow_volume.shader"
+#define ENGINE_WIREFRAME_SHADER		"wireframe.shader"
 #define ENGINE_LOG_NAME				"Engine.log"
 #define ENGINE_GAP_SIZE				256
 
@@ -139,6 +140,9 @@ public:
 
 	// shadow volume
 	static GLProgram* shadow_volume_shader;
+
+	// the program of the wireframe mode, it lives in the context of the screen
+	static GLProgram* wireframe_program;
 
 	// current state
 	static float time;

@@ -145,6 +145,7 @@ void GLProgram::load(const char* name, const Defines& defines) {
 
 void GLProgram::enable() {
 	if (old_shader == this) return;
+	// the program is bound per context, the engine renders into pbuffers
 	glUseProgram(program);
 	old_shader = this;
 }
@@ -166,10 +167,10 @@ void GLProgram::disable() {
 
 void GLProgram::bind() {
 
-	if (old_shader != this) {
-		glUseProgram(program);
-		old_shader = this;
-	}
+	// the program is bound per context, the engine renders into pbuffers, so
+	// it has to be bound again
+	glUseProgram(program);
+	old_shader = this;
 
 	values.user[0] = parameters[0];
 	values.user[1] = parameters[1];

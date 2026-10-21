@@ -64,6 +64,7 @@ Mirror* Engine::current_mirror;
 MeshData* Engine::sphere_mesh;
 
 GLProgram* Engine::shadow_volume_shader;
+GLProgram* Engine::wireframe_program;
 
 float Engine::time;
 vec4 Engine::light;
@@ -276,6 +277,9 @@ int Engine::init(Paths& paths, const char* config)
 	screen->enable();
 	device->setDepthTest(true);
 	device->setFaceCulling(true);
+	// the scene is drawn in the context of the screen, the program of the
+	// wireframe mode has to live there
+	wireframe_program = new GLProgram(paths.findFile(ENGINE_WIREFRAME_SHADER).c_str(), defines);
 	screen->disable();
 	screen_texture = new GLTexture(screen_width, screen_height, GLTexture::TEXTURE_2D, GLTexture::RGB | GLTexture::CLAMP | GLTexture::LINEAR);
 	screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
@@ -672,7 +676,8 @@ void Engine::render_light() {
 		if (scissor_toggle) device->setScissor(scissor);
 
 		// shadows
-		if (shadows_toggle && l->shadows) {
+		// the shadow volumes have their own colour, they would break the wireframe
+		if (shadows_toggle && l->shadows && !wireframe_toggle) {
 
 			if (show_shadows_toggle) {
 				device->setBlend(true);
@@ -872,7 +877,8 @@ void Engine::render_transparent() {
 	device->setDepthWrite(false);
 
 	// volume fogs
-	if (fog_toggle) {
+	// the fog has its own colour, it would break the wireframe
+	if (fog_toggle && !wireframe_toggle) {
 		for (int i = 0; i < num_visible_fogs; i++) {
 			Fog* fog = visible_fogs[i];
 			current_fog = fog;
@@ -994,6 +1000,7 @@ void Engine::render(float ifps) {
 	if (wireframe_toggle) {
 		device->setPolygonMode(PolygonMode::line);
 		device->setPolygonOffset(true, -0.5f, 0.0f);
+		device->setColor(vec4(1, 1, 1, 1));
 	}
 
 	// number of visible lights
@@ -1113,8 +1120,11 @@ void Engine::render(float ifps) {
 
 	/* render light flares
 	 */
-	for (int i = 0; i < lights.num_visible_lights; i++) {
-		lights.visible_lights[i]->renderFlare();
+	// the flares have their own colour, they would break the wireframe
+	if (!wireframe_toggle) {
+		for (int i = 0; i < lights.num_visible_lights; i++) {
+			lights.visible_lights[i]->renderFlare();
+		}
 	}
 
 	/* disable pbuffer
