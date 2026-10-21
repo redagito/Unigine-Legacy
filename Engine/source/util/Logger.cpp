@@ -26,7 +26,7 @@ void init(const char* file_name) {
 	auto console_logger = std::make_shared<spdlog::logger>("console", spdlog::sinks_init_list{ console_sink, file_sink });
 	spdlog::register_logger(console_logger);
 
-	spdlog::set_level(spdlog::level::trace);
+	spdlog::set_level(spdlog::level::info);
 	spdlog::flush_on(spdlog::level::trace);
 }
 

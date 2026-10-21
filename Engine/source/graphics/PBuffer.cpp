@@ -187,8 +187,7 @@ void PBuffer::disable() {
  */
 #include <vector>
 #include <windows.h>
-#include <GL/gl.h>
-#include <GL/glext.h>
+#include "graphics/OpenGL.h"
 #include <GL/wglext.h>
 #include "graphics/PBuffer.h"
 

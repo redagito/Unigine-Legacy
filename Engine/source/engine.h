@@ -6,11 +6,7 @@
 #pragma warning(disable: 4305)
 #endif
 
-#include <GL/gl.h>
-#include <GL/glext.h>
-#ifdef _WIN32
-#include "graphics/win32/glext.h"
-#endif
+#include "graphics/OpenGL.h"
 
 #include <map>
 #include <string>

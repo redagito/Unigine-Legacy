@@ -1,9 +1,8 @@
 #include "graphics/MeshVBO.h"
 
-#include <GL/gl.h>
-#include <GL/glext.h>
+
 #ifdef _WIN32
-#include "graphics/win32/glext.h"
+
 #endif
 
 MeshVBO::MeshVBO(const char* name) : Mesh(name) {

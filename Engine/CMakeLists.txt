@@ -17,9 +17,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC glm::glm
+	PUBLIC spdlog::spdlog
+	PUBLIC glad::glad
 	PUBLIC glext::glext
 	PUBLIC wglext::wglext
-	PUBLIC spdlog::spdlog
 	PUBLIC OpenAL::OpenAL
 	PUBLIC libmad::libmad
 	PUBLIC vorbis::vorbis

@@ -1,5 +1,6 @@
 #include "engine.h"
 #include "util/Logger.h"
+#include "graphics/win32/glext.h"
 #include "util/Error.h"
 
 #include "graphics/PBuffer.h"

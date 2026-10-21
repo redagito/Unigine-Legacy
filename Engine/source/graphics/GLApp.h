@@ -4,9 +4,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <GL/gl.h>
-#include <GL/glext.h>
-#include <GL/glu.h>
+#include "graphics/OpenGL.h"
 
 class GLApp {
 public:

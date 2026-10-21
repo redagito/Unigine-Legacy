@@ -20,6 +20,10 @@
 #include "util/Error.h"
 #include "util/Logger.h"
 
+#ifndef GL_DONT_CARE
+#define GL_DONT_CARE 0x1100
+#endif
+
 #ifndef _WIN32
 
 /*	linux
@@ -33,7 +37,6 @@
 #include <X11/keysym.h>
 #include <X11/extensions/xf86vmode.h>
 #include <GL/gl.h>
-#include <GL/glu.h>
 #include <GL/glx.h>
 #ifdef HAVE_GTK
 #include <gtk/gtk.h>
@@ -158,6 +161,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		if(!context) THROW_ERROR("glXCreateContext failed");
 		
 		glXMakeCurrent(display,window,context);
+		installDebugCallback();
 		glViewport(0,0,windowWidth,windowHeight);
 	}
 	catch(const EngineError& e) {
@@ -211,12 +215,16 @@ void GLApp::checkExtension(const char *extension) {
 }
 
 
+
 void GLApp::error() {
+	// the debug callback already reports every error, asking for them again
+	// would add one more error per call
+	if (debugCallbackInstalled()) return;
 	GLenum error;
-	while((error = glGetError()) != GL_NO_ERROR) {
-		spdlog::error("OpenGL error 0x{:04X}: {}", error, (const char*)gluErrorString(error));
+	for (int i = 0; i < 32 && (error = glGetError()) != GL_NO_ERROR; i++) {
+		spdlog::error("OpenGL error 0x{:04X}: {}", error, gl_error_string(error));
 #ifdef HAVE_GTK_2
-		GtkWidget *dialog = gtk_message_dialog_new(NULL,GTK_DIALOG_MODAL,GTK_MESSAGE_ERROR,GTK_BUTTONS_OK,"OpenGL error 0x%04X: %s\n",error,gluErrorString(error));
+		GtkWidget *dialog = gtk_message_dialog_new(NULL,GTK_DIALOG_MODAL,GTK_MESSAGE_ERROR,GTK_BUTTONS_OK,"OpenGL error 0x%04X: %s\n",error,gl_error_string(error));
 		gtk_dialog_run(GTK_DIALOG(dialog));
 		gtk_widget_destroy(dialog);
 #endif
@@ -398,9 +406,9 @@ void GLApp::main() {
 #include <stdlib.h>
 #include <stdarg.h>
 #include <windows.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include "glapp.h"
+#include "graphics/GLApp.h"
+#include "graphics/DebugCallback.h"
+#include "graphics/win32/glext.h"
 
 #pragma comment (lib,"opengl32.lib")
 #pragma comment (lib,"glu32.lib")
@@ -432,6 +440,15 @@ GLApp::~GLApp() {
 	}
 }
 
+
+// wglGetProcAddress only resolves the drivers own functions, the GL 1.1 core
+// functions come from opengl32.dll
+static PROC WINAPI getGLProcAddress(const char* name) {
+	PROC proc = wglGetProcAddress(name);
+	if (proc && proc != (PROC)1 && proc != (PROC)2 && proc != (PROC)3 && proc != (PROC)-1) return proc;
+	static HMODULE opengl32 = GetModuleHandleA("opengl32.dll");
+	return opengl32 ? (PROC)GetProcAddress(opengl32, name) : NULL;
+}
 
 static int translateKey(int key) {
 	int ret;
@@ -612,6 +629,8 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		if(!context) context = wglCreateContext(hdc);
 		if(!context) THROW_ERROR("wglCreateContext() fail");
 		if(!wglMakeCurrent(hdc,context)) THROW_ERROR("wglMakeCurrent() fail");
+		if(!gladLoadGL((GLADloadfunc)getGLProcAddress)) THROW_ERROR("gladLoadGL() fail");
+		installDebugCallback();
 		glViewport(0,0,glApp->windowWidth,glApp->windowHeight);
 	}
 	catch(const EngineError& e) {
@@ -660,11 +679,15 @@ void GLApp::checkExtension(const char *extension) {
 }
 
 
+
 void GLApp::error() {
+	// the debug callback already reports every error, asking for them again
+	// would add one more error per call
+	if (debugCallbackInstalled()) return;
 	GLenum error;
-	while((error = glGetError()) != GL_NO_ERROR) {
-		spdlog::error("OpenGL error 0x{:04X}: {}", error, (const char*)gluErrorString(error));
-		MessageBox(0,(char*)gluErrorString(error),"OpenGL error",MB_OK);
+	for (int i = 0; i < 32 && (error = glGetError()) != GL_NO_ERROR; i++) {
+		spdlog::error("OpenGL error 0x{:04X}: {}", error, gl_error_string(error));
+		MessageBox(0,(char*)gl_error_string(error),"OpenGL error",MB_OK);
 	}
 }
 

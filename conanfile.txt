@@ -3,6 +3,7 @@
 glm/cci.20230113
 openal/1.22.2
 spdlog/1.15.3
+glad/2.0.8
 catch2/3.4.0
 glext/cci.20210420
 wglext/cci.20200813
@@ -14,6 +15,10 @@ libpng/1.6.45
 # libjpeg/9f
 
 [options]
+# the engine draws with the fixed function pipeline, so it needs the compatibility profile
+glad/*:gl_profile=compatibility
+glad/*:gl_version=4.6
+glad/*:extensions=GL_ARB_vertex_program,GL_ARB_fragment_program,GL_NV_fragment_program,GL_ARB_vertex_buffer_object,GL_ARB_occlusion_query,GL_EXT_stencil_two_side,GL_NV_depth_clamp,GL_EXT_texture_filter_anisotropic,GL_ARB_texture_env_combine
 # ffmpeg/*:with_ssl=False
 # ffmpeg/*:with_freetype=False
 

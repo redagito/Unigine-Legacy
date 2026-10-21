@@ -19,6 +19,7 @@ find_package(catch2 REQUIRED)
 # Dependencies
 find_package(glm REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(glad REQUIRED)
 
 # Audio
 find_package(OpenAL REQUIRED)

@@ -32,7 +32,7 @@
 #include "graphics/Texture.h"
 
 #ifdef _WIN32
-#include "graphics/win32/glext.h"
+
 #endif
 
  /*
@@ -49,8 +49,8 @@ Texture::Texture(int width, int height, GLuint target, int flag) : width(width),
 	GLuint internalformat;
 	if (flag & FLOAT) {
 		type = GL_FLOAT;
-		if (format == GL_RGB) internalformat = GL_FLOAT_RGB_NV;
-		else if (format == GL_RGBA) internalformat = GL_FLOAT_RGBA_NV;
+		if (format == GL_RGB) internalformat = GL_RGB32F;
+		else if (format == GL_RGBA) internalformat = GL_RGBA32F;
 		else {
 			spdlog::warn("Texture::Texture(): FLOAT flag is accessible only for RGB or RGBA formats");
 			return;
@@ -79,17 +79,17 @@ Texture::Texture(int width, int height, GLuint target, int flag) : width(width),
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	}
 	else if (flag & NEAREST_MIPMAP_NEAREST) {
-		glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+		glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 	}
 	else if (flag & LINEAR_MIPMAP_NEAREST) {
-		glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+		glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	}
 	else if (flag & LINEAR_MIPMAP_LINEAR) {
-		glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+		glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	}
@@ -162,17 +162,17 @@ void Texture::load(const char* name, GLuint target, int flag) {
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	}
 	else if (flag & NEAREST_MIPMAP_NEAREST) {
-		glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+		glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 	}
 	else if (flag & LINEAR_MIPMAP_NEAREST) {
-		glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+		glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	}
 	else if (flag & LINEAR_MIPMAP_LINEAR) {
-		glTexParameteri(target, GL_GENERATE_MIPMAP_SGIS, GL_TRUE);
+		glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	}
