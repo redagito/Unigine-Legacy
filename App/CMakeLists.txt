@@ -29,3 +29,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 		"${CMAKE_CURRENT_SOURCE_DIR}/data"
 		"$<TARGET_FILE_DIR:${PROJECT_NAME}>/data"
 )
+
+# renders a few frames without a window, the frame goes to the build folder
+add_test(NAME headless
+	COMMAND ${PROJECT_NAME} -frames 60 -shot headless.png
+)
+set_tests_properties(headless PROPERTIES
+	WORKING_DIRECTORY $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)

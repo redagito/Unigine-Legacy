@@ -15,6 +15,9 @@ public:
 	int setVideoMode(int w, int h, int fs = 0);
 	void setTitle(const char* title);
 
+	// runs without a visible window, the loop stops after the given frames
+	void setHeadless(int frames);
+
 	void setCursor(int x, int y);
 	void showCursor(int show);
 
@@ -66,6 +69,8 @@ public:
 	int windowWidth = 0;
 	int windowHeight = 0;
 	int fullScreen = 0;
+	int headless = 0;
+	int headlessFrames = 0;
 	char title[1024] = { '\0' };
 
 	int mouseX = 0;

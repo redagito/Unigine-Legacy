@@ -140,7 +140,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		}
 		
 		window = XCreateWindow(display,rootWindow,0,0,windowWidth,windowHeight,0,visual->depth,InputOutput,visual->visual,mask,&attr);
-		XMapWindow(display,window);
+		if(!headless) XMapWindow(display,window);
 		
 		if(fullScreen) {
 			XMoveWindow(display,window,0,0);
@@ -183,12 +183,14 @@ void GLApp::setTitle(const char *title) {
 
 
 void GLApp::setCursor(int x,int y) {
+	if(headless) return;
 	XWarpPointer(display,None,window,0,0,0,0,x,y);
 	XFlush(display);
 }
 
 
 void GLApp::showCursor(int show) {
+	if(headless) return;
 	if(show) XDefineCursor(display,window,0);
 	else {
 		if(!cursor) {
@@ -500,7 +502,8 @@ LRESULT CALLBACK windowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
 		case WM_SIZE:
 			glApp->windowWidth = LOWORD(lparam);
 			glApp->windowHeight = HIWORD(lparam);
-			glViewport(0,0,glApp->windowWidth,glApp->windowHeight);
+			// the window is created before the context, there is nothing to set yet
+			if(context) glViewport(0,0,glApp->windowWidth,glApp->windowHeight);
 			break;
 		case WM_KEYDOWN: {
 				int key = translateKey((int)wparam);
@@ -612,6 +615,8 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 			settings.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
 			if(ChangeDisplaySettings(&settings,CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) THROW_ERROR("ChangeDisplaySettings() fail");
 			window = CreateWindowEx(0,"GLApp","GLApp",WS_POPUP,0,0,windowWidth,windowHeight,NULL,NULL,hInstance,NULL);
+		} else if(headless) {
+			window = CreateWindowEx(0,"GLApp","GLApp",WS_POPUP,0,0,windowWidth,windowHeight,NULL,NULL,hInstance,NULL);
 		} else {
 			RECT windowRect = {0, 0, windowWidth, windowHeight };
 			AdjustWindowRectEx(&windowRect,WS_OVERLAPPEDWINDOW,0,0);
@@ -622,10 +627,10 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		
 		if(!window) THROW_ERROR("CreateWindowEx() fail");
 		if(!(hdc = GetDC(window))) THROW_ERROR("GetDC() fail");
-		
+
 		if(!(pixelformat = ChoosePixelFormat(hdc,&pfd))) THROW_ERROR("ChoosePixelFormat() fail");
 		if(!(SetPixelFormat(hdc,pixelformat,&pfd))) THROW_ERROR("SetPixelFormat() fail");
-		
+
 		if(!context) context = wglCreateContext(hdc);
 		if(!context) THROW_ERROR("wglCreateContext() fail");
 		if(!wglMakeCurrent(hdc,context)) THROW_ERROR("wglMakeCurrent() fail");
@@ -639,11 +644,19 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		exit("%s", e.what());
 		return 0;
 	}
-	ShowWindow(window,SW_SHOW);
-	UpdateWindow(window);
-	SetForegroundWindow(window);
-	SetFocus(window);
+	if(!headless) {
+		ShowWindow(window,SW_SHOW);
+		UpdateWindow(window);
+		SetForegroundWindow(window);
+		SetFocus(window);
+	}
 	return 1;
+}
+
+
+void GLApp::setHeadless(int frames) {
+	headless = 1;
+	headlessFrames = frames;
 }
 
 
@@ -653,6 +666,7 @@ void GLApp::setTitle(const char *title) {
 
 
 void GLApp::setCursor(int x,int y) {
+	if(headless) return;
 	POINT pt;
 	pt.x = x;
 	pt.y = y;
@@ -662,6 +676,7 @@ void GLApp::setCursor(int x,int y) {
 
 
 void GLApp::showCursor(int show) {
+	if(headless) return;
 	if(!cursor) cursor = GetCursor();
 	if(show) SetCursor(cursor);
 	else SetCursor(NULL);
@@ -734,6 +749,7 @@ static int getTime() {
 
 void GLApp::main() {
 	int startTime = 0,endTime = 0,counter = 0;
+	int frames = 0;
 	fps = 60;
 	MSG msg;
 	while(window && !done) {
@@ -748,13 +764,16 @@ void GLApp::main() {
 				fps = counter * 1000.0f / (float)(startTime - endTime);
 				counter = 0;
 			}
-			ifps = 1.0f / fps;
-			
+			// the headless run has to give the same frame every time
+			ifps = headless ? 1.0f / 60.0f : 1.0f / fps;
+
 			idle();
 			render();
-			
+
 			SwapBuffers(wglGetCurrentDC());
 			mouseButton &= ~(BUTTON_UP | BUTTON_DOWN);
+
+			if(headless && ++frames >= headlessFrames) break;
 		}
 	}
 }

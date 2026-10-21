@@ -46,18 +46,15 @@ Joint::~Joint() {
 }
 
 void Joint::remove_from(RigidBody* body) {
-	if (body->destroyed) {
+	for (int i = 0; i < body->num_joints; i++) {
+		if (body->joints[i] != this) continue;
+		for (int j = i; j < body->num_joints - 1; j++) {
+			body->joints[j] = body->joints[j + 1];
+			body->joined_rigidbodies[j] = body->joined_rigidbodies[j + 1];
+		}
 		body->num_joints--;
 		return;
 	}
-	for (int i = 0, j = 0; i < body->num_joints; i++) {
-		if (i != j) {
-			body->joints[j] = body->joints[i];
-			body->joined_rigidbodies[j] = body->joined_rigidbodies[i];
-		}
-		if (body->joints[i] != this) j++;
-	}
-	body->num_joints--;
 }
 
 
