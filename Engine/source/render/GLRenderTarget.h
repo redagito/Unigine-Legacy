@@ -20,9 +20,12 @@
 #ifndef __PBUFFER_H__
 #define __PBUFFER_H__
 
+#include "graphics/OpenGL.h"
+#include "render/Resources.h"
+
 struct PBuffer_data;
 
-class PBuffer {
+class GLRenderTarget : public RenderTarget {
 public:
 	
 	enum {
@@ -35,10 +38,15 @@ public:
 		MULTISAMPLE_4 = 1 << 6,
 	};
 	
-	PBuffer(int width,int height,int flag = RGBA | DEPTH | STENCIL);
-	~PBuffer();
+	GLRenderTarget(int width,int height,int flag = RGBA | DEPTH | STENCIL);
+	virtual ~GLRenderTarget();
 	
 	void enable();
+
+	void bind() override;
+	void resolve() override;
+	int getWidth() const override;
+	int getHeight() const override;
 	void disable();
 	
 	int width;

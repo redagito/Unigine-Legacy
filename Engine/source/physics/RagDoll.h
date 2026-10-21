@@ -2,7 +2,7 @@
 
 #include "math/Math.h"
 
-#include "graphics/SkinnedMesh.h"
+#include "render/GLSkinnedGeometry.h"
 
 class Object;
 class RigidBody;
@@ -10,7 +10,7 @@ class Paths;
 
 class RagDoll {
 public:
-	RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths);
+	RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& paths);
 	~RagDoll();
 
 	void update();
@@ -21,10 +21,10 @@ public:
 
 protected:
 
-	SkinnedMesh* skinnedmesh = nullptr;
+	GLSkinnedGeometry* skinnedmesh = nullptr;
 
 	int num_bones = 0;
-	SkinnedMesh::Bone* bones = nullptr;
+	GLSkinnedGeometry::Bone* bones = nullptr;
 
 	Object** meshes = nullptr;
 	RigidBody** rigidbodies = nullptr;

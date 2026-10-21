@@ -1,10 +1,10 @@
 #include "graphics/Fog.h"
 
 #include "graphics/OpenGL.h"
-#include "graphics/PBuffer.h"
-#include "graphics/Texture.h"
-#include "graphics/Shader.h"
-#include "graphics/Mesh.h"
+#include "render/GLRenderTarget.h"
+#include "render/GLTexture.h"
+#include "render/GLProgram.h"
+#include "render/MeshData.h"
 #include "engine.h"
 #include "Paths.h"
 
@@ -14,19 +14,19 @@
 #define FOG_FINAL			"fog_final.shader"
 
 int Fog::counter = 0;
-PBuffer *Fog::pbuffer;
-Texture *Fog::depth_tex;
-Texture *Fog::fog_tex;
-PBuffer *Fog::pbuffers[3];
-Texture *Fog::depth_texes[3];
-Texture *Fog::fog_texes[3];
-Shader *Fog::depth_to_rgb_shader;
-Shader *Fog::pass_shader;
-Shader *Fog::fail_shader;
-Shader *Fog::final_shader;
+GLRenderTarget *Fog::pbuffer;
+GLTexture *Fog::depth_tex;
+GLTexture *Fog::fog_tex;
+GLRenderTarget *Fog::pbuffers[3];
+GLTexture *Fog::depth_texes[3];
+GLTexture *Fog::fog_texes[3];
+GLProgram *Fog::depth_to_rgb_shader;
+GLProgram *Fog::pass_shader;
+GLProgram *Fog::fail_shader;
+GLProgram *Fog::final_shader;
 
 
-Fog::Fog(Mesh *mesh,const vec4 &color, const Paths& paths) : mesh(mesh), color(color) {
+Fog::Fog(MeshData *mesh,const vec4 &color, const Paths& paths) : mesh(mesh), color(color) {
 	
 	pos.radius = getRadius();
 	pos = getCenter();
@@ -34,7 +34,7 @@ Fog::Fog(Mesh *mesh,const vec4 &color, const Paths& paths) : mesh(mesh), color(c
 	if(counter++ == 0) {	// loading global objects
 		
 		for(int i = 0; i < 3; i++) {
-			pbuffers[i] = new PBuffer(128 << i,128 << i,PBuffer::RGBA | PBuffer::DEPTH | PBuffer::STENCIL);
+			pbuffers[i] = new GLRenderTarget(128 << i,128 << i,GLRenderTarget::RGBA | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL);
 			
 			pbuffers[i]->enable();
 			glClearColor(0,0,0,1);
@@ -42,8 +42,8 @@ Fog::Fog(Mesh *mesh,const vec4 &color, const Paths& paths) : mesh(mesh), color(c
 			glEnable(GL_CULL_FACE);
 			pbuffers[i]->disable();
 			
-			depth_texes[i] = new Texture(128 << i,128 << i,Texture::TEXTURE_2D,Texture::RGB | Texture::NEAREST);
-			fog_texes[i] = new Texture(128 << i,128 << i,Texture::TEXTURE_2D,Texture::RGBA | Texture::LINEAR);
+			depth_texes[i] = new GLTexture(128 << i,128 << i,GLTexture::TEXTURE_2D,GLTexture::RGB | GLTexture::NEAREST);
+			fog_texes[i] = new GLTexture(128 << i,128 << i,GLTexture::TEXTURE_2D,GLTexture::RGBA | GLTexture::LINEAR);
 		}
 		
 		depth_to_rgb_shader = Engine::loadShader(FOG_DEPTH_TO_RGB, paths);
@@ -229,7 +229,7 @@ float Fog::getDensity(const vec3 &point) {
 int Fog::inside(const vec3 &point) {
 	for(int i = 0; i < mesh->getNumSurfaces(); i++) {
 		int num_triangles = mesh->getNumTriangles(i);
-		Mesh::Triangle *triangles = mesh->getTriangles(i);
+		MeshData::Triangle *triangles = mesh->getTriangles(i);
 		for(int j = 0; j < num_triangles; j++) {
 			if(triangles[j].plane * vec4(point,1) > 0.0) return 0;
 		}

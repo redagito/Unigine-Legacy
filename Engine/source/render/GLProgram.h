@@ -1,16 +1,17 @@
 #pragma once
 
 #include "graphics/OpenGL.h"
+#include "render/Resources.h"
 #include "math/Math.h"
 
 class Defines;
-class Texture;
+class GLTexture;
 
-class Shader {
+class GLProgram : public RenderProgram {
 public:
 
-	Shader(const char* name, const Defines& defines);
-	~Shader();
+	GLProgram(const char* name, const Defines& defines);
+	virtual ~GLProgram();
 
 	void load(const char* name, const Defines& defines);
 
@@ -20,7 +21,9 @@ public:
 	void disable();
 	void bind();
 
-	void bindTexture(int unit, Texture* texture);
+	void setUniforms(const ProgramUniforms& uniforms) override;
+
+	void bindTexture(int unit, GLTexture* texture);
 
 	enum {
 		NUM_MATRIXES = 4,
@@ -29,7 +32,7 @@ public:
 		NUM_TEXTURES = 6,
 	};
 
-	static Shader* old_shader;
+	static GLProgram* old_shader;
 
 protected:
 
@@ -85,5 +88,5 @@ protected:
 	GLuint fragment_id = 0;
 
 	static vec4 parameters[NUM_PARAMETERS];
-	static Texture* old_textures[Shader::NUM_TEXTURES];
+	static GLTexture* old_textures[GLProgram::NUM_TEXTURES];
 };

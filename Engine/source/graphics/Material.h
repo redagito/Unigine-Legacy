@@ -1,8 +1,8 @@
 #pragma once
 
-#include "graphics/Shader.h"
+#include "render/GLProgram.h"
 
-class Texture;
+class GLTexture;
 class Paths;
 
 class Material 
@@ -18,7 +18,7 @@ public:
 	void disable();
 	void bind();
 
-	void bindTexture(int unit, Texture* texture);
+	void bindTexture(int unit, GLTexture* texture);
 
 	int blend = 0;
 
@@ -33,10 +33,10 @@ public:
 	GLuint getBlendFactor(const char* factor);
 	GLuint getAlphaFunc(const char* func);
 
-	Shader* light_shader = nullptr;
-	Shader* ambient_shader = nullptr;
-	vec4 parameters[Shader::NUM_PARAMETERS];
-	Texture* textures[Shader::NUM_TEXTURES];
+	GLProgram* light_shader = nullptr;
+	GLProgram* ambient_shader = nullptr;
+	vec4 parameters[GLProgram::NUM_PARAMETERS];
+	GLTexture* textures[GLProgram::NUM_TEXTURES];
 
 	static Material* old_material;
 };

@@ -4,12 +4,12 @@
 #include <cstdio>
 #include <cstdarg>
 
-#include "graphics/Texture.h"
+#include "render/GLTexture.h"
 
 Font::Font(const char* name)
 {
 	int width = 0, height = 0;
-	unsigned char* data = Texture::load(name, width, height);
+	unsigned char* data = GLTexture::load(name, width, height);
 	if (!data) {
 		THROW_ERROR("Font::Font(): can`t open \"%s\" file\n", name);
 	}

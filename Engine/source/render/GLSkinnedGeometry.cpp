@@ -7,9 +7,9 @@
 
 #include "graphics/OpenGL.h"
 
-#include "graphics/SkinnedMesh.h"
+#include "render/GLSkinnedGeometry.h"
 
-SkinnedMesh::SkinnedMesh(const char* name) : num_bones(0), bones(NULL), num_frames(0), frames(NULL), num_surfaces(0) {
+GLSkinnedGeometry::GLSkinnedGeometry(const char* name) : num_bones(0), bones(NULL), num_frames(0), frames(NULL), num_surfaces(0) {
 	min = vec3(0, 0, 0);
 	max = vec3(0, 0, 0);
 	center = vec3(0, 0, 0);
@@ -17,7 +17,7 @@ SkinnedMesh::SkinnedMesh(const char* name) : num_bones(0), bones(NULL), num_fram
 	load(name);
 }
 
-SkinnedMesh::~SkinnedMesh() {
+GLSkinnedGeometry::~GLSkinnedGeometry() {
 	if (bones) delete[] bones;
 	if (frames) {
 		for (int i = 0; i < num_frames; i++) delete[] frames[i];
@@ -41,7 +41,7 @@ SkinnedMesh::~SkinnedMesh() {
 /*                                                                           */
 /*****************************************************************************/
 
-void SkinnedMesh::setFrame(float frame, int from, int to) {
+void GLSkinnedGeometry::setFrame(float frame, int from, int to) {
 
 	if (num_frames == 0) return;
 
@@ -67,7 +67,7 @@ void SkinnedMesh::setFrame(float frame, int from, int to) {
 }
 
 
-void SkinnedMesh::calculateSkin() {
+void GLSkinnedGeometry::calculateSkin() {
 
 	min = vec3(1000000, 1000000, 1000000);	// bound box
 	max = vec3(-1000000, -1000000, -1000000);
@@ -137,7 +137,7 @@ void SkinnedMesh::calculateSkin() {
 /*                                                                           */
 /*****************************************************************************/
 
-int SkinnedMesh::render(int ppl, int s) {
+int GLSkinnedGeometry::render(int ppl, int s) {
 	int num_triangles = 0;
 	if (ppl) {
 		glEnableVertexAttribArrayARB(0);
@@ -210,7 +210,7 @@ int SkinnedMesh::render(int ppl, int s) {
 /*                                                                           */
 /*****************************************************************************/
 
-void SkinnedMesh::findSilhouette(const vec4& light, int s) {
+void GLSkinnedGeometry::findSilhouette(const vec4& light, int s) {
 	if (s < 0) {
 		for (int i = 0; i < num_surfaces; i++) {
 			Surface* s = surfaces[i];
@@ -289,7 +289,7 @@ void SkinnedMesh::findSilhouette(const vec4& light, int s) {
 }
 
 
-int SkinnedMesh::getNumIntersections(const vec3& line0, const vec3& line1, int s) {
+int GLSkinnedGeometry::getNumIntersections(const vec3& line0, const vec3& line1, int s) {
 	int num_intersections = 0;
 	if (s < 0) {
 		vec3 dir = line1 - line0;
@@ -335,7 +335,7 @@ int SkinnedMesh::getNumIntersections(const vec3& line0, const vec3& line1, int s
 }
 
 
-int SkinnedMesh::renderShadowVolume(int s) {
+int GLSkinnedGeometry::renderShadowVolume(int s) {
 	int num_triangles = 0;
 	glEnableVertexAttribArrayARB(0);
 	if (s < 0) {
@@ -363,7 +363,7 @@ int SkinnedMesh::renderShadowVolume(int s) {
 /*                                                                           */
 /*****************************************************************************/
 
-int SkinnedMesh::intersection(const vec3& line0, const vec3& line1, vec3& point, vec3& normal, int s) {
+int GLSkinnedGeometry::intersection(const vec3& line0, const vec3& line1, vec3& point, vec3& normal, int s) {
 	float nearest = 2.0;
 	if (s < 0) {
 		vec3 dir = line1 - line0;
@@ -420,7 +420,7 @@ int SkinnedMesh::intersection(const vec3& line0, const vec3& line1, vec3& point,
 /*                                                                           */
 /*****************************************************************************/
 
-void SkinnedMesh::transform(const mat4& m) {
+void GLSkinnedGeometry::transform(const mat4& m) {
 	mat4 r = m.rotation();
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = surfaces[i];
@@ -451,40 +451,40 @@ void SkinnedMesh::transform(const mat4& m) {
 /*****************************************************************************/
 
 
-int SkinnedMesh::getNumSurfaces() {
+int GLSkinnedGeometry::getNumSurfaces() {
 	return num_surfaces;
 }
 
-const char* SkinnedMesh::getSurfaceName(int s) {
+const char* GLSkinnedGeometry::getSurfaceName(int s) {
 	return surfaces[s]->name;
 }
 
-int SkinnedMesh::getSurface(const char* name) {
+int GLSkinnedGeometry::getSurface(const char* name) {
 	for (int i = 0; i < num_surfaces; i++) if (!strcmp(name, surfaces[i]->name)) return i;
-	spdlog::debug("SkinnedMesh::getSurface(): can`t find \"{}\" surface", name);
+	spdlog::debug("GLSkinnedGeometry::getSurface(): can`t find \"{}\" surface", name);
 	return -1;
 }
 
 
-int SkinnedMesh::getNumBones() {
+int GLSkinnedGeometry::getNumBones() {
 	return num_bones;
 }
 
-SkinnedMesh::Bone* SkinnedMesh::getBones() {
+GLSkinnedGeometry::Bone* GLSkinnedGeometry::getBones() {
 	return bones;
 }
 
-const char* SkinnedMesh::getBoneName(int b) {
+const char* GLSkinnedGeometry::getBoneName(int b) {
 	return bones[b].name;
 }
 
-int SkinnedMesh::getBone(const char* name) {
+int GLSkinnedGeometry::getBone(const char* name) {
 	for (int i = 0; i < num_bones; i++) if (!strcmp(name, bones[i].name)) return i;
-	spdlog::debug("SkinnedMesh::getBone(): can`t find \"{}\" bone", name);
+	spdlog::debug("GLSkinnedGeometry::getBone(): can`t find \"{}\" bone", name);
 	return -1;
 }
 
-const mat4& SkinnedMesh::getBoneTransform(int b) {
+const mat4& GLSkinnedGeometry::getBoneTransform(int b) {
 	if (b < 0) {
 		static mat4 dummy;
 		return dummy;
@@ -493,57 +493,57 @@ const mat4& SkinnedMesh::getBoneTransform(int b) {
 }
 
 
-int SkinnedMesh::getNumVertex(int s) {
+int GLSkinnedGeometry::getNumVertex(int s) {
 	return surfaces[s]->num_vertex;
 }
 
-SkinnedMesh::Vertex* SkinnedMesh::getVertex(int s) {
+GLSkinnedGeometry::Vertex* GLSkinnedGeometry::getVertex(int s) {
 	return surfaces[s]->vertex;
 }
 
-int SkinnedMesh::getNumEdges(int s) {
+int GLSkinnedGeometry::getNumEdges(int s) {
 	return surfaces[s]->num_edges;
 }
 
-SkinnedMesh::Edge* SkinnedMesh::getEdges(int s) {
+GLSkinnedGeometry::Edge* GLSkinnedGeometry::getEdges(int s) {
 	return surfaces[s]->edges;
 }
 
-int SkinnedMesh::getNumTriangles(int s) {
+int GLSkinnedGeometry::getNumTriangles(int s) {
 	return surfaces[s]->num_triangles;
 }
 
-SkinnedMesh::Triangle* SkinnedMesh::getTriangles(int s) {
+GLSkinnedGeometry::Triangle* GLSkinnedGeometry::getTriangles(int s) {
 	return surfaces[s]->triangles;
 }
 
 
-const vec3& SkinnedMesh::getMin(int s) {
+const vec3& GLSkinnedGeometry::getMin(int s) {
 	if (s < 0) return min;
 	return surfaces[s]->min;
 }
 
-const vec3& SkinnedMesh::getMax(int s) {
+const vec3& GLSkinnedGeometry::getMax(int s) {
 	if (s < 0) return max;
 	return surfaces[s]->max;
 }
 
-const vec3& SkinnedMesh::getCenter(int s) {
+const vec3& GLSkinnedGeometry::getCenter(int s) {
 	if (s < 0) return center;
 	return surfaces[s]->center;
 }
 
-float SkinnedMesh::getRadius(int s) {
+float GLSkinnedGeometry::getRadius(int s) {
 	if (s < 0) return radius;
 	return surfaces[s]->radius;
 }
 
 /* load
  */
-int SkinnedMesh::load(const char* name) {
+int GLSkinnedGeometry::load(const char* name) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		THROW_ERROR("SkinnedMesh::load(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLSkinnedGeometry::load(): error open \"%s\" file\n", name);
 	}
 	int magic = 0;
 	fread(&magic, sizeof(int), 1, file);
@@ -560,10 +560,10 @@ int SkinnedMesh::load(const char* name) {
 
 /* save
  */
-int SkinnedMesh::save(const char* name) {
+int GLSkinnedGeometry::save(const char* name) {
 	FILE* file = fopen(name, "wb");
 	if (!file) {
-		THROW_ERROR("SkinnedMesh::save(): error create \"%s\" file\n", name);
+		THROW_ERROR("GLSkinnedGeometry::save(): error create \"%s\" file\n", name);
 	}
 	int magic = SKINNED_MESH_MAGIC;
 	fwrite(&magic, sizeof(int), 1, file);
@@ -610,23 +610,23 @@ int SkinnedMesh::save(const char* name) {
 /*                                                                           */
 /*****************************************************************************/
 
-int SkinnedMesh::load_binary(const char* name) {
+int GLSkinnedGeometry::load_binary(const char* name) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		THROW_ERROR("SkinnedMesh::load_binary(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLSkinnedGeometry::load_binary(): error open \"%s\" file\n", name);
 	}
 
 	int magic;	// magic
 	fread(&magic, sizeof(int), 1, file);
 	if (magic != SKINNED_MESH_MAGIC) {
-		THROW_ERROR("SkinnedMesh::load_binary(): wrong magic 0x%04x in \"%s\" file", magic, name);
+		THROW_ERROR("GLSkinnedGeometry::load_binary(): wrong magic 0x%04x in \"%s\" file", magic, name);
 		fclose(file);
 		return 0;
 	}
 
 	fread(&num_bones, sizeof(int), 1, file);	// bones
 	if (num_bones < 0 || num_bones > 1024) {
-		THROW_ERROR("SkinnedMesh::load_binary(): invalid num_bones %d in \"%s\" file\n", num_bones, name);
+		THROW_ERROR("GLSkinnedGeometry::load_binary(): invalid num_bones %d in \"%s\" file\n", num_bones, name);
 		fclose(file);
 		return 0;
 	}
@@ -639,7 +639,7 @@ int SkinnedMesh::load_binary(const char* name) {
 	int num_surfaces;	// surfaces
 	fread(&num_surfaces, sizeof(int), 1, file);
 	if (num_surfaces < 0 || num_surfaces > NUM_SURFACES) {
-		THROW_ERROR("SkinnedMesh::load_binary(): invalid num_surfaces %d in \"%s\" file\n", num_surfaces, name);
+		THROW_ERROR("GLSkinnedGeometry::load_binary(): invalid num_surfaces %d in \"%s\" file\n", num_surfaces, name);
 		fclose(file);
 		return 0;
 	}
@@ -650,7 +650,7 @@ int SkinnedMesh::load_binary(const char* name) {
 
 		fread(&s->num_vertex, sizeof(int), 1, file);	// vertexes
 		if (s->num_vertex < 0) {
-			THROW_ERROR("SkinnedMesh::load_binary(): invalid num_vertex %d in \"%s\" file\n", s->num_vertex, name);
+			THROW_ERROR("GLSkinnedGeometry::load_binary(): invalid num_vertex %d in \"%s\" file\n", s->num_vertex, name);
 			delete s;
 			fclose(file);
 			return 0;
@@ -661,7 +661,7 @@ int SkinnedMesh::load_binary(const char* name) {
 			fread(&v->texcoord, sizeof(vec2), 1, file);
 			fread(&v->num_weights, sizeof(int), 1, file);	// weights
 			if (v->num_weights < 0 || v->num_weights > num_bones) {
-				THROW_ERROR("SkinnedMesh::load_binary(): invalid num_weights %d in \"%s\" file\n", v->num_weights, name);
+				THROW_ERROR("GLSkinnedGeometry::load_binary(): invalid num_weights %d in \"%s\" file\n", v->num_weights, name);
 				delete s;
 				fclose(file);
 				return 0;
@@ -679,7 +679,7 @@ int SkinnedMesh::load_binary(const char* name) {
 
 		fread(&s->num_triangles, sizeof(int), 1, file);	// triangles
 		if (s->num_triangles < 0) {
-			THROW_ERROR("SkinnedMesh::load_binary(): invalid num_triangles %d in \"%s\" file\n", s->num_triangles, name);
+			THROW_ERROR("GLSkinnedGeometry::load_binary(): invalid num_triangles %d in \"%s\" file\n", s->num_triangles, name);
 			delete s;
 			fclose(file);
 			return 0;
@@ -695,7 +695,7 @@ int SkinnedMesh::load_binary(const char* name) {
 			s->indeices[j * 3 + 2] = t->v[2];
 		}
 		if (this->num_surfaces == NUM_SURFACES) {
-			THROW_ERROR("SkinnedMesh::load_binary(): many surfaces\n");
+			THROW_ERROR("GLSkinnedGeometry::load_binary(): many surfaces\n");
 			this->num_surfaces--;
 		}
 		surfaces[this->num_surfaces++] = s;
@@ -718,7 +718,7 @@ int SkinnedMesh::load_binary(const char* name) {
 /*                                                                           */
 /*****************************************************************************/
 
-void SkinnedMesh::read_string(FILE* file, char* string, int size) {
+void GLSkinnedGeometry::read_string(FILE* file, char* string, int size) {
 	char c;
 	char* s = string;
 	int quoted = -1;
@@ -740,10 +740,10 @@ void SkinnedMesh::read_string(FILE* file, char* string, int size) {
 }
 
 
-int SkinnedMesh::load_ascii(const char* name) {
+int GLSkinnedGeometry::load_ascii(const char* name) {
 	FILE* file = fopen(name, "r");
 	if (!file) {
-		THROW_ERROR("SkinnedMesh::load_ascii(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLSkinnedGeometry::load_ascii(): error open \"%s\" file\n", name);
 	}
 	char buf[1024];
 	while (fscanf(file, "%1023s", buf) != EOF) {
@@ -801,13 +801,13 @@ int SkinnedMesh::load_ascii(const char* name) {
 					break;
 				}
 				else {
-					THROW_ERROR("SkinnedMesh::load_ascii(): unknown token \"%s\"\n", buf);
+					THROW_ERROR("GLSkinnedGeometry::load_ascii(): unknown token \"%s\"\n", buf);
 					fclose(file);
 					return 0;
 				}
 			}
 			if (num_surfaces == NUM_SURFACES) {
-				THROW_ERROR("SkinnedMesh::load_ascii(): many surfaces\n");
+				THROW_ERROR("GLSkinnedGeometry::load_ascii(): many surfaces\n");
 				num_surfaces--;
 			}
 			surfaces[num_surfaces++] = s;
@@ -826,7 +826,7 @@ int SkinnedMesh::load_ascii(const char* name) {
 			fscanf(file, "%1023s", buf);
 		}
 		else {
-			THROW_ERROR("SkinnedMesh::load_ascii(): unknown token \"%s\"\n", buf);
+			THROW_ERROR("GLSkinnedGeometry::load_ascii(): unknown token \"%s\"\n", buf);
 			fclose(file);
 			return 0;
 		}
@@ -841,7 +841,7 @@ int SkinnedMesh::load_ascii(const char* name) {
 /*                                                                           */
 /*****************************************************************************/
 
-void SkinnedMesh::calculate_tangent() {
+void GLSkinnedGeometry::calculate_tangent() {
 	setFrame(0.0);
 	calculateSkin();
 
@@ -960,7 +960,7 @@ static int csv_edge_cmp(const void* a, const void* b) {
 	return 0;
 }
 
-void SkinnedMesh::create_shadow_volumes() {
+void GLSkinnedGeometry::create_shadow_volumes() {
 	for (int i = 0; i < num_surfaces; i++) {
 		Surface* s = surfaces[i];
 		s->num_edges = s->num_triangles * 3;
@@ -1009,4 +1009,14 @@ void SkinnedMesh::create_shadow_volumes() {
 		delete[] ebuf;
 		delete[] e;
 	}
+}
+
+void GLSkinnedGeometry::draw() {
+	render();
+}
+
+int GLSkinnedGeometry::indexCount() const {
+	int count = 0;
+	for (int i = 0; i < num_surfaces; i++) count += surfaces[i]->num_indices;
+	return count;
 }

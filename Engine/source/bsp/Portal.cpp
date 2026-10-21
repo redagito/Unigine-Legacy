@@ -2,7 +2,7 @@
 #include "util/Error.h"
 
 #include "graphics/OpenGL.h"
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 #include "engine.h"
 
 #include <cstdio>
@@ -16,7 +16,7 @@ Portal::~Portal() {
 }
 
 
-void Portal::create(Mesh* mesh, int s) {
+void Portal::create(MeshData* mesh, int s) {
 	center = mesh->getCenter(s);
 	radius = mesh->getRadius(s);
 	for (int i = 0; i < 4; i++) points[i] = vec3(0, 0, 0);
@@ -24,7 +24,7 @@ void Portal::create(Mesh* mesh, int s) {
 	if (num_vertex != 6) {
 		THROW_ERROR("Portal::create(): portal mesh must have only two triangle\n");
 	}
-	Mesh::Vertex* v = mesh->getVertex(s);
+	MeshData::Vertex* v = mesh->getVertex(s);
 	int flag[6] = { 0 };	// create quad from the six vertexes
 	for (int i = 0; i < 6; i++) {
 		flag[i] = 0;

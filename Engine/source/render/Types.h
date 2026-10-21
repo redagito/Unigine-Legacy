@@ -2,9 +2,7 @@
 
 #include "math/Math.h"
 
-namespace render {
-
-class Geometry;
+class RenderGeometry;
 
 // the maps a material carries
 //
@@ -115,7 +113,7 @@ struct ProgramUniforms {
 };
 
 // what a light contributes to the frame
-struct Light {
+struct RenderLight {
 	vec3 position;
 	float radius = 1.0f;
 	vec4 color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -125,7 +123,7 @@ struct Light {
 // the volume a fog pass renders
 struct FogVolume {
 	vec4 color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	Geometry* volume = nullptr;
+	RenderGeometry* volume = nullptr;
 };
 
 struct Camera {
@@ -143,4 +141,3 @@ struct Vertex {
 	vec2 texcoord;
 };
 
-}

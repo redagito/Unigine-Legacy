@@ -2,7 +2,7 @@
 
 #include "math/Math.h"
 
-class Mesh;
+class MeshData;
 class Portal;
 class Node;
 class Frustum;
@@ -15,14 +15,14 @@ public:
 	Sector();
 	~Sector();
 
-	void create(Mesh* mesh, int s);
+	void create(MeshData* mesh, int s);
 	void getNodeObjects(Node* node);
 	void create();
 
 	int inside(const vec3& point) const;
 	int inside(Portal* portal);
 	int inside(const vec3& center, float radius) const;
-	int inside(Mesh* mesh, int s);
+	int inside(MeshData* mesh, int s);
 
 	void addObject(Object* object);
 	void removeObject(Object* object);

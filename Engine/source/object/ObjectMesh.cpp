@@ -19,12 +19,12 @@
 
 #include "graphics/Frustum.h"
 #include "graphics/Material.h"
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 #include "engine.h"
 #include "object/Object.h"
 #include "object/ObjectMesh.h"
 
-ObjectMesh::ObjectMesh(Mesh *mesh) : Object(OBJECT_MESH), mesh(mesh) {
+ObjectMesh::ObjectMesh(MeshData *mesh) : Object(OBJECT_MESH), mesh(mesh) {
 	materials = new Material*[getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];

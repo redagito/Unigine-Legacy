@@ -5,14 +5,14 @@
 
 #include "math/Math.h"
 
-class Mesh 
+class MeshData 
 {
 public:
 
-	Mesh();
-	Mesh(const char* name);
-	Mesh(const Mesh* mesh);
-	virtual ~Mesh();
+	MeshData();
+	MeshData(const char* name);
+	MeshData(const MeshData* mesh);
+	virtual ~MeshData();
 
 	virtual int render(int ppl = 0, int s = -1);
 
@@ -68,7 +68,7 @@ public:
 	float getRadius(int s = -1);
 
 	// io
-	void addSurface(Mesh* mesh, int surface);
+	void addSurface(MeshData* mesh, int surface);
 	void addSurface(const char* name, Vertex* vertex, int num_vertex);
 
 	int load(const char* name);

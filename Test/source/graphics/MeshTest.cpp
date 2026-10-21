@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 
 using Catch::Approx;
 
@@ -35,8 +35,8 @@ void writeRawMesh(const char* name, int num_vertex) {
 
 }
 
-TEST_CASE("Mesh default constructor", "[graphics][mesh]") {
-    Mesh m;
+TEST_CASE("MeshData default constructor", "[graphics][mesh]") {
+    MeshData m;
     REQUIRE(m.getNumSurfaces() == 0);
     REQUIRE(m.getRadius() == Approx(1000000.0f));
     REQUIRE(m.getCenter().x == Approx(0.0f));
@@ -44,25 +44,25 @@ TEST_CASE("Mesh default constructor", "[graphics][mesh]") {
     REQUIRE(m.getCenter().z == Approx(0.0f));
 }
 
-TEST_CASE("Mesh load nonexistent throws", "[graphics][mesh]") {
-    Mesh m;
+TEST_CASE("MeshData load nonexistent throws", "[graphics][mesh]") {
+    MeshData m;
     REQUIRE_THROWS_AS(m.load_mesh("nonexistent_file.mesh"), EngineError);
 }
 
-TEST_CASE("Mesh load_3ds nonexistent throws", "[graphics][mesh]") {
-    Mesh m;
+TEST_CASE("MeshData load_3ds nonexistent throws", "[graphics][mesh]") {
+    MeshData m;
     REQUIRE_THROWS_AS(m.load_3ds("nonexistent_file.3ds"), EngineError);
 }
 
-TEST_CASE("Mesh getSurface on empty mesh returns -1", "[graphics][mesh]") {
-    Mesh m;
+TEST_CASE("MeshData getSurface on empty mesh returns -1", "[graphics][mesh]") {
+    MeshData m;
     int s = m.getSurface("anything");
     REQUIRE(s == -1);
 }
 
-TEST_CASE("Mesh load replaces the surfaces of a previous load", "[graphics][mesh]") {
+TEST_CASE("MeshData load replaces the surfaces of a previous load", "[graphics][mesh]") {
     writeRawMesh("mesh_probe.mesh", 3);
-    Mesh m;
+    MeshData m;
     REQUIRE(m.load("mesh_probe.mesh") == 1);
     REQUIRE(m.getNumSurfaces() == 1);
     REQUIRE(m.load("mesh_probe.mesh") == 1);
@@ -71,12 +71,12 @@ TEST_CASE("Mesh load replaces the surfaces of a previous load", "[graphics][mesh
     remove("mesh_probe.mesh");
 }
 
-TEST_CASE("Mesh copy keeps its own surfaces", "[graphics][mesh]") {
+TEST_CASE("MeshData copy keeps its own surfaces", "[graphics][mesh]") {
     writeRawMesh("mesh_probe_copy.mesh", 3);
-    Mesh source;
+    MeshData source;
     REQUIRE(source.load("mesh_probe_copy.mesh") == 1);
     {
-        Mesh copy(&source);
+        MeshData copy(&source);
         REQUIRE(copy.getNumSurfaces() == 1);
         REQUIRE(strcmp(copy.getSurfaceName(0), "probe") == 0);
     }
@@ -85,11 +85,11 @@ TEST_CASE("Mesh copy keeps its own surfaces", "[graphics][mesh]") {
     remove("mesh_probe_copy.mesh");
 }
 
-TEST_CASE("Mesh addSurface from another mesh", "[graphics][mesh]") {
+TEST_CASE("MeshData addSurface from another mesh", "[graphics][mesh]") {
     writeRawMesh("mesh_probe_add.mesh", 3);
-    Mesh source;
+    MeshData source;
     REQUIRE(source.load("mesh_probe_add.mesh") == 1);
-    Mesh target;
+    MeshData target;
     target.addSurface(&source, 0);
     REQUIRE(target.getNumSurfaces() == 1);
     REQUIRE(strcmp(target.getSurfaceName(0), "probe") == 0);

@@ -1,11 +1,11 @@
-#include "graphics/MeshVBO.h"
+#include "render/GLGeometry.h"
 
 
 #ifdef _WIN32
 
 #endif
 
-MeshVBO::MeshVBO(const char* name) : Mesh(name) {
+GLGeometry::GLGeometry(const char* name) : MeshData(name) {
 	for (int i = 0; i < getNumSurfaces(); i++) {
 		GLuint id;
 		glGenBuffersARB(1, &id);
@@ -16,7 +16,7 @@ MeshVBO::MeshVBO(const char* name) : Mesh(name) {
 	glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 }
 
-MeshVBO::MeshVBO(const Mesh* mesh) : Mesh(mesh) {
+GLGeometry::GLGeometry(const MeshData* mesh) : MeshData(mesh) {
 	for (int i = 0; i < getNumSurfaces(); i++) {
 		GLuint id;
 		glGenBuffersARB(1, &id);
@@ -27,13 +27,13 @@ MeshVBO::MeshVBO(const Mesh* mesh) : Mesh(mesh) {
 	glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 }
 
-MeshVBO::~MeshVBO() {
+GLGeometry::~GLGeometry() {
 	for (int i = 0; i < getNumSurfaces(); i++) glDeleteBuffersARB(1, &vbo_id[i]);
 	vbo_id.clear();
 }
 
 
-int MeshVBO::render(int ppl, int s) {
+int GLGeometry::render(int ppl, int s) {
 	int num_triangles = 0;
 	if (ppl) 
 	{
@@ -119,7 +119,7 @@ int MeshVBO::render(int ppl, int s) {
 }
 
 
-int MeshVBO::renderShadowVolume(int s) {
+int GLGeometry::renderShadowVolume(int s) {
 	int num_triangles = 0;
 	glEnableVertexAttribArrayARB(0);
 	if (s < 0) 
@@ -142,4 +142,14 @@ int MeshVBO::renderShadowVolume(int s) {
 	}
 	glDisableVertexAttribArrayARB(0);
 	return num_triangles;
+}
+
+void GLGeometry::draw() {
+	render();
+}
+
+int GLGeometry::indexCount() const {
+	int count = 0;
+	for (int i = 0; i < num_surfaces; i++) count += surfaces[i]->num_indices;
+	return count;
 }

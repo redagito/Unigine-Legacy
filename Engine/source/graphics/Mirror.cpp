@@ -3,16 +3,16 @@
 
 #include "engine.h"
 #include "graphics/Frustum.h"
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 #include "graphics/Material.h"
-#include "graphics/PBuffer.h"
-#include "graphics/Texture.h"
+#include "render/GLRenderTarget.h"
+#include "render/GLTexture.h"
 
 int Mirror::counter = 0;
-PBuffer *Mirror::pbuffers[3];
+GLRenderTarget *Mirror::pbuffers[3];
 
 
-Mirror::Mirror(Mesh *mesh) : mesh(mesh), material(NULL) {
+Mirror::Mirror(MeshData *mesh) : mesh(mesh), material(NULL) {
 	
 	pos = getCenter();
 	
@@ -21,15 +21,15 @@ Mirror::Mirror(Mesh *mesh) : mesh(mesh), material(NULL) {
 	} else if (mesh->getNumTriangles(0) == 0) {
 		THROW_ERROR("Mirror::Mirror: bad mesh\n");
 	} else {
-		Mesh::Triangle *triangles = mesh->getTriangles(0);
+		MeshData::Triangle *triangles = mesh->getTriangles(0);
 		plane = triangles[0].plane;
 	}
 	
-	for(int i = 0; i < 3; i++) mirror_texes[i] = new Texture(128 << i,128 << i,Texture::TEXTURE_2D,Texture::RGB | Texture::LINEAR | Texture::CLAMP);
+	for(int i = 0; i < 3; i++) mirror_texes[i] = new GLTexture(128 << i,128 << i,GLTexture::TEXTURE_2D,GLTexture::RGB | GLTexture::LINEAR | GLTexture::CLAMP);
 	
 	if(counter++ == 0) {
 		for(int i =  0; i < 3; i++) {
-			pbuffers[i] = new PBuffer(128 << i,128 << i,PBuffer::RGB | PBuffer::DEPTH | PBuffer::STENCIL);
+			pbuffers[i] = new GLRenderTarget(128 << i,128 << i,GLRenderTarget::RGB | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL);
 			
 			pbuffers[i]->enable();
 			glEnable(GL_DEPTH_TEST);

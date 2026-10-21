@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "graphics/PBuffer.h"
+#include "render/GLRenderTarget.h"
 #include "util/Logger.h"
 #include "util/Error.h"
 
@@ -41,7 +41,7 @@ struct PBuffer_data {
 };
 
 
-PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
+GLRenderTarget::GLRenderTarget(int width,int height,int flag) : width(width), height(height) {
 	
 	Display *display = glXGetCurrentDisplay();
 	int screen = DefaultScreen(display);
@@ -141,7 +141,7 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 	catch(const EngineError& e) {
 		pbuffer = glXGetCurrentDrawable();
 		context = old_context;
-		THROW_ERROR("PBuffer::PBuffer: %s", e.getMessage().c_str());
+		THROW_ERROR("GLRenderTarget::GLRenderTarget: %s", e.getMessage().c_str());
 	}
 	
 	data = new PBuffer_data;
@@ -155,29 +155,29 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 }
 
 
-PBuffer::~PBuffer() {
+GLRenderTarget::~GLRenderTarget() {
 	if(data->context) glXDestroyContext(data->display,data->context);
 	if(data->pbuffer) glXDestroyPbuffer(data->display,data->pbuffer);
 	delete data;
 }
 
 
-void PBuffer::enable() {
+void GLRenderTarget::enable() {
 	glXWaitGL();	// very BIG bug fix :)
 	
 	data->old_pbuffer = glXGetCurrentDrawable();
 	data->old_context = glXGetCurrentContext();
 	
 	if(!glXMakeCurrent(data->display,data->pbuffer,data->context)) {
-		THROW_ERROR("PBuffer::enable(): glXMakeCurrent() failed\n");
+		THROW_ERROR("GLRenderTarget::enable(): glXMakeCurrent() failed\n");
 	}
 }
 
 
-void PBuffer::disable() {
+void GLRenderTarget::disable() {
 	glXWaitGL();
 	if(!glXMakeCurrent(data->display,data->old_pbuffer,data->old_context)) {
-		THROW_ERROR("PBuffer::disable(): glXMakeCurrent() failed\n");
+		THROW_ERROR("GLRenderTarget::disable(): glXMakeCurrent() failed\n");
 	}
 }
 
@@ -189,7 +189,7 @@ void PBuffer::disable() {
 #include <windows.h>
 #include "graphics/OpenGL.h"
 #include <GL/wglext.h>
-#include "graphics/PBuffer.h"
+#include "render/GLRenderTarget.h"
 
 
 struct PBuffer_data {
@@ -208,7 +208,7 @@ static PFNWGLRELEASEPBUFFERDCARBPROC wglReleasePbufferDCARB = 0;
 static PFNWGLDESTROYPBUFFERARBPROC wglDestroyPbufferARB = 0;
 
 
-PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
+GLRenderTarget::GLRenderTarget(int width,int height,int flag) : width(width), height(height) {
 	
 	HDC old_hdc = wglGetCurrentDC();
 	HGLRC old_context = wglGetCurrentContext();
@@ -302,7 +302,7 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 			wglDestroyPbufferARB(pbuffer);
 		}
 		if (context) wglDeleteContext(context);
-		THROW_ERROR("PBuffer::PBuffer: %s", e.getMessage().c_str());
+		THROW_ERROR("GLRenderTarget::GLRenderTarget: %s", e.getMessage().c_str());
 	}
 
 	data = new PBuffer_data;
@@ -315,7 +315,7 @@ PBuffer::PBuffer(int width,int height,int flag) : width(width), height(height) {
 }
 
 
-PBuffer::~PBuffer() {
+GLRenderTarget::~GLRenderTarget() {
 	if (data->context && data->context != data->old_context) wglDeleteContext(data->context);
 	if (data->pbuffer) {
 		if (data->hdc && data->hdc != data->old_hdc) wglReleasePbufferDCARB(data->pbuffer, data->hdc);
@@ -325,20 +325,35 @@ PBuffer::~PBuffer() {
 }
 
 
-void PBuffer::enable() {
+void GLRenderTarget::enable() {
 	data->old_hdc = wglGetCurrentDC();
 	data->old_context = wglGetCurrentContext();
 	
 	if(!wglMakeCurrent(data->hdc,data->context)) {
-		THROW_ERROR("PBuffer::disable(): wglMakeCurrent() failed\n");
+		THROW_ERROR("GLRenderTarget::disable(): wglMakeCurrent() failed\n");
 	}
 }
 
 
-void PBuffer::disable() {
+void GLRenderTarget::disable() {
 	if(!wglMakeCurrent(data->old_hdc,data->old_context)) {
-		THROW_ERROR("PBuffer::disable(): wglMakeCurrent() failed\n");
+		THROW_ERROR("GLRenderTarget::disable(): wglMakeCurrent() failed\n");
 	}
 }
 
 #endif
+
+void GLRenderTarget::bind() {
+	enable();
+}
+
+void GLRenderTarget::resolve() {
+}
+
+int GLRenderTarget::getWidth() const {
+	return width;
+}
+
+int GLRenderTarget::getHeight() const {
+	return height;
+}

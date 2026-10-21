@@ -2,14 +2,14 @@
 
 #include "object/Object.h"
 
-class SkinnedMesh;
+class GLSkinnedGeometry;
 class RagDoll;
 class Paths;
 
 class ObjectSkinnedMesh : public Object {
 public:
 
-	ObjectSkinnedMesh(SkinnedMesh *skinnedmesh);
+	ObjectSkinnedMesh(GLSkinnedGeometry *skinnedmesh);
 	ObjectSkinnedMesh(const char *name, const Paths& paths);
 	virtual ~ObjectSkinnedMesh();
 	
@@ -42,7 +42,7 @@ public:
 	virtual void set(const vec3 &p);
 	virtual void set(const mat4 &m);
 	
-	SkinnedMesh *skinnedmesh;
+	GLSkinnedGeometry *skinnedmesh;
 	
 	RagDoll *ragdoll;
 	

@@ -2,8 +2,8 @@
 #include "util/Error.h"
 
 #include "bsp/Sector.h"
-#include "graphics/Mesh.h"
-#include "graphics/MeshVBO.h"
+#include "render/MeshData.h"
+#include "render/GLGeometry.h"
 #include "graphics/Frustum.h"
 #include "engine.h"
 #include "object/ObjectMesh.h"
@@ -26,7 +26,7 @@ Node::~Node() {
 	}
 }
 
-void Node::create(Mesh* mesh) {
+void Node::create(MeshData* mesh) {
 	min = mesh->getMin();
 	max = mesh->getMax();
 	center = mesh->getCenter();
@@ -48,7 +48,7 @@ void Node::create(Mesh* mesh) {
 		vec3 center(0, 0, 0);
 		int num_vertex = 0;	// find center of node
 		for (int i = 0; i < mesh->getNumSurfaces(); i++) {
-			Mesh::Vertex* vertex = mesh->getVertex(i);
+			MeshData::Vertex* vertex = mesh->getVertex(i);
 			for (int j = 0; j < mesh->getNumVertex(i); j++) {
 				center += vertex[j].xyz;
 				num_vertex++;
@@ -56,15 +56,15 @@ void Node::create(Mesh* mesh) {
 		}
 		center /= (float)num_vertex;
 		plane.w = -(plane * vec4(center, 1));
-		Mesh* left_mesh = new Mesh();
-		Mesh* right_mesh = new Mesh();
+		MeshData* left_mesh = new MeshData();
+		MeshData* right_mesh = new MeshData();
 		for (int i = 0; i < mesh->getNumSurfaces(); i++) {
 			int num_vertex = mesh->getNumVertex(i);
-			Mesh::Vertex* vertex = mesh->getVertex(i);
+			MeshData::Vertex* vertex = mesh->getVertex(i);
 			int left_mesh_num_vertex = 0;
-			Mesh::Vertex* left_mesh_vertex = new Mesh::Vertex[num_vertex * 2];
+			MeshData::Vertex* left_mesh_vertex = new MeshData::Vertex[num_vertex * 2];
 			int right_mesh_num_vertex = 0;
-			Mesh::Vertex* right_mesh_vertex = new Mesh::Vertex[num_vertex * 2];
+			MeshData::Vertex* right_mesh_vertex = new MeshData::Vertex[num_vertex * 2];
 			for (int j = 0; j < num_vertex; j += 3) {
 				/*int pos = 0;
 				if(plane * vec4(vertex[j + 0].xyz,1) > 0.0) pos++;
@@ -81,8 +81,8 @@ void Node::create(Mesh* mesh) {
 				}*/
 				int num_left = 0;
 				int num_right = 0;
-				Mesh::Vertex* left = &left_mesh_vertex[left_mesh_num_vertex];
-				Mesh::Vertex* right = &right_mesh_vertex[right_mesh_num_vertex];
+				MeshData::Vertex* left = &left_mesh_vertex[left_mesh_num_vertex];
+				MeshData::Vertex* right = &right_mesh_vertex[right_mesh_num_vertex];
 				float cur_dot = plane * vec4(vertex[j + 0].xyz, 1);
 				for (int cur = 0; cur < 3; cur++) {
 					int next = (cur + 1) % 3;
@@ -91,7 +91,7 @@ void Node::create(Mesh* mesh) {
 					if (cur_dot > 0.0) right[num_right++] = vertex[j + cur];
 					if ((cur_dot <= 0.0) != (next_dot <= 0.0)) {
 						float k = -cur_dot / (next_dot - cur_dot);
-						Mesh::Vertex v;
+						MeshData::Vertex v;
 						v.xyz = vertex[j + cur].xyz * (1.0f - k) + vertex[j + next].xyz * k;
 						v.normal = vertex[j + cur].normal * (1.0f - k) + vertex[j + next].normal * k;
 						v.tangent = vertex[j + cur].tangent * (1.0f - k) + vertex[j + next].tangent * k;
@@ -137,7 +137,7 @@ void Node::create(Mesh* mesh) {
 		else {
 			mesh->create_shadow_volumes();
 			mesh->create_triangle_strips();
-			object = new ObjectMesh(new MeshVBO(mesh));
+			object = new ObjectMesh(new GLGeometry(mesh));
 			delete right_mesh;
 			delete left_mesh;
 		}
@@ -145,7 +145,7 @@ void Node::create(Mesh* mesh) {
 	else {
 		mesh->create_shadow_volumes();
 		mesh->create_triangle_strips();
-		object = new ObjectMesh(new MeshVBO(mesh));
+		object = new ObjectMesh(new GLGeometry(mesh));
 	}
 	delete mesh;
 }
@@ -170,13 +170,13 @@ void Node::load(FILE* file) {
 	}
 	else {
 		fseek(file, -sizeof(int), SEEK_CUR);
-		Mesh* mesh = new Mesh();
+		MeshData* mesh = new MeshData();
 		mesh->load(file);
 		min = mesh->getMin();
 		max = mesh->getMax();
 		center = mesh->getCenter();
 		radius = mesh->getRadius();
-		object = new ObjectMesh(new MeshVBO(mesh));
+		object = new ObjectMesh(new GLGeometry(mesh));
 		delete mesh;
 	}
 }

@@ -2,7 +2,7 @@
 
 #include "math/Math.h"
 
-class Texture;
+class GLTexture;
 class Paths;
 
 class Flare {
@@ -21,5 +21,5 @@ protected:
 
 	static int counter;
 
-	static Texture* flare_tex;
+	static GLTexture* flare_tex;
 };

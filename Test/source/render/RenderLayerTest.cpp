@@ -16,15 +16,15 @@ using Catch::Approx;
 #endif
 
 TEST_CASE("the render layer exposes the map slots the materials use", "[render]") {
-	REQUIRE(static_cast<int>(render::MapSlot::count) == 4);
-	REQUIRE(static_cast<int>(render::MapSlot::albedo) == 0);
-	REQUIRE(static_cast<int>(render::MapSlot::normal) == 1);
-	REQUIRE(static_cast<int>(render::MapSlot::direction_lookup) == 2);
-	REQUIRE(static_cast<int>(render::MapSlot::emission) == 3);
+	REQUIRE(static_cast<int>(MapSlot::count) == 4);
+	REQUIRE(static_cast<int>(MapSlot::albedo) == 0);
+	REQUIRE(static_cast<int>(MapSlot::normal) == 1);
+	REQUIRE(static_cast<int>(MapSlot::direction_lookup) == 2);
+	REQUIRE(static_cast<int>(MapSlot::emission) == 3);
 }
 
 TEST_CASE("the render layer carries the uniform set the shaders need", "[render]") {
-	render::ProgramUniforms uniforms;
+	ProgramUniforms uniforms;
 	uniforms.light = vec4(1.0f, 2.0f, 3.0f, 0.25f);
 	uniforms.user[0] = vec4(0.0f);
 	REQUIRE(uniforms.light.w == Approx(0.25f));

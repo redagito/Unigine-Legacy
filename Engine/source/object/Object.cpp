@@ -5,7 +5,7 @@
 #include "bsp/Bsp.h"
 #include "bsp/Sector.h"
 #include "math/Position.h"
-#include "graphics/Shader.h"
+#include "render/GLProgram.h"
 #include "graphics/Material.h"
 #include "physics/RigidBody.h"
 #include "util/StringUtil.h"
@@ -111,7 +111,7 @@ void Object::enable() {
 	Engine::itransform = itransform * Engine::itransform;
 	glLoadMatrixf(Engine::modelview);
 	// new transformation
-	if(Shader::old_shader) Shader::old_shader->bind();
+	if(GLProgram::old_shader) GLProgram::old_shader->bind();
 }
 
 void Object::disable() {
@@ -121,5 +121,5 @@ void Object::disable() {
 	Engine::transform = old_transform;
 	Engine::itransform = old_itransform;
 	glLoadMatrixf(Engine::modelview);
-	if(Shader::old_shader) Shader::old_shader->bind();
+	if(GLProgram::old_shader) GLProgram::old_shader->bind();
 }

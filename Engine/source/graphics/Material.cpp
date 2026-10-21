@@ -3,8 +3,8 @@
 
 //
 #include "light.h"
-#include "graphics/Texture.h"
-#include "graphics/Shader.h"
+#include "render/GLTexture.h"
+#include "render/GLProgram.h"
 #include "script/Parser.h"
 #include "engine.h"
 #include "Paths.h"
@@ -47,7 +47,7 @@ void Material::load(const char* name, const Paths& paths) {
 		sscanf(parser->get("alpha_test"), "%1023s %f", func, &alpha_ref);
 		alpha_func = getAlphaFunc(func);
 	}
-	for (int i = 0; i < Shader::NUM_PARAMETERS; i++) {
+	for (int i = 0; i < GLProgram::NUM_PARAMETERS; i++) {
 		parameters[i] = vec4(0, 0, 0, 0);
 		char buf[1024];
 		sprintf(buf, "parameter%d", i);
@@ -62,13 +62,13 @@ void Material::load(const char* name, const Paths& paths) {
 	if (parser->get("shader")) {
 		light_shader = ambient_shader = Engine::loadShader(parser->get("shader"), paths);
 	}
-	for (int i = 0; i < Shader::NUM_TEXTURES; i++) {
+	for (int i = 0; i < GLProgram::NUM_TEXTURES; i++) {
 		textures[i] = NULL;
 		char buf[1024];
 		sprintf(buf, "texture%d", i);
 		char* s = parser->get(buf);
 		if (s) {
-			GLuint target = Texture::TEXTURE_2D;
+			GLuint target = GLTexture::TEXTURE_2D;
 			int flag = 0;
 			int format = 0;
 			int filter = 0;
@@ -85,36 +85,36 @@ void Material::load(const char* name, const Paths& paths) {
 					d = buf;
 					while (*s != '\n' && *s != '\0' && strchr(" \t\r", *s)) s++;
 
-					if (!strcmp(buf, "2D")) target = Texture::TEXTURE_2D;
-					else if (!strcmp(buf, "RECT")) target = Texture::TEXTURE_RECT;
-					else if (!strcmp(buf, "CUBE")) target = Texture::TEXTURE_CUBE;
-					else if (!strcmp(buf, "3D")) target = Texture::TEXTURE_3D;
+					if (!strcmp(buf, "2D")) target = GLTexture::TEXTURE_2D;
+					else if (!strcmp(buf, "RECT")) target = GLTexture::TEXTURE_RECT;
+					else if (!strcmp(buf, "CUBE")) target = GLTexture::TEXTURE_CUBE;
+					else if (!strcmp(buf, "3D")) target = GLTexture::TEXTURE_3D;
 
-					else if (!strcmp(buf, "LUMINANCE")) format = Texture::LUMINANCE;
-					else if (!strcmp(buf, "LUMINANCE_ALPHA")) format = Texture::LUMINANCE_ALPHA;
-					else if (!strcmp(buf, "RGB")) format = Texture::RGB;
-					else if (!strcmp(buf, "RGBA")) format = Texture::RGBA;
+					else if (!strcmp(buf, "LUMINANCE")) format = GLTexture::LUMINANCE;
+					else if (!strcmp(buf, "LUMINANCE_ALPHA")) format = GLTexture::LUMINANCE_ALPHA;
+					else if (!strcmp(buf, "RGB")) format = GLTexture::RGB;
+					else if (!strcmp(buf, "RGBA")) format = GLTexture::RGBA;
 
-					else if (!strcmp(buf, "CLAMP")) flag |= Texture::CLAMP;
-					else if (!strcmp(buf, "CLAMP_TO_EDGE")) flag |= Texture::CLAMP_TO_EDGE;
+					else if (!strcmp(buf, "CLAMP")) flag |= GLTexture::CLAMP;
+					else if (!strcmp(buf, "CLAMP_TO_EDGE")) flag |= GLTexture::CLAMP_TO_EDGE;
 
-					else if (!strcmp(buf, "NEAREST")) filter = Texture::NEAREST;
-					else if (!strcmp(buf, "LINEAR")) filter = Texture::LINEAR;
-					else if (!strcmp(buf, "NEAREST_MIPMAP_NEAREST")) filter = Texture::NEAREST_MIPMAP_NEAREST;
-					else if (!strcmp(buf, "LINEAR_MIPMAP_NEAREST")) filter = Texture::LINEAR_MIPMAP_NEAREST;
-					else if (!strcmp(buf, "LINEAR_MIPMAP_LINEAR")) filter = Texture::LINEAR_MIPMAP_LINEAR;
+					else if (!strcmp(buf, "NEAREST")) filter = GLTexture::NEAREST;
+					else if (!strcmp(buf, "LINEAR")) filter = GLTexture::LINEAR;
+					else if (!strcmp(buf, "NEAREST_MIPMAP_NEAREST")) filter = GLTexture::NEAREST_MIPMAP_NEAREST;
+					else if (!strcmp(buf, "LINEAR_MIPMAP_NEAREST")) filter = GLTexture::LINEAR_MIPMAP_NEAREST;
+					else if (!strcmp(buf, "LINEAR_MIPMAP_LINEAR")) filter = GLTexture::LINEAR_MIPMAP_LINEAR;
 
-					else if (!strcmp(buf, "ANISOTROPY_1")) flag |= Texture::ANISOTROPY_1;
-					else if (!strcmp(buf, "ANISOTROPY_2")) flag |= Texture::ANISOTROPY_2;
-					else if (!strcmp(buf, "ANISOTROPY_4")) flag |= Texture::ANISOTROPY_4;
-					else if (!strcmp(buf, "ANISOTROPY_8")) flag |= Texture::ANISOTROPY_8;
-					else if (!strcmp(buf, "ANISOTROPY_16")) flag |= Texture::ANISOTROPY_16;
+					else if (!strcmp(buf, "ANISOTROPY_1")) flag |= GLTexture::ANISOTROPY_1;
+					else if (!strcmp(buf, "ANISOTROPY_2")) flag |= GLTexture::ANISOTROPY_2;
+					else if (!strcmp(buf, "ANISOTROPY_4")) flag |= GLTexture::ANISOTROPY_4;
+					else if (!strcmp(buf, "ANISOTROPY_8")) flag |= GLTexture::ANISOTROPY_8;
+					else if (!strcmp(buf, "ANISOTROPY_16")) flag |= GLTexture::ANISOTROPY_16;
 
 					else THROW_ERROR("Material::Material(): unknown texture%d flag \"%s\"\n", i, buf);
 				}
 				else *d++ = *s++;
 			}
-			textures[i] = Engine::loadTexture(name, paths, target, flag | (format == 0 ? Texture::RGB : format) | (filter == 0 ? Engine::texture_filter : filter));
+			textures[i] = Engine::loadTexture(name, paths, target, flag | (format == 0 ? GLTexture::RGB : format) | (filter == 0 ? Engine::texture_filter : filter));
 		}
 		else {
 			textures[i] = NULL;
@@ -199,7 +199,7 @@ void Material::disable() {
 		glEnable(GL_CULL_FACE);
 		glDisable(GL_ALPHA_TEST);
 	}
-	if (Shader::old_shader) Shader::old_shader->disable();
+	if (GLProgram::old_shader) GLProgram::old_shader->disable();
 	glColor4f(1, 1, 1, 1);
 	old_material = NULL;
 }
@@ -209,14 +209,14 @@ void Material::bind() {
 	if (old_material != this) {
 		if (blend) glBlendFunc(sfactor, dfactor);
 		if (alpha_test) glAlphaFunc(alpha_func, alpha_ref);
-		for (int i = 0; i < Shader::NUM_PARAMETERS; i++) Shader::setParameter(i, parameters[i]);
-		for (int i = 0; i < Shader::NUM_TEXTURES; i++) bindTexture(i, textures[i]);
+		for (int i = 0; i < GLProgram::NUM_PARAMETERS; i++) GLProgram::setParameter(i, parameters[i]);
+		for (int i = 0; i < GLProgram::NUM_TEXTURES; i++) bindTexture(i, textures[i]);
 		old_material = this;
 	}
 	if (Engine::lights.num_visible_lights) {
 		if (light_shader) {
 			if (Engine::lights.current_light && Engine::lights.current_light->material && Engine::lights.current_light->material->light_shader) {
-				for (int i = 0; i < Shader::NUM_TEXTURES; i++) {
+				for (int i = 0; i < GLProgram::NUM_TEXTURES; i++) {
 					if (Engine::lights.current_light->material->textures[i]) bindTexture(i, Engine::lights.current_light->material->textures[i]);
 				}
 				Engine::lights.current_light->material->light_shader->bind();
@@ -232,7 +232,7 @@ void Material::bind() {
 }
 
 
-void Material::bindTexture(int unit, Texture* texture) {
+void Material::bindTexture(int unit, GLTexture* texture) {
 	if (Engine::lights.num_visible_lights) {
 		if (Engine::lights.current_light && Engine::lights.current_light->material && Engine::lights.current_light->material->light_shader) {
 			Engine::lights.current_light->material->light_shader->bindTexture(unit, texture);

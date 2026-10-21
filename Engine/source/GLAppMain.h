@@ -8,7 +8,7 @@
 class Light;
 class Sound;
 class Collide;
-class Texture;
+class GLTexture;
 class Object;
 class ObjectParticle;
 class ObjectParticles;
@@ -51,7 +51,7 @@ public:
 	Light* shoot_light = nullptr;				// shoot light
 	Sound* shoot_sound = nullptr;				// shoot sound
 	ObjectParticles* shoot_particles = nullptr;	// particles
-	Texture* cross_tex = nullptr;					// cross
+	GLTexture* cross_tex = nullptr;					// cross
 
 	Object* lamp = nullptr;					// lamp
 	Light* lamp_light = nullptr;				// lamp light

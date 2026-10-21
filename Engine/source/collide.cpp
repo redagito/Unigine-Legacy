@@ -4,7 +4,7 @@
 //#include "engine.h"
 #include "object/Object.h"
 #include "object/ObjectMesh.h"
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 #include "physics/RigidBody.h"
 
 #include <cmath>
@@ -148,7 +148,7 @@ void Collide::collideObjectSphere(Object* object, const vec3& pos, float radius)
 
 	static int next[3] = { 1, 2, 0 };
 
-	// collide sphere-Mesh
+	// collide sphere-MeshData
 	if (object->type == Object::OBJECT_MESH) {
 
 		// collide sphere-sphere
@@ -162,17 +162,17 @@ void Collide::collideObjectSphere(Object* object, const vec3& pos, float radius)
 			return;
 		}
 
-		// collide sphere-Mesh
-		Mesh* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
+		// collide sphere-MeshData
+		MeshData* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
 
 		for (int i = 0; i < mesh->getNumSurfaces(); i++) {
 			if ((mesh->getCenter(i) - pos).length() > mesh->getRadius(i) + radius) continue;
 
-			Mesh::Triangle* triangles = mesh->getTriangles(i);
+			MeshData::Triangle* triangles = mesh->getTriangles(i);
 
 			int num_triangles = mesh->getNumTriangles(i);
 			for (int j = 0; j < num_triangles; j++) {
-				Mesh::Triangle* t = &triangles[j];
+				MeshData::Triangle* t = &triangles[j];
 
 				// distance from the center of sphere to the plane of triangle
 				float dist = vec4(pos, 1) * t->plane;
@@ -222,23 +222,23 @@ void Collide::collideObjectSphere(Object* object, const vec3& pos, float radius)
 		return;
 	}
 
-	// collide sphere-SkinnedMesh
+	// collide sphere-GLSkinnedGeometry
 	/*if(object->type == Object::OBJECT_SKINNEDMESH) {
 
 		ObjectSkinnedMesh *objectskinnedmesh = reinterpret_cast<ObjectSkinnedMesh*>(object);
 		if(objectskinnedmesh->ragdoll) return;
 
-		SkinnedMesh *skinnedmesh = objectskinnedmesh->skinnedmesh;
+		GLSkinnedGeometry *skinnedmesh = objectskinnedmesh->skinnedmesh;
 
 		for(int i = 0; i < skinnedmesh->getNumSurfaces(); i++) {
 			if((skinnedmesh->getCenter(i) - pos).length() > skinnedmesh->getRadius(i) + radius) continue;
 
-			SkinnedMesh::Vertex *vertex = skinnedmesh->getVertex(i);
-			SkinnedMesh::Triangle *triangles = skinnedmesh->getTriangles(i);
+			GLSkinnedGeometry::Vertex *vertex = skinnedmesh->getVertex(i);
+			GLSkinnedGeometry::Triangle *triangles = skinnedmesh->getTriangles(i);
 
 			int num_triangles = skinnedmesh->getNumTriangles(i);
 			for(int j = 0; j < num_triangles; j++) {
-				SkinnedMesh::Triangle *t = &triangles[j];
+				GLSkinnedGeometry::Triangle *t = &triangles[j];
 
 				// distance from the center of sphere to the plane of triangle
 				float dist = vec4(pos,1) * t->plane;
@@ -305,7 +305,7 @@ int Collide::collide(Object* object) {
 	// transform and copy triangles from the mesh in to collide surface
 	if (object->type == Object::OBJECT_MESH) {
 
-		Mesh* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
+		MeshData* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
 
 		for (int i = 0; i < mesh->getNumSurfaces(); i++) {
 
@@ -316,7 +316,7 @@ int Collide::collide(Object* object) {
 				continue;
 			}
 
-			Mesh::Triangle* t = mesh->getTriangles(i);
+			MeshData::Triangle* t = mesh->getTriangles(i);
 			Triangle* ct = surfaces[num_surfaces].triangles;
 
 			vec3 min = vec3(1000000, 1000000, 1000000);	// calculate bound box
@@ -397,13 +397,13 @@ int Collide::collide(Object* object) {
 			// transform vertex and calcualte bound box
 			num_surfaces = 0;
 			if (object->type == Object::OBJECT_MESH) {
-				Mesh* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
+				MeshData* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
 				for (int k = 0; k < mesh->getNumSurfaces(); k++) {
 
 					surfaces[num_surfaces].num_triangles = mesh->getNumTriangles(k);
 					if (surfaces[num_surfaces].num_triangles > NUM_TRIANGLES) continue;
 
-					Mesh::Triangle* t = mesh->getTriangles(k);
+					MeshData::Triangle* t = mesh->getTriangles(k);
 					Triangle* ct = surfaces[num_surfaces].triangles;
 
 					vec3 min = vec3(1000000, 1000000, 1000000);	// calculate bound box
@@ -449,13 +449,13 @@ int Collide::collide(Object* object) {
 			// recalculate normals and fast point and triangle
 			num_surfaces = 0;
 			if (object->type == Object::OBJECT_MESH) {
-				Mesh* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
+				MeshData* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
 				for (int k = 0; k < mesh->getNumSurfaces(); k++) {
 
 					surfaces[num_surfaces].num_triangles = mesh->getNumTriangles(k);
 					if (surfaces[num_surfaces].num_triangles > NUM_TRIANGLES) continue;
 
-					Mesh::Triangle* t = mesh->getTriangles(k);
+					MeshData::Triangle* t = mesh->getTriangles(k);
 					Triangle* ct = surfaces[num_surfaces].triangles;
 
 					for (int l = 0; l < surfaces[num_surfaces].num_triangles; l++) {
@@ -489,10 +489,10 @@ void Collide::collideObjectMesh(Object* object) {
 
 	static int next[3] = { 1, 2, 0 };
 
-	// collide Mesh-Mesh
+	// collide MeshData-MeshData
 	if (object->type != Object::OBJECT_MESH) return;
 
-	Mesh* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
+	MeshData* mesh = reinterpret_cast<ObjectMesh*>(object)->mesh;
 
 	for (int i = 0; i < mesh->getNumSurfaces(); i++) {
 		for (int j = 0; j < num_surfaces; j++) {
@@ -509,13 +509,13 @@ void Collide::collideObjectMesh(Object* object) {
 			if (min.z >= surfaces[j].max.z) continue;
 			if (max.z <= surfaces[j].min.z) continue;
 
-			Mesh::Triangle* triangles = mesh->getTriangles(i);
+			MeshData::Triangle* triangles = mesh->getTriangles(i);
 			Surface* s = &surfaces[j];
 
 			int num_triangles = mesh->getNumTriangles(i);
 			for (int k = 0; k < num_triangles; k++) {
 
-				Mesh::Triangle* t = &triangles[k];
+				MeshData::Triangle* t = &triangles[k];
 
 				for (int l = 0; l < s->num_triangles; l++) {
 

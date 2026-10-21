@@ -2,7 +2,7 @@
 
 #include "bsp/Node.h"
 #include "bsp/Portal.h"
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 #include "graphics/Frustum.h"
 #include "graphics/Material.h"
 #include "object/ObjectMesh.h"
@@ -26,12 +26,12 @@ Sector::~Sector() {
 }
 
 
-void Sector::create(Mesh* mesh, int s) {
+void Sector::create(MeshData* mesh, int s) {
 	center = mesh->getCenter(s);
 	radius = mesh->getRadius(s);
 	num_planes = mesh->getNumVertex(s) / 3;
 	planes = new vec4[num_planes];
-	Mesh::Vertex* v = mesh->getVertex(s);
+	MeshData::Vertex* v = mesh->getVertex(s);
 	for (int i = 0; i < num_planes; i++) {
 		vec3 normal;
 		normal.cross(v[i * 3 + 1].xyz - v[i * 3 + 0].xyz, v[i * 3 + 2].xyz - v[i * 3 + 0].xyz);
@@ -92,8 +92,8 @@ int Sector::inside(const vec3& center, float radius) const {
 	return 1;
 }
 
-int Sector::inside(Mesh* mesh, int s) {
-	Mesh::Vertex* v = mesh->getVertex(s);
+int Sector::inside(MeshData* mesh, int s) {
+	MeshData::Vertex* v = mesh->getVertex(s);
 	for (int i = 0; i < mesh->getNumVertex(s); i++) {
 		if (inside(v[i].xyz) == 0) return 0;
 	}

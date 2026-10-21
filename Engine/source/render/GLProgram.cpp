@@ -1,23 +1,23 @@
-#include "graphics/Shader.h"
+#include "render/GLProgram.h"
 #include "util/Logger.h"
 #include "util/Error.h"
 
 #include "engine.h"
-#include "light.h"
+#include "graphics/Light.h"
 #include "script/Parser.h"
 #include "script/Defines.h"
 
 
-Shader* Shader::old_shader;
-vec4 Shader::parameters[NUM_PARAMETERS];
-Texture* Shader::old_textures[NUM_TEXTURES];
+GLProgram* GLProgram::old_shader;
+vec4 GLProgram::parameters[NUM_PARAMETERS];
+GLTexture* GLProgram::old_textures[NUM_TEXTURES];
 
 
-Shader::Shader(const char* name, const Defines& defines) {
+GLProgram::GLProgram(const char* name, const Defines& defines) {
 	load(name, defines);
 }
 
-Shader::~Shader() {
+GLProgram::~GLProgram() {
 	release();
 }
 
@@ -28,7 +28,7 @@ Shader::~Shader() {
 /*****************************************************************************/
 
 
-void Shader::release() {
+void GLProgram::release() {
 	if (vertex_target == GL_VERTEX_PROGRAM_ARB) {
 		if (vertex_id) glDeleteProgramsARB(1, &vertex_id);
 	}
@@ -48,7 +48,7 @@ void Shader::release() {
 }
 
 
-void Shader::load(const char* name, const Defines& defines) {
+void GLProgram::load(const char* name, const Defines& defines) {
 	release();
 	Parser* parser = new Parser(name, defines);
 	// matrixes
@@ -103,7 +103,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* s = data;
 			while (*s != '\0' && *s != '\n') s++;
 			*s = '\0';
-			THROW_ERROR("Shader::Shader(): unknown vertex program header \"%s\" in \"%s\" file\n", data, name);
+			THROW_ERROR("GLProgram::GLProgram(): unknown vertex program header \"%s\" in \"%s\" file\n", data, name);
 		}
 		if (error != -1) {
 			int line = 0;
@@ -113,7 +113,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* e = ++s;
 			while (*e != '\0' && *e != '\n') e++;
 			*e = '\0';
-			THROW_ERROR("Shader::Shader(): vertex program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
+			THROW_ERROR("GLProgram::GLProgram(): vertex program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
 		}
 	}
 	// fragment program
@@ -143,7 +143,7 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* s = data;
 			while (*s != '\0' && *s != '\n') s++;
 			*s = '\0';
-			THROW_ERROR("Shader::Shader(): unknown fragment program header \"%s\" in \"%s\" file\n", data, name);
+			THROW_ERROR("GLProgram::GLProgram(): unknown fragment program header \"%s\" in \"%s\" file\n", data, name);
 		}
 		if (error != -1) {
 			int line = 0;
@@ -153,19 +153,19 @@ void Shader::load(const char* name, const Defines& defines) {
 			char* e = ++s;
 			while (*e != '\0' && *e != '\n') e++;
 			*e = '\0';
-			THROW_ERROR("Shader::Shader(): fragment program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
+			THROW_ERROR("GLProgram::GLProgram(): fragment program error in \"%s\" file at line %d:\n\"%s\"\n", name, line, s);
 		}
 	}
 	delete parser;
 }
 
 
-GLuint Shader::compileARBtec(const char* src) {
+GLuint GLProgram::compileARBtec(const char* src) {
 	const char* s = src;
 	GLuint list = glGenLists(1);
 	glNewList(list, GL_COMPILE);
 	if (strncmp("!!ARBtec1.0", s, 11)) {
-		THROW_ERROR("Shader::compileARBtec(): unknown header\n");
+		THROW_ERROR("GLProgram::compileARBtec(): unknown header\n");
 		glEndList();
 		return list;
 	}
@@ -225,12 +225,12 @@ GLuint Shader::compileARBtec(const char* src) {
 				else if (!strncmp("scale4", s, 6) && (s += 6)) glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE, 4);
 				else if (*s == '\n' && s++) break;
 				else {
-					spdlog::error("Shader::compileARBtec(): unknown token \"{}\"", s);
+					spdlog::error("GLProgram::compileARBtec(): unknown token \"{}\"", s);
 					char buf[1024];
 					char* d = buf;
 					while (*s && !strchr(" \t\n\r", *s)) *d++ = *s++;
 					*d = '\0';
-					THROW_ERROR("Shader::compileARBtec(): unknown token \"%s\"\n", buf);
+					THROW_ERROR("GLProgram::compileARBtec(): unknown token \"%s\"\n", buf);
 					glEndList();
 					return list;
 				}
@@ -244,17 +244,17 @@ GLuint Shader::compileARBtec(const char* src) {
 }
 
 
-void Shader::getMatrix(const char* name, Matrix* m) {
+void GLProgram::getMatrix(const char* name, Matrix* m) {
 	if (!strcmp(name, "projection")) m->type = PROJECTION;
 	else if (!strcmp(name, "modelview")) m->type = MODELVIEW;
 	else if (!strcmp(name, "imodelview")) m->type = IMODELVIEW;
 	else if (!strcmp(name, "transform")) m->type = TRANSFORM;
 	else if (!strcmp(name, "itransform")) m->type = ITRANSFORM;
 	else if (!strcmp(name, "light_transform")) m->type = LIGHT_TRANSFORM;
-	else THROW_ERROR("Shader::getMatrix(): unknown matrix \"%s\"\n", name);
+	else THROW_ERROR("GLProgram::getMatrix(): unknown matrix \"%s\"\n", name);
 }
 
-void Shader::getLocalParameter(const char* name, Shader::LocalParameter* p) {
+void GLProgram::getLocalParameter(const char* name, GLProgram::LocalParameter* p) {
 	if (!strcmp(name, "time")) p->type = TIME;
 	else if (!strcmp(name, "sin")) p->type = SIN;
 	else if (!strcmp(name, "cos")) p->type = COS;
@@ -269,15 +269,15 @@ void Shader::getLocalParameter(const char* name, Shader::LocalParameter* p) {
 		p->type = PARAMETER;
 		sscanf(name + 9, "%d", &p->parameter);
 		if (p->parameter < 0 || p->parameter >= NUM_PARAMETERS) {
-			THROW_ERROR("Shader::getLocalParameter(): number of parameters is big\n");
+			THROW_ERROR("GLProgram::getLocalParameter(): number of parameters is big\n");
 			p->parameter = 0;
 		}
 	}
-	else THROW_ERROR("Shader::getLocalParameter(): unknown parameter \"%s\"\n", name);
+	else THROW_ERROR("GLProgram::getLocalParameter(): unknown parameter \"%s\"\n", name);
 }
 
 
-void Shader::setParameter(int num, const vec4& parameter) {
+void GLProgram::setParameter(int num, const vec4& parameter) {
 	parameters[num] = parameter;
 }
 
@@ -288,7 +288,7 @@ void Shader::setParameter(int num, const vec4& parameter) {
 /*****************************************************************************/
 
 
-void Shader::enable() {
+void GLProgram::enable() {
 	if (old_shader == this) return;
 	if (old_shader) {
 		if (old_shader->vertex_target != vertex_target) {
@@ -321,7 +321,7 @@ void Shader::enable() {
 }
 
 
-void Shader::disable() {
+void GLProgram::disable() {
 	if (vertex_target) glDisable(vertex_target);
 	if (fragment_target == GL_FRAGMENT_PROGRAM_ARB) glDisable(fragment_target);
 	else if (fragment_target == GL_FRAGMENT_PROGRAM_NV) glDisable(fragment_target);
@@ -347,7 +347,7 @@ void Shader::disable() {
 }
 
 
-void Shader::bind() 
+void GLProgram::bind() 
 {
 	if (old_shader != this) {
 		if (vertex_target == GL_VERTEX_PROGRAM_ARB) glBindProgramARB(vertex_target, vertex_id);
@@ -403,7 +403,7 @@ void Shader::bind()
 /*                                                                           */
 /*****************************************************************************/
 
-void Shader::bindTexture(int unit, Texture* texture) {
+void GLProgram::bindTexture(int unit, GLTexture* texture) {
 	if (old_textures[unit] == texture) return;
 	glActiveTexture(GL_TEXTURE0 + unit);
 	if (texture) {
@@ -418,4 +418,8 @@ void Shader::bindTexture(int unit, Texture* texture) {
 		if (old_textures[unit]) old_textures[unit]->disable();
 	}
 	old_textures[unit] = texture;
+}
+
+void GLProgram::setUniforms(const ProgramUniforms& uniforms) {
+	bind();
 }

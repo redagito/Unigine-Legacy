@@ -2,19 +2,23 @@
 
 #include <vector>
 #include "math/Math.h"
+#include "render/Resources.h"
 
 #define SKINNED_MESH_MAGIC ('s' | 'm' << 8 | '0' << 16 | '2' << 24)
 
-class SkinnedMesh {
+class GLSkinnedGeometry : public RenderGeometry {
 public:
 
-	SkinnedMesh(const char* name);
-	virtual ~SkinnedMesh();
+	GLSkinnedGeometry(const char* name);
+	virtual ~GLSkinnedGeometry();
 
 	void setFrame(float frame, int from = -1, int to = -1);
 	void calculateSkin();
 
 	virtual int render(int ppl = 0, int s = -1);
+
+	void draw() override;
+	int indexCount() const override;
 
 	void findSilhouette(const vec4& light, int s = -1);
 	int getNumIntersections(const vec3& line0, const vec3& line1, int s = -1);

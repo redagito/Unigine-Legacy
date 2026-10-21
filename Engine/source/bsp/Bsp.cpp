@@ -24,9 +24,9 @@ static bool has_extension(const char* name, const char* extension) {
 #include "engine.h"
 #include <cstring>
 
-#include "graphics/Mesh.h"
+#include "render/MeshData.h"
 #include <cstring>
-#include "graphics/MeshVBO.h"
+#include "render/GLGeometry.h"
 #include <cstring>
 
 #include "object/Object.h"
@@ -202,7 +202,7 @@ void Bsp::load(const char* name) {
 	}
 
 	// else generate bsp tree with portals and sectors
-	Mesh* mesh = new Mesh();
+	MeshData* mesh = new MeshData();
 	if (has_extension(name, ".3ds")) mesh->load_3ds(name);
 	else if (has_extension(name, ".mesh")) mesh->load_mesh(name);
 
@@ -262,7 +262,7 @@ void Bsp::load(const char* name) {
 
 		for (int i = 0; i < num_sectors; i++) {
 			Sector* s = &sectors[i];
-			Mesh* m = new Mesh();
+			MeshData* m = new MeshData();
 			for (int j = 0; j < mesh->getNumSurfaces(); j++) {
 				if (usage_flag[j]) continue;
 				if (s->inside(mesh, j)) {

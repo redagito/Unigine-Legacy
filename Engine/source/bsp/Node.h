@@ -4,7 +4,7 @@
 
 #include <cstdio>
 
-class Mesh;
+class MeshData;
 class Material;
 class Frustum;
 class ObjectMesh;
@@ -16,7 +16,7 @@ public:
 	Node();
 	~Node();
 
-	void create(Mesh* mesh);
+	void create(MeshData* mesh);
 	void load(FILE* file);
 	void save(FILE* file);
 

@@ -3,10 +3,10 @@
 #include "graphics/win32/glext.h"
 #include "util/Error.h"
 
-#include "graphics/PBuffer.h"
+#include "render/GLRenderTarget.h"
 #include "graphics/Console.h"
 #include "graphics/Frustum.h"
-#include "graphics/MeshVBO.h"
+#include "render/GLGeometry.h"
 #include "bsp/Bsp.h"
 #include "bsp/Sector.h"
 #include "bsp/Portal.h"
@@ -15,8 +15,8 @@
 #include "graphics/Light.h"
 #include "graphics/Fog.h"
 #include "graphics/Mirror.h"
-#include "graphics/Shader.h"
-#include "graphics/Texture.h"
+#include "render/GLProgram.h"
+#include "render/GLTexture.h"
 #include "graphics/Material.h"
 #include "physics/Physic.h"
 #include "map.h"
@@ -30,8 +30,8 @@ char* Engine::extensions = "The Extensions";
 int Engine::screen_width = 1024;
 int Engine::screen_height = 512;
 int Engine::screen_multisample = 0;
-PBuffer* Engine::screen;
-Texture* Engine::screen_texture;
+GLRenderTarget* Engine::screen;
+GLTexture* Engine::screen_texture;
 Material* Engine::screen_material;
 
 Defines Engine::defines;
@@ -60,9 +60,9 @@ Mirror** Engine::visible_mirrors;
 Mirror* Engine::current_mirror;
 
 GLuint Engine::query_id;
-Mesh* Engine::sphere_mesh;
+MeshData* Engine::sphere_mesh;
 
-Shader* Engine::shadow_volume_shader;
+GLProgram* Engine::shadow_volume_shader;
 
 float Engine::time;
 vec4 Engine::light;
@@ -92,12 +92,12 @@ int Engine::fog_toggle;
 int Engine::mirror_toggle;
 int Engine::physic_toggle;
 
-int Engine::texture_filter = Texture::LINEAR_MIPMAP_LINEAR;
+int Engine::texture_filter = GLTexture::LINEAR_MIPMAP_LINEAR;
 
-std::map<std::string, Shader*> Engine::shaders;
-std::map<std::string, Texture*> Engine::textures;
+std::map<std::string, GLProgram*> Engine::shaders;
+std::map<std::string, GLTexture*> Engine::textures;
 std::map<std::string, Material*> Engine::materials;
-std::map<std::string, Mesh*> Engine::meshes;
+std::map<std::string, MeshData*> Engine::meshes;
 
 void (*Engine::extern_load)(void*) = NULL;
 	void* Engine::extern_load_data;
@@ -182,16 +182,16 @@ int Engine::init(Paths& paths, const char* config)
 							char* d = s;
 							while (*d && !strchr(" \t\n", *d)) d++;
 							if (*d) *d++ = '\0';
-							if (!strcmp(s, "nearest")) texture_filter |= Texture::NEAREST;
-							else if (!strcmp(s, "linear")) texture_filter |= Texture::LINEAR;
-							else if (!strcmp(s, "nearest_mipmap_nearest")) texture_filter |= Texture::NEAREST_MIPMAP_NEAREST;
-							else if (!strcmp(s, "linear_mipmap_nearest")) texture_filter |= Texture::LINEAR_MIPMAP_NEAREST;
-							else if (!strcmp(s, "linear_mipmap_linear")) texture_filter |= Texture::LINEAR_MIPMAP_LINEAR;
-							else if (!strcmp(s, "anisotropy_1")) texture_filter |= Texture::ANISOTROPY_1;
-							else if (!strcmp(s, "anisotropy_2")) texture_filter |= Texture::ANISOTROPY_2;
-							else if (!strcmp(s, "anisotropy_4")) texture_filter |= Texture::ANISOTROPY_4;
-							else if (!strcmp(s, "anisotropy_8")) texture_filter |= Texture::ANISOTROPY_8;
-							else if (!strcmp(s, "anisotropy_16")) texture_filter |= Texture::ANISOTROPY_16;
+							if (!strcmp(s, "nearest")) texture_filter |= GLTexture::NEAREST;
+							else if (!strcmp(s, "linear")) texture_filter |= GLTexture::LINEAR;
+							else if (!strcmp(s, "nearest_mipmap_nearest")) texture_filter |= GLTexture::NEAREST_MIPMAP_NEAREST;
+							else if (!strcmp(s, "linear_mipmap_nearest")) texture_filter |= GLTexture::LINEAR_MIPMAP_NEAREST;
+							else if (!strcmp(s, "linear_mipmap_linear")) texture_filter |= GLTexture::LINEAR_MIPMAP_LINEAR;
+							else if (!strcmp(s, "anisotropy_1")) texture_filter |= GLTexture::ANISOTROPY_1;
+							else if (!strcmp(s, "anisotropy_2")) texture_filter |= GLTexture::ANISOTROPY_2;
+							else if (!strcmp(s, "anisotropy_4")) texture_filter |= GLTexture::ANISOTROPY_4;
+							else if (!strcmp(s, "anisotropy_8")) texture_filter |= GLTexture::ANISOTROPY_8;
+							else if (!strcmp(s, "anisotropy_16")) texture_filter |= GLTexture::ANISOTROPY_16;
 							s = d;
 						}
 						else if (strchr(" \t", *s)) s++;
@@ -300,14 +300,14 @@ int Engine::init(Paths& paths, const char* config)
 	console->addCommand("extensions", ::extensions, NULL);
 
 	// screen
-	if (screen_multisample == 1) screen = new PBuffer(screen_width, screen_height, PBuffer::RGB | PBuffer::DEPTH | PBuffer::STENCIL | PBuffer::MULTISAMPLE_2);
-	else if (screen_multisample == 2) screen = new PBuffer(screen_width, screen_height, PBuffer::RGB | PBuffer::DEPTH | PBuffer::STENCIL | PBuffer::MULTISAMPLE_4);
-	else screen = new PBuffer(screen_width, screen_height, PBuffer::RGB | PBuffer::DEPTH | PBuffer::STENCIL);
+	if (screen_multisample == 1) screen = new GLRenderTarget(screen_width, screen_height, GLRenderTarget::RGB | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL | GLRenderTarget::MULTISAMPLE_2);
+	else if (screen_multisample == 2) screen = new GLRenderTarget(screen_width, screen_height, GLRenderTarget::RGB | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL | GLRenderTarget::MULTISAMPLE_4);
+	else screen = new GLRenderTarget(screen_width, screen_height, GLRenderTarget::RGB | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL);
 	screen->enable();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	screen->disable();
-	screen_texture = new Texture(screen_width, screen_height, Texture::TEXTURE_2D, Texture::RGB | Texture::CLAMP | Texture::LINEAR);
+	screen_texture = new GLTexture(screen_width, screen_height, GLTexture::TEXTURE_2D, GLTexture::RGB | GLTexture::CLAMP | GLTexture::LINEAR);
 	screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
 
 	// create new objects
@@ -383,12 +383,12 @@ void Engine::clear(const Paths& paths) {
 	bsp = NULL;
 
 	// shaders
-	std::map<std::string, Shader*>::iterator shaders_it;
+	std::map<std::string, GLProgram*>::iterator shaders_it;
 	for (shaders_it = shaders.begin(); shaders_it != shaders.end(); shaders_it++) delete shaders_it->second;
 	shaders.clear();
 
 	// textures
-	std::map<std::string, Texture*>::iterator textures_it;
+	std::map<std::string, GLTexture*>::iterator textures_it;
 	for (textures_it = textures.begin(); textures_it != textures.end(); textures_it++) delete textures_it->second;
 	textures.clear();
 
@@ -398,7 +398,7 @@ void Engine::clear(const Paths& paths) {
 	materials.clear();
 
 	// meshes
-	std::map<std::string, Mesh*>::iterator meshes_it;
+	std::map<std::string, MeshData*>::iterator meshes_it;
 	for (meshes_it = meshes.begin(); meshes_it != meshes.end(); meshes_it++) delete meshes_it->second;
 	meshes.clear();
 
@@ -425,20 +425,20 @@ void Engine::load(const char* name, Paths& paths) {
 }
 
 
-Shader* Engine::loadShader(const char* name, const Paths& paths) {
-	std::map<std::string, Shader*>::iterator it = shaders.find(name);
+GLProgram* Engine::loadShader(const char* name, const Paths& paths) {
+	std::map<std::string, GLProgram*>::iterator it = shaders.find(name);
 	if (it == shaders.end()) {
-		Shader* shader = new Shader(paths.findFile(name).c_str(), defines);
+		GLProgram* shader = new GLProgram(paths.findFile(name).c_str(), defines);
 		shaders[name] = shader;
 		return shader;
 	}
 	return it->second;
 }
 
-Texture* Engine::loadTexture(const char* name, const Paths& paths, GLuint target, int flag) {
-	std::map<std::string, Texture*>::iterator it = textures.find(name);
+GLTexture* Engine::loadTexture(const char* name, const Paths& paths, GLuint target, int flag) {
+	std::map<std::string, GLTexture*>::iterator it = textures.find(name);
 	if (it == textures.end()) {
-		Texture* texture = new Texture(paths.findFile(name).c_str(), target, flag);
+		GLTexture* texture = new GLTexture(paths.findFile(name).c_str(), target, flag);
 		textures[name] = texture;
 		return texture;
 	}
@@ -455,10 +455,10 @@ Material* Engine::loadMaterial(const char* name, const Paths& paths) {
 	return it->second;
 }
 
-Mesh* Engine::loadMesh(const char* name, const Paths& paths) {
-	std::map<std::string, Mesh*>::iterator it = meshes.find(name);
+MeshData* Engine::loadMesh(const char* name, const Paths& paths) {
+	std::map<std::string, MeshData*>::iterator it = meshes.find(name);
 	if (it == meshes.end()) {
-		Mesh* mesh = new MeshVBO(paths.findFile(name).c_str());
+		MeshData* mesh = new GLGeometry(paths.findFile(name).c_str());
 		meshes[name] = mesh;
 		return mesh;
 	}
@@ -474,14 +474,14 @@ void Engine::reload(const Paths& paths) {
 }
 
 void Engine::reload_shaders(const Paths& paths) {
-	std::map<std::string, Shader*>::iterator it;
+	std::map<std::string, GLProgram*>::iterator it;
 	for (it = shaders.begin(); it != shaders.end(); it++) {
 		it->second->load(paths.findFile(it->first.c_str()).c_str(), defines);
 	}
 }
 
 void Engine::reload_textures(const Paths& paths) {
-	std::map<std::string, Texture*>::iterator it;
+	std::map<std::string, GLTexture*>::iterator it;
 	for (it = textures.begin(); it != textures.end(); it++) {
 		it->second->load(paths.findFile(it->first.c_str()).c_str(), it->second->target, it->second->flag);
 	}

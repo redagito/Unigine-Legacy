@@ -3,16 +3,16 @@
 #include "math/Math.h"
 #include "math/Position.h"
 
-class Mesh;
-class PBuffer;
-class Texture;
-class Shader;
+class MeshData;
+class GLRenderTarget;
+class GLTexture;
+class GLProgram;
 class Paths;
 
 class Fog {
 public:
 
-	Fog(Mesh* mesh, const vec4& color, const Paths& paths);
+	Fog(MeshData* mesh, const vec4& color, const Paths& paths);
 	~Fog();
 
 	void enable();
@@ -29,23 +29,23 @@ public:
 	float getRadius();
 
 	Position pos;	// position
-	Mesh* mesh = nullptr;		// mesh
+	MeshData* mesh = nullptr;		// mesh
 	vec4 color;		// color
 
 protected:
 
 	static int counter;	// usage counter
 
-	static PBuffer* pbuffer;
-	static Texture* depth_tex;
-	static Texture* fog_tex;
+	static GLRenderTarget* pbuffer;
+	static GLTexture* depth_tex;
+	static GLTexture* fog_tex;
 
-	static PBuffer* pbuffers[3];	// three different resolution 128/256/512
-	static Texture* depth_texes[3];
-	static Texture* fog_texes[3];
+	static GLRenderTarget* pbuffers[3];	// three different resolution 128/256/512
+	static GLTexture* depth_texes[3];
+	static GLTexture* fog_texes[3];
 
-	static Shader* depth_to_rgb_shader;
-	static Shader* pass_shader;
-	static Shader* fail_shader;
-	static Shader* final_shader;
+	static GLProgram* depth_to_rgb_shader;
+	static GLProgram* pass_shader;
+	static GLProgram* fail_shader;
+	static GLProgram* final_shader;
 };

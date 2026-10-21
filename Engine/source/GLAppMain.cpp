@@ -9,7 +9,7 @@
 #include "physics/RigidBody.h"
 #include "physics/RagDoll.h"
 
-#include "graphics/Texture.h"
+#include "render/GLTexture.h"
 #include "graphics/Light.h"
 #include "graphics/Console.h"
 #include "graphics/Flare.h"
@@ -176,7 +176,7 @@ int GLAppMain::init() {
 
 	// shoot
 	shoot_sound = new Sound("data/fire.wav");
-	cross_tex = new Texture("data/cross.tga", Texture::TEXTURE_2D, Texture::RGBA | Texture::LINEAR_MIPMAP_LINEAR);
+	cross_tex = new GLTexture("data/cross.tga", GLTexture::TEXTURE_2D, GLTexture::RGBA | GLTexture::LINEAR_MIPMAP_LINEAR);
 
 	// engine
 	paths.addPath("data/,"

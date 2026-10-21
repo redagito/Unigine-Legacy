@@ -1,8 +1,9 @@
 #pragma once
 
 #include "graphics/OpenGL.h"
+#include "render/Resources.h"
 
-class Texture {
+class GLTexture : public RenderTexture {
 public:
 
 	enum {
@@ -39,9 +40,9 @@ public:
 		ANISOTROPY_16 = 1 << 16,
 	};
 
-	Texture(int width, int height, GLuint target = TEXTURE_2D, int flag = RGB | LINEAR_MIPMAP_LINEAR);
-	Texture(const char* name, GLuint target = TEXTURE_2D, int flag = RGB | LINEAR_MIPMAP_LINEAR);
-	~Texture();
+	GLTexture(int width, int height, GLuint target = TEXTURE_2D, int flag = RGB | LINEAR_MIPMAP_LINEAR);
+	GLTexture(const char* name, GLuint target = TEXTURE_2D, int flag = RGB | LINEAR_MIPMAP_LINEAR);
+	virtual ~GLTexture();
 
 	void load(const char* name, GLuint target = TEXTURE_2D, int flag = RGB | LINEAR_MIPMAP_LINEAR);
 	void release();
@@ -49,6 +50,7 @@ public:
 	void enable();
 	void disable();
 	void bind();
+
 	void copy(GLuint target = 0);
 	void render(float x0 = -1.0, float y0 = -1.0, float x1 = 1.0, float y1 = 1.0);
 

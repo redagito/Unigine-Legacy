@@ -5,8 +5,8 @@
 #include "engine.h"
 #include "Paths.h"
 
-#include "graphics/Mesh.h"
-#include "graphics/MeshVBO.h"
+#include "render/MeshData.h"
+#include "render/GLGeometry.h"
 
 #include "physics/JointBall.h"
 #include "physics/JointHinge.h"
@@ -15,7 +15,7 @@
 #include "physics/RigidBody.h"
 #include "object/ObjectMesh.h"
 
-RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths) : skinnedmesh(skinnedmesh), num_bones(0), root(-1) {
+RagDoll::RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& paths) : skinnedmesh(skinnedmesh), num_bones(0), root(-1) {
 
 	Parser* parser = new Parser(paths.findFile(name).c_str(), Engine::defines);
 
@@ -49,7 +49,7 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 
 	char buf[1024];
 	sscanf(parser->get("mesh"), "%1023s", buf);
-	Mesh* mesh = new Mesh(paths.findFile(buf).c_str());
+	MeshData* mesh = new MeshData(paths.findFile(buf).c_str());
 
 	// scale objects
 	if (parser->get("scale")) {
@@ -106,12 +106,12 @@ RagDoll::RagDoll(SkinnedMesh* skinnedmesh, const char* name, const Paths& paths)
 		}
 
 		// create new mesh
-		Mesh* m = new Mesh;
+		MeshData* m = new MeshData;
 		m->addSurface(mesh, surface);
 		vec3 center = (m->getMax() + m->getMin()) / 2.0f;
 		offsets[i].translate(-center);
 		m->transform(offsets[i]);
-		meshes[i] = new ObjectMesh(new MeshVBO(m));
+		meshes[i] = new ObjectMesh(new GLGeometry(m));
 		delete m;
 
 		//meshes[i]->bindMaterial("*",Engine::loadMaterial("default.mat"));

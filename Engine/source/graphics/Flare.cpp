@@ -1,20 +1,20 @@
 #include "graphics/Flare.h"
 
 #include "engine.h"
-#include "graphics/Texture.h"
-#include "graphics/Mesh.h"
+#include "render/GLTexture.h"
+#include "render/MeshData.h"
 #include "Paths.h"
 
 #define FLARE_TEX	"flare.png"
 
 int Flare::counter = 0;
-Texture* Flare::flare_tex = nullptr;
+GLTexture* Flare::flare_tex = nullptr;
 
 Flare::Flare(float min_radius, float max_radius, float sphere_radius, const Paths& paths) : min_radius(min_radius), max_radius(max_radius), sphere_radius(sphere_radius), time(0) 
 {
 
 	if (counter++ == 0) {
-		flare_tex = new Texture(paths.findFile(FLARE_TEX).c_str(), Texture::TEXTURE_2D, Texture::RGB | Texture::LINEAR_MIPMAP_LINEAR | Texture::CLAMP);
+		flare_tex = new GLTexture(paths.findFile(FLARE_TEX).c_str(), GLTexture::TEXTURE_2D, GLTexture::RGB | GLTexture::LINEAR_MIPMAP_LINEAR | GLTexture::CLAMP);
 	}
 }
 

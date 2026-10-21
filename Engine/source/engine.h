@@ -19,20 +19,20 @@
 #include "math/Math.h"
 #include "bsp/Bsp.h"
 #include "math/Position.h"
-#include "graphics/Texture.h"
+#include "render/GLTexture.h"
 #include "script/Defines.h"
 #include "graphics/Lights.h"
 
-class PBuffer;
+class GLRenderTarget;
 class Console;
 class Frustum;
 class Bsp;
-class Mesh;
+class MeshData;
 class Light;
 class Fog;
 class Mirror;
-class Shader;
-class Texture;
+class GLProgram;
+class GLTexture;
 class Material;
 class Paths;
 
@@ -51,10 +51,10 @@ public:
 	// loaders
 	static void load(const char* name, Paths& paths);
 
-	static Shader* loadShader(const char* name, const Paths& paths);
-	static Texture* loadTexture(const char* name, const Paths& paths, GLuint target = Texture::TEXTURE_2D, int flag = texture_filter);
+	static GLProgram* loadShader(const char* name, const Paths& paths);
+	static GLTexture* loadTexture(const char* name, const Paths& paths, GLuint target = GLTexture::TEXTURE_2D, int flag = texture_filter);
 	static Material* loadMaterial(const char* name, const Paths& paths);
-	static Mesh* loadMesh(const char* name, const Paths& paths);
+	static MeshData* loadMesh(const char* name, const Paths& paths);
 
 	static void reload(const Paths& paths);
 	static void reload_shaders(const Paths& paths);
@@ -91,8 +91,8 @@ public:
 	static int screen_width;
 	static int screen_height;
 	static int screen_multisample;
-	static PBuffer* screen;
-	static Texture* screen_texture;
+	static GLRenderTarget* screen;
+	static GLTexture* screen_texture;
 	static Material* screen_material;
 
 	// Lights
@@ -129,10 +129,10 @@ public:
 
 	// occlusion test
 	static GLuint query_id;
-	static Mesh* sphere_mesh;
+	static MeshData* sphere_mesh;
 
 	// shadow volume
-	static Shader* shadow_volume_shader;
+	static GLProgram* shadow_volume_shader;
 
 	// current state
 	static float time;
@@ -172,10 +172,10 @@ public:
 	static int texture_filter;
 
 	// object managment
-	static std::map<std::string, Shader*> shaders;
-	static std::map<std::string, Texture*> textures;
+	static std::map<std::string, GLProgram*> shaders;
+	static std::map<std::string, GLTexture*> textures;
 	static std::map<std::string, Material*> materials;
-	static std::map<std::string, Mesh*> meshes;
+	static std::map<std::string, MeshData*> meshes;
 
 	static void (*extern_load)(void*);
 	static void* extern_load_data;

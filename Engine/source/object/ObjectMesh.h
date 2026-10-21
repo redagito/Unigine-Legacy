@@ -2,13 +2,13 @@
 
 #include "object/Object.h"
 
-class Mesh;
+class MeshData;
 class Paths;
 
 class ObjectMesh : public Object {
 public:
 
-	ObjectMesh(Mesh *mesh);
+	ObjectMesh(MeshData *mesh);
 	ObjectMesh(const char *name, const Paths& paths);
 	virtual ~ObjectMesh();
 	
@@ -29,7 +29,7 @@ public:
 	virtual const vec3 &getCenter(int s = -1);
 	virtual float getRadius(int s = -1);
 
-	Mesh *mesh = nullptr;
+	MeshData *mesh = nullptr;
 	
 	int *frames = nullptr;
 };

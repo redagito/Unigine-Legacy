@@ -6,12 +6,6 @@
 #include <string>
 #include <vector>
 
-namespace render {
-
-class Texture;
-class Program;
-class RenderTarget;
-
 /*
  * The rendering layer.
  *
@@ -42,29 +36,27 @@ class RenderTarget;
  * then every light adds its own contribution, then fog, mirrors and the
  * transparent overlay are resolved.
  */
-class Render {
+class RenderLayer {
 public:
 
-	virtual ~Render() {}
+	virtual ~RenderLayer() {}
 
 	// resources
-	virtual Texture* createTexture(const TextureDesc& desc) = 0;
-	virtual Program* createProgram(const std::string& vertex, const std::string& fragment) = 0;
+	virtual RenderTexture* createTexture(const TextureDesc& desc) = 0;
+	virtual RenderProgram* createProgram(const std::string& vertex, const std::string& fragment) = 0;
 	virtual RenderTarget* createRenderTarget(int width, int height) = 0;
 
 	// frame
 	virtual void beginFrame(const Camera& camera) = 0;
 	virtual void ambientPass() = 0;
-	virtual void shadowPass(const Light& light) = 0;
-	virtual void lightPass(const Light& light) = 0;
+	virtual void shadowPass(const RenderLight& light) = 0;
+	virtual void lightPass(const RenderLight& light) = 0;
 	virtual void fogPass(const FogVolume& fog) = 0;
-	virtual void mirrorPass(RenderTarget* target, const Camera& camera, const Geometry& mirror) = 0;
+	virtual void mirrorPass(RenderTarget* target, const Camera& camera, const RenderGeometry& mirror) = 0;
 	virtual void transparentPass() = 0;
 	virtual void endFrame() = 0;
 
 	// drawing
-	virtual void draw(const Geometry& geometry, const Material& material) = 0;
-	virtual void blit(RenderTarget* target, const Texture& texture) = 0;
+	virtual void draw(const RenderGeometry& geometry, const RenderMaterial& material) = 0;
+	virtual void blit(RenderTarget* target, const RenderTexture& texture) = 0;
 };
-
-}

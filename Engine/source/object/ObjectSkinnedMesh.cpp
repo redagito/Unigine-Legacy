@@ -4,14 +4,14 @@
 #include "bsp/Bsp.h"
 #include "graphics/Frustum.h"
 #include "graphics/Material.h"
-#include "graphics/SkinnedMesh.h"
+#include "render/GLSkinnedGeometry.h"
 #include "physics/RagDoll.h"
 #include "Paths.h"
 
 float ObjectSkinnedMesh::skin_time_step = 1.0f / 25.0f;
 
 
-ObjectSkinnedMesh::ObjectSkinnedMesh(SkinnedMesh* skinnedmesh) : Object(OBJECT_SKINNEDMESH), skinnedmesh(skinnedmesh), ragdoll(NULL), skin_time(0.0) {
+ObjectSkinnedMesh::ObjectSkinnedMesh(GLSkinnedGeometry* skinnedmesh) : Object(OBJECT_SKINNEDMESH), skinnedmesh(skinnedmesh), ragdoll(NULL), skin_time(0.0) {
 	materials = new Material * [getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];
@@ -19,7 +19,7 @@ ObjectSkinnedMesh::ObjectSkinnedMesh(SkinnedMesh* skinnedmesh) : Object(OBJECT_S
 }
 
 ObjectSkinnedMesh::ObjectSkinnedMesh(const char* name, const Paths& paths) : Object(OBJECT_SKINNEDMESH), ragdoll(NULL), skin_time(0.0) {
-	skinnedmesh = new SkinnedMesh(paths.findFile(name).c_str());
+	skinnedmesh = new GLSkinnedGeometry(paths.findFile(name).c_str());
 	materials = new Material * [getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];

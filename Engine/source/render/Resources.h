@@ -2,30 +2,28 @@
 
 #include "render/Types.h"
 
-namespace render {
-
-class Texture {
+class RenderTexture {
 public:
 
-	virtual ~Texture() {}
+	virtual ~RenderTexture() {}
 
-	// binds the texture to a unit
-	virtual void bind(int unit) = 0;
+	// binds the texture to the active unit
+	virtual void bind() = 0;
 };
 
-class Program {
+class RenderProgram {
 public:
 
-	virtual ~Program() {}
+	virtual ~RenderProgram() {}
 
 	virtual void bind() = 0;
 	virtual void setUniforms(const ProgramUniforms& uniforms) = 0;
 };
 
-class Geometry {
+class RenderGeometry {
 public:
 
-	virtual ~Geometry() {}
+	virtual ~RenderGeometry() {}
 
 	virtual void draw() = 0;
 	virtual int indexCount() const = 0;
@@ -41,13 +39,13 @@ public:
 	// draws the target onto the screen
 	virtual void resolve() = 0;
 
-	virtual int width() const = 0;
-	virtual int height() const = 0;
+	virtual int getWidth() const = 0;
+	virtual int getHeight() const = 0;
 };
 
-struct Material {
-	Program* program = nullptr;
-	Texture* maps[MapSlot::count] = {};
+struct RenderMaterial {
+	RenderProgram* program = nullptr;
+	RenderTexture* maps[MapSlot::count] = {};
 
 	BlendMode blend = BlendMode::none;
 	BlendFactor source_factor = BlendFactor::one;
@@ -57,5 +55,3 @@ struct Material {
 	CompareFunction alpha_function = CompareFunction::never;
 	float alpha_reference = 0.0f;
 };
-
-}

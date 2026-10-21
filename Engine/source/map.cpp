@@ -278,7 +278,7 @@ void Map::load_light(const Paths& paths) {
 
 void Map::load_fog(const Paths& paths) {
 	read_token("{");
-	Mesh* mesh = NULL;
+	MeshData* mesh = NULL;
 	vec4 color(1.0, 1.0, 1.0, 1.0);
 	while (1) {
 		const char* token = read_token();

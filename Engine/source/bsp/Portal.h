@@ -2,7 +2,7 @@
 
 #include "math/Math.h"
 
-class Mesh;
+class MeshData;
 
 class Portal
 {
@@ -10,7 +10,7 @@ public:
 	Portal();
 	~Portal();
 
-	void create(Mesh* mesh, int s);
+	void create(MeshData* mesh, int s);
 
 	void getScissor(int* scissor) const;
 

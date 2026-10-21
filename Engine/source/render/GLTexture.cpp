@@ -1,4 +1,4 @@
-/* Texture
+/* GLTexture
  *
  * Copyright (C) 2003-2004, Alexander Zaprjagaev <frustum@frustum.org>
  *
@@ -29,7 +29,7 @@
  }
  */
 
-#include "graphics/Texture.h"
+#include "render/GLTexture.h"
 
 #ifdef _WIN32
 
@@ -37,14 +37,14 @@
 
  /*
   */
-Texture::Texture(int width, int height, GLuint target, int flag) : width(width), height(height), depth(1), target(target), flag(flag) {
+GLTexture::GLTexture(int width, int height, GLuint target, int flag) : width(width), height(height), depth(1), target(target), flag(flag) {
 	glGenTextures(1, &id);
 	glBindTexture(target, id);
 	if (flag & LUMINANCE) format = GL_LUMINANCE;
 	else if (flag & LUMINANCE_ALPHA) format = GL_LUMINANCE_ALPHA;
 	else if (flag & RGB) format = GL_RGB;
 	else if (flag & RGBA) format = GL_RGBA;
-	else THROW_ERROR("Texture::Texture(): unknown format\n");
+	else THROW_ERROR("GLTexture::GLTexture(): unknown format\n");
 	GLuint type;
 	GLuint internalformat;
 	if (flag & FLOAT) {
@@ -52,7 +52,7 @@ Texture::Texture(int width, int height, GLuint target, int flag) : width(width),
 		if (format == GL_RGB) internalformat = GL_RGB32F;
 		else if (format == GL_RGBA) internalformat = GL_RGBA32F;
 		else {
-			spdlog::warn("Texture::Texture(): FLOAT flag is accessible only for RGB or RGBA formats");
+			spdlog::warn("GLTexture::GLTexture(): FLOAT flag is accessible only for RGB or RGBA formats");
 			return;
 		}
 	}
@@ -112,23 +112,23 @@ Texture::Texture(int width, int height, GLuint target, int flag) : width(width),
 }
 
 
-Texture::Texture(const char* name, GLuint target, int flag) {
+GLTexture::GLTexture(const char* name, GLuint target, int flag) {
 	load(name, target, flag);
 }
 
 
-Texture::~Texture() {
+GLTexture::~GLTexture() {
 	release();
 }
 
 
-void Texture::release() {
+void GLTexture::release() {
 	if (id) glDeleteTextures(1, &id);
 	id = 0;
 }
 
 
-void Texture::load(const char* name, GLuint target, int flag) {
+void GLTexture::load(const char* name, GLuint target, int flag) {
 	release();
 	width = 0;
 	height = 0;
@@ -141,8 +141,8 @@ void Texture::load(const char* name, GLuint target, int flag) {
 	else if (flag & LUMINANCE_ALPHA) format = GL_LUMINANCE_ALPHA;
 	else if (flag & RGB) format = GL_RGB;
 	else if (flag & RGBA) format = GL_RGBA;
-	else THROW_ERROR("Texture::Texture(): unknown format\n");
-		if (flag & FLOAT) spdlog::warn("Texture::Texture(): FLOAT flag is not accessible for \"{}\" file", name);
+	else THROW_ERROR("GLTexture::GLTexture(): unknown format\n");
+		if (flag & FLOAT) spdlog::warn("GLTexture::GLTexture(): FLOAT flag is not accessible for \"{}\" file", name);
 	if (flag & CLAMP) {
 		glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP);
@@ -223,28 +223,28 @@ void Texture::load(const char* name, GLuint target, int flag) {
 }
 
 
-void Texture::enable() {
+void GLTexture::enable() {
 	glEnable(target);
 }
 
 
-void Texture::disable() {
+void GLTexture::disable() {
 	glDisable(target);
 }
 
 
-void Texture::bind() {
+void GLTexture::bind() {
 	glBindTexture(target, id);
 }
 
 
-void Texture::copy(GLuint target) {
+void GLTexture::copy(GLuint target) {
 	if (target == 0) glCopyTexSubImage2D(this->target, 0, 0, 0, 0, 0, width, height);
 	else glCopyTexSubImage2D(target, 0, 0, 0, 0, 0, width, height);
 }
 
 
-void Texture::render(float x0, float y0, float x1, float y1) {
+void GLTexture::render(float x0, float y0, float x1, float y1) {
 	glBegin(GL_QUADS);
 	if (target == TEXTURE_RECT) {
 		glTexCoord2f(0, 0);
@@ -277,29 +277,29 @@ void Texture::render(float x0, float y0, float x1, float y1) {
 
 /* images
  */
-unsigned char* Texture::load(const char* name, int& width, int& height) {
+unsigned char* GLTexture::load(const char* name, int& width, int& height) {
 	const char* ext = strrchr(name, '.');
 	if (!ext) {
-		THROW_ERROR("Texture::load(): unknown format of \"%s\" file", name);
+		THROW_ERROR("GLTexture::load(): unknown format of \"%s\" file", name);
 	}
 	unsigned char* data = NULL;
 	if (!strcmp(ext, ".tga")) data = load_tga(name, width, height);
 	else if (!strcmp(ext, ".png")) data = load_png(name, width, height);
 	else if (!strcmp(ext, ".jpg")) data = load_jpeg(name, width, height);
 	else if (!strcmp(ext, ".dds")) data = load_dds(name, width, height);
-	else THROW_ERROR("Texture::load(): unknown format of \"%s\" file", name);
+	else THROW_ERROR("GLTexture::load(): unknown format of \"%s\" file", name);
 	return data;
 }
 
-int Texture::save(const char* name, const unsigned char* data, int width, int height) {
+int GLTexture::save(const char* name, const unsigned char* data, int width, int height) {
 	const char* ext = strrchr(name, '.');
 	if (!ext) {
-		THROW_ERROR("Texture::save(): unknown format of \"%s\" file", name);
+		THROW_ERROR("GLTexture::save(): unknown format of \"%s\" file", name);
 	}
 	int ret = 0;
 	if (!strcmp(ext, ".tga")) ret = save_tga(name, data, width, height);
 	else if (!strcmp(ext, ".jpg")) ret = save_jpeg(name, data, width, height, 80);
-	else THROW_ERROR("Texture::save(): unknown format of \"%s\" file", name);
+	else THROW_ERROR("GLTexture::save(): unknown format of \"%s\" file", name);
 	return ret;
 }
 
@@ -312,22 +312,22 @@ int Texture::save(const char* name, const unsigned char* data, int width, int he
 /* load tga image
  * only for 24 and 32 bits per pixel
  */
-unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
+unsigned char* GLTexture::load_tga(const char* name, int& width, int& height) {
 	int i, j, k, l, components, size;
 	unsigned char rep, * data, * buf, * ptr, info[18];
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		THROW_ERROR("Texture::load_tga(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_tga(): error open \"%s\" file\n", name);
 	}
 	if (fread(&info, 1, 18, file) != 18) {
-		THROW_ERROR("Texture::load_tga(): error reading header from \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_tga(): error reading header from \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	width = info[12] + info[13] * 256;
 	height = info[14] + info[15] * 256;
 	if (width <= 0 || height <= 0) {
-		THROW_ERROR("Texture::load_tga(): invalid dimensions %dx%d in \"%s\" file\n", width, height, name);
+		THROW_ERROR("GLTexture::load_tga(): invalid dimensions %dx%d in \"%s\" file\n", width, height, name);
 		fclose(file);
 		return NULL;
 	}
@@ -335,7 +335,7 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 	case 32: components = 4; break;
 	case 24: components = 3; break;
 	default:
-		THROW_ERROR("Texture::load_tga(): unsupported bit depth %d in \"%s\" file\n", info[16], name);
+		THROW_ERROR("GLTexture::load_tga(): unsupported bit depth %d in \"%s\" file\n", info[16], name);
 		fclose(file);
 		return NULL;
 	}
@@ -346,7 +346,7 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 	switch (info[2]) {
 	case 2:
 		if (fread(buf, 1, size, file) != (size_t)size) {
-			THROW_ERROR("Texture::load_tga(): error reading image data from \"%s\" file\n", name);
+			THROW_ERROR("GLTexture::load_tga(): error reading image data from \"%s\" file\n", name);
 			fclose(file);
 			delete[] buf;
 			delete[] data;
@@ -358,7 +358,7 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 		ptr = buf;
 		while (i < size) {
 			if (fread(&rep, 1, 1, file) != 1) {
-				THROW_ERROR("Texture::load_tga(): error reading RLE packet from \"%s\" file\n", name);
+				THROW_ERROR("GLTexture::load_tga(): error reading RLE packet from \"%s\" file\n", name);
 				fclose(file);
 				delete[] buf;
 				delete[] data;
@@ -367,14 +367,14 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 			if (rep & 0x80) {
 				rep ^= 0x80;
 				if (i + components * (rep + 1) > size) {
-					THROW_ERROR("Texture::load_tga(): RLE packet overruns image data in \"%s\" file\n", name);
+					THROW_ERROR("GLTexture::load_tga(): RLE packet overruns image data in \"%s\" file\n", name);
 					fclose(file);
 					delete[] buf;
 					delete[] data;
 					return NULL;
 				}
 				if (fread(ptr, 1, components, file) != (size_t)components) {
-					THROW_ERROR("Texture::load_tga(): error reading RLE pixel from \"%s\" file\n", name);
+					THROW_ERROR("GLTexture::load_tga(): error reading RLE pixel from \"%s\" file\n", name);
 					fclose(file);
 					delete[] buf;
 					delete[] data;
@@ -390,14 +390,14 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 			else {
 				k = components * (rep + 1);
 				if (i + k > size) {
-					THROW_ERROR("Texture::load_tga(): RLE run overruns image data in \"%s\" file\n", name);
+					THROW_ERROR("GLTexture::load_tga(): RLE run overruns image data in \"%s\" file\n", name);
 					fclose(file);
 					delete[] buf;
 					delete[] data;
 					return NULL;
 				}
 				if (fread(ptr, 1, k, file) != (size_t)k) {
-					THROW_ERROR("Texture::load_tga(): error reading RLE run from \"%s\" file\n", name);
+					THROW_ERROR("GLTexture::load_tga(): error reading RLE run from \"%s\" file\n", name);
 					fclose(file);
 					delete[] buf;
 					delete[] data;
@@ -409,7 +409,7 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 		}
 		break;
 	default:
-		THROW_ERROR("Texture::load_tga(): unsupported encoding type %d in \"%s\" file\n", info[2], name);
+		THROW_ERROR("GLTexture::load_tga(): unsupported encoding type %d in \"%s\" file\n", info[2], name);
 		fclose(file);
 		delete[] buf;
 		delete[] data;
@@ -438,12 +438,12 @@ unsigned char* Texture::load_tga(const char* name, int& width, int& height) {
 
 /* save tga image
  */
-int Texture::save_tga(const char* name, const unsigned char* data, int width, int height) {
+int GLTexture::save_tga(const char* name, const unsigned char* data, int width, int height) {
 	int i, j;
 	unsigned char* buf;
 	FILE* file = fopen(name, "wb");
 	if (!file) {
-		THROW_ERROR("Texture::save_tga(): error create \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::save_tga(): error create \"%s\" file\n", name);
 	}
 	buf = new unsigned char[18 + width * height * 4];
 	memset(buf, 0, 18);
@@ -468,19 +468,19 @@ int Texture::save_tga(const char* name, const unsigned char* data, int width, in
 
 /* load png image
  */
-unsigned char* Texture::load_png(const char* name, int& width, int& height) {
+unsigned char* GLTexture::load_png(const char* name, int& width, int& height) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		THROW_ERROR("Texture::load_png(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_png(): error open \"%s\" file\n", name);
 	}
 	png_byte sig[8];
 	if (fread(sig, 8, 1, file) != 1) {
-		THROW_ERROR("Texture::load_png(): error reading signature from \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_png(): error reading signature from \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	if (!png_check_sig(sig, 8)) {
-		THROW_ERROR("Texture::load_png(): wrong signature in \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_png(): wrong signature in \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
@@ -558,7 +558,7 @@ unsigned char* Texture::load_png(const char* name, int& width, int& height) {
  }
  */
 
-unsigned char* Texture::load_jpeg(const char* name, int& width, int& height) {
+unsigned char* GLTexture::load_jpeg(const char* name, int& width, int& height) {
 
 	/*
 	struct jpeg_decompress_struct cinfo;
@@ -572,7 +572,7 @@ unsigned char* Texture::load_jpeg(const char* name, int& width, int& height) {
 	unsigned char *data;
 	file = fopen(name,"rb");
 	if(!file) {
-		THROW_ERROR("Texture::load_jpeg(): error open \"%s\" file\n",name);
+		THROW_ERROR("GLTexture::load_jpeg(): error open \"%s\" file\n",name);
 	}
 	cinfo.err = jpeg_std_error(&jerr.pub);
 	jerr.pub.error_exit = my_error_exit;
@@ -628,7 +628,7 @@ unsigned char* Texture::load_jpeg(const char* name, int& width, int& height) {
 
 /* save jpeg image
  */
-int Texture::save_jpeg(const char* name, const unsigned char* data, int width, int height, int quality) {
+int GLTexture::save_jpeg(const char* name, const unsigned char* data, int width, int height, int quality) {
 	/*
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
@@ -637,7 +637,7 @@ int Texture::save_jpeg(const char* name, const unsigned char* data, int width, i
 	unsigned char *data_buffer;
 	FILE *file = fopen(name,"wb");
 	if(!file) {
-		THROW_ERROR("Texture::load_jpeg(): error create \"%s\" file\n",name);
+		THROW_ERROR("GLTexture::load_jpeg(): error create \"%s\" file\n",name);
 	}
 	data_buffer = new unsigned char[width * height * 3];
 	for(i = 0, j = 0; i < width * height * 4; i += 4, j += 3) {
@@ -732,19 +732,19 @@ enum {
 	DDPF_RGBA = 0x41
 };
 
-unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
+unsigned char* GLTexture::load_dds(const char* name, int& width, int& height) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		THROW_ERROR("Texture::load_dds(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_dds(): error open \"%s\" file\n", name);
 	}
 	dds_header header;
 	if (fread(&header, sizeof(dds_header), 1, file) != 1) {
-		THROW_ERROR("Texture::load_dds(): error reading header from \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_dds(): error reading header from \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	if (header.magic != ('D' | 'D' << 8 | 'S' << 16 | ' ' << 24)) {
-		THROW_ERROR("Texture::load_dds(): wrong magic in \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_dds(): wrong magic in \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
@@ -763,17 +763,17 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 	else if (header.dwPFFlags == DDPF_RGB && header.dwRGBBitCount == 24) format = DDS_RGB;
 	else if (header.dwPFFlags == DDPF_RGBA && header.dwRGBBitCount == 32) format = DDS_RGBA;
 	else {
-		THROW_ERROR("Texture::load_dds(): unknown format of \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_dds(): unknown format of \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	if (format == DDS_DXT2 || format == DDS_DXT4) {
-		THROW_ERROR("Texture::load_dds(): DXT2 or DXT4 is not supported in \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_dds(): DXT2 or DXT4 is not supported in \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	if (width <= 0 || height <= 0) {
-		THROW_ERROR("Texture::load_dds(): invalid dimensions %dx%d in \"%s\" file\n", width, height, name);
+		THROW_ERROR("GLTexture::load_dds(): invalid dimensions %dx%d in \"%s\" file\n", width, height, name);
 		fclose(file);
 		return NULL;
 	}
@@ -781,7 +781,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 	if (format == DDS_RGB) {
 		unsigned char* buf = new unsigned char[width * height * 3];
 		if (fread(buf, width * height * 3, 1, file) != 1) {
-			THROW_ERROR("Texture::load_dds(): error reading RGB data from \"%s\" file\n", name);
+			THROW_ERROR("GLTexture::load_dds(): error reading RGB data from \"%s\" file\n", name);
 			fclose(file);
 			delete[] buf;
 			delete[] data;
@@ -802,7 +802,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 	else if (format == DDS_RGBA) {
 		unsigned char* buf = new unsigned char[width * height * 4];
 		if (fread(buf, width * height * 4, 1, file) != 1) {
-			THROW_ERROR("Texture::load_dds(): error reading RGBA data from \"%s\" file\n", name);
+			THROW_ERROR("GLTexture::load_dds(): error reading RGBA data from \"%s\" file\n", name);
 			fclose(file);
 			delete[] buf;
 			delete[] data;
@@ -828,7 +828,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 		unsigned char* buf = new unsigned char[buf_size];
 		unsigned char* src = buf;
 		if (fread(buf, buf_size, 1, file) != 1) {
-			THROW_ERROR("Texture::load_dds(): error reading compressed data from \"%s\" file\n", name);
+			THROW_ERROR("GLTexture::load_dds(): error reading compressed data from \"%s\" file\n", name);
 			fclose(file);
 			delete[] buf;
 			delete[] data;
@@ -918,7 +918,7 @@ unsigned char* Texture::load_dds(const char* name, int& width, int& height) {
 /*                                                                           */
 /*****************************************************************************/
 
-unsigned char* Texture::rgba2rgb(unsigned char* data, int width, int height) {
+unsigned char* GLTexture::rgba2rgb(unsigned char* data, int width, int height) {
 	unsigned char* dest = new unsigned char[width * height * 3];
 	unsigned char* d = dest;
 	unsigned char* s = data;
@@ -932,7 +932,7 @@ unsigned char* Texture::rgba2rgb(unsigned char* data, int width, int height) {
 	return dest;
 }
 
-unsigned char* Texture::rgba2luminance(unsigned char* data, int width, int height) {
+unsigned char* GLTexture::rgba2luminance(unsigned char* data, int width, int height) {
 	unsigned char* dest = new unsigned char[width * height];
 	unsigned char* d = dest;
 	unsigned char* s = data;
@@ -944,7 +944,7 @@ unsigned char* Texture::rgba2luminance(unsigned char* data, int width, int heigh
 	return dest;
 }
 
-unsigned char* Texture::rgba2luminance_alpha(unsigned char* data, int width, int height) {
+unsigned char* GLTexture::rgba2luminance_alpha(unsigned char* data, int width, int height) {
 	unsigned char* dest = new unsigned char[width * height * 2];
 	unsigned char* d = dest;
 	unsigned char* s = data;
@@ -963,19 +963,19 @@ unsigned char* Texture::rgba2luminance_alpha(unsigned char* data, int width, int
 /*                                                                           */
 /*****************************************************************************/
 
-unsigned char* Texture::load_3d(const char* name, int& width, int& height, int& depth, int& format) {
+unsigned char* GLTexture::load_3d(const char* name, int& width, int& height, int& depth, int& format) {
 	FILE* file = fopen(name, "rb");
 	if (!file) {
-		THROW_ERROR("Texture::load_3d(): error open \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_3d(): error open \"%s\" file\n", name);
 	}
 	int magic;
 	if (fread(&magic, sizeof(int), 1, file) != 1) {
-		THROW_ERROR("Texture::load_3d(): error reading magic from \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_3d(): error reading magic from \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	if (magic != ('3' | 'D' << 8 | 'T' << 16 | 'X' << 24)) {
-		THROW_ERROR("Texture::load_3d(): wrong magic 0x%08x in \"%s\" file\n", magic, name);
+		THROW_ERROR("GLTexture::load_3d(): wrong magic 0x%08x in \"%s\" file\n", magic, name);
 		fclose(file);
 		return NULL;
 	}
@@ -983,12 +983,12 @@ unsigned char* Texture::load_3d(const char* name, int& width, int& height, int& 
 		fread(&height, sizeof(int), 1, file) != 1 ||
 		fread(&depth, sizeof(int), 1, file) != 1 ||
 		fread(&format, sizeof(int), 1, file) != 1) {
-		THROW_ERROR("Texture::load_3d(): error reading header from \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_3d(): error reading header from \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
 	if (width <= 0 || height <= 0 || depth <= 0) {
-		THROW_ERROR("Texture::load_3d(): invalid dimensions %dx%dx%d in \"%s\" file\n", width, height, depth, name);
+		THROW_ERROR("GLTexture::load_3d(): invalid dimensions %dx%dx%d in \"%s\" file\n", width, height, depth, name);
 		fclose(file);
 		return NULL;
 	}
@@ -998,13 +998,13 @@ unsigned char* Texture::load_3d(const char* name, int& width, int& height, int& 
 	else if (format == RGB) size *= 3;
 	else if (format == RGBA) size *= 4;
 	else {
-		THROW_ERROR("Texture::load_3d(): unknown format %d of \"%s\" file\n", format, name);
+		THROW_ERROR("GLTexture::load_3d(): unknown format %d of \"%s\" file\n", format, name);
 		fclose(file);
 		return NULL;
 	}
 	unsigned char* data = new unsigned char[size];
 	if (fread(data, sizeof(unsigned char), size, file) != (size_t)size) {
-		THROW_ERROR("Texture::load_3d(): error reading data from \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::load_3d(): error reading data from \"%s\" file\n", name);
 		delete[] data;
 		fclose(file);
 		return NULL;
@@ -1014,10 +1014,10 @@ unsigned char* Texture::load_3d(const char* name, int& width, int& height, int& 
 }
 
 
-int Texture::save_3d(const char* name, const unsigned char* data, int width, int height, int depth, int format) {
+int GLTexture::save_3d(const char* name, const unsigned char* data, int width, int height, int depth, int format) {
 	FILE* file = fopen(name, "wb");
 	if (!file) {
-		THROW_ERROR("Texture::save_3d(): error create \"%s\" file\n", name);
+		THROW_ERROR("GLTexture::save_3d(): error create \"%s\" file\n", name);
 	}
 	int magic = ('3' | 'D' << 8 | 'T' << 16 | 'X' << 24);
 	fwrite(&magic, sizeof(int), 1, file);
@@ -1030,7 +1030,7 @@ int Texture::save_3d(const char* name, const unsigned char* data, int width, int
 	else if (format == LUMINANCE_ALPHA) size *= 2;
 	else if (format == RGB) size *= 3;
 	else if (format == RGBA) size *= 4;
-	else THROW_ERROR("Texture::save_3d(): unknown format\n");
+	else THROW_ERROR("GLTexture::save_3d(): unknown format\n");
 	fwrite(data, sizeof(unsigned char), size, file);
 	fclose(file);
 	return 1;
