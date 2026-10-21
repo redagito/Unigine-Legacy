@@ -58,6 +58,9 @@ App.exe -frames 60 -shot frame.png
 The `ctest` run of the `headless` test does the same and leaves the frame in
 the build folder.
 
+The first error the driver reports stops the app, the log holds the stack of
+the call that failed.
+
 ## Features
 
 From the original release:

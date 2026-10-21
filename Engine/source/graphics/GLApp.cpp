@@ -20,6 +20,8 @@
 #include "util/Error.h"
 #include "util/Logger.h"
 
+#include <cstdlib>
+
 #ifndef GL_DONT_CARE
 #define GL_DONT_CARE 0x1100
 #endif
@@ -702,7 +704,7 @@ void GLApp::error() {
 	GLenum error;
 	for (int i = 0; i < 32 && (error = glGetError()) != GL_NO_ERROR; i++) {
 		spdlog::error("OpenGL error 0x{:04X}: {}", error, gl_error_string(error));
-		MessageBox(0,(char*)gl_error_string(error),"OpenGL error",MB_OK);
+		std::abort();
 	}
 }
 
@@ -715,7 +717,7 @@ void GLApp::exit(const char *error,...) {
 		vsnprintf(buf,sizeof(buf),error,arg);
 		va_end(arg);
 		spdlog::critical("GLApp exit: {}", buf);
-		MessageBox(0,buf,"GLApp exit",MB_OK);
+		if(!glApp || !glApp->headless) MessageBox(0,buf,"GLApp exit",MB_OK);
 	}
 	done = 1;
 }

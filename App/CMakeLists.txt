@@ -23,6 +23,10 @@ target_include_directories(${PROJECT_NAME}
 	PRIVATE source
 )
 
+# the release build keeps the symbols, the crash report needs them
+target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Zi>)
+target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
+
 # the data has to sit next to the executable, which is in a per config folder
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory

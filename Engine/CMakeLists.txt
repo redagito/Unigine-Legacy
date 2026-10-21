@@ -29,7 +29,15 @@ target_link_libraries(${PROJECT_NAME}
     # PRIVATE ffmpeg::avcodec
 )
 
+if(WIN32)
+	# the crash report names the functions of the stack
+	target_link_libraries(${PROJECT_NAME} PUBLIC dbghelp)
+endif()
+
 # TODO Move public header to include dir
 target_include_directories(${PROJECT_NAME}
 	PUBLIC source
 )
+
+# the release build keeps the symbols, the crash report needs them
+target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Zi>)
