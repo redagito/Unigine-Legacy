@@ -1,8 +1,8 @@
 #include "engine.h"
 #include "util/Logger.h"
-#include "graphics/win32/glext.h"
 #include "util/Error.h"
 
+#include "render/Device.h"
 #include "render/GLRenderTarget.h"
 #include "render/Console.h"
 #include "graphics/Frustum.h"
@@ -18,6 +18,7 @@
 #include "render/GLProgram.h"
 #include "render/GLTexture.h"
 #include "render/Material.h"
+#include "render/ShaderSupport.h"
 #include "physics/Physic.h"
 #include "map.h"
 #include "Paths.h"
@@ -26,6 +27,8 @@ char* Engine::vendor = "The Vendor";
 char* Engine::renderer = "The Renderer";
 char* Engine::version = "The Version";
 char* Engine::extensions = "The Extensions";
+
+RenderDevice* Engine::device = NULL;
 
 int Engine::screen_width = 1024;
 int Engine::screen_height = 512;
@@ -59,7 +62,6 @@ int Engine::num_visible_mirrors;
 Mirror** Engine::visible_mirrors;
 Mirror* Engine::current_mirror;
 
-GLuint Engine::query_id;
 MeshData* Engine::sphere_mesh;
 
 GLProgram* Engine::shadow_volume_shader;
@@ -206,10 +208,8 @@ int Engine::init(Paths& paths, const char* config)
 		}
 	}
 
-	// init OpenGL extensions win32 only
-#ifdef _WIN32
-	glext_init();
-#endif
+	// the graphics device
+	device = createRenderDevice();
 
 	// console
 	console = new Console(paths.findFile(ENGINE_FONT_NAME).c_str());
@@ -218,10 +218,11 @@ int Engine::init(Paths& paths, const char* config)
 	spdlog::info("3D Engine");
 
 	// renderer abilities
-	vendor = (char*)glGetString(GL_VENDOR);
-	renderer = (char*)glGetString(GL_RENDERER);
-	version = (char*)glGetString(GL_VERSION);
-	extensions = (char*)glGetString(GL_EXTENSIONS);
+	DeviceInfo info = device->info();
+	vendor = (char*)info.vendor;
+	renderer = (char*)info.renderer;
+	version = (char*)info.version;
+	extensions = (char*)info.extensions;
 
 	spdlog::info("vendor: {}\nrenderer: {}\nversion: {}\n", vendor, renderer, version);
 
@@ -236,53 +237,34 @@ int Engine::init(Paths& paths, const char* config)
 	mirror_toggle = 1;
 	physic_toggle = 1;
 
-	if (!extensions) {
-		spdlog::error("can`t get OpenGL extensions string");
+	if (!extensions || !extensions[0]) {
+		spdlog::error("can`t get the extensions of the device");
 		return 0;
 	}
 
-	if (!strstr(extensions, "GL_ARB_vertex_program")) {	// fatal error
-		spdlog::error("can`t find GL_ARB_vertex_program extension");
+	if (!device->hasCapability(Capability::vertex_program)) {	// fatal error
+		spdlog::error("can`t find the vertex program stage");
 		return 0;
 	}
 
-	if (strstr(extensions, "GL_ARB_occlusion_query")) {
+	if (device->hasCapability(Capability::occlusion_query)) {
 		have_occlusion = 1;
-		spdlog::info("find GL_ARB_occlusion_query extension");
+		spdlog::info("the device can run occlusion queries");
 	}
-	if (strstr(extensions, "GL_EXT_stencil_two_side")) {
+	if (device->hasCapability(Capability::stencil_two_side)) {
 		have_stencil_two_side = 1;
-		spdlog::info("find GL_EXT_stencil_two_side extension");
-	}
-	if (strstr(extensions, "GL_NV_depth_clamp")) {
-		defines.define("DEPTH_CLAMP");
-		spdlog::info("find GL_NV_depth_clamp extension");
+		spdlog::info("the device can write the stencil from both faces");
 	}
 
-	if (strstr(extensions, "GL_NV_fragment_program")) {			// nv3x cards
-		defines.define("NV3X");
-		defines.define("TEYLOR");
-		defines.define("OFFSET");
-		defines.define("HORIZON");
-		spdlog::info("using GL_NV_fragment_program shaders code");
+	if (!ShaderSupport::select(*device, defines)) {
+		spdlog::error("pls upgrade you video card...");
+		return 0;
 	}
-	else if (strstr(extensions, "GL_ARB_fragment_program")) {		// radeons
-		defines.define("RADEON");
-		defines.define("TEYLOR");
-		defines.define("OFFSET");
-		defines.define("HORIZON");
-		spdlog::info("using GL_ARB_fragment_program shaders code");
-	}
-	else if (strstr(extensions, "GL_ARB_texture_env_combine")) {	// hm
-		defines.define("VERTEX");
+
+	if (defines.isDefine("VERTEX")) {
 		if (!defines.isDefine("DEPTH_CLAMP")) shadows_toggle = 0;
 		fog_toggle = 0;
 		mirror_toggle = 0;
-		spdlog::info("using GL_ARB_texture_env_combine \"shaders\" code");
-	}
-	else {
-		spdlog::error("pls upgrade you video card...");
-		return 0;
 	}
 
 	console->addBool("wireframe", &wireframe_toggle);
@@ -304,8 +286,8 @@ int Engine::init(Paths& paths, const char* config)
 	else if (screen_multisample == 2) screen = new GLRenderTarget(screen_width, screen_height, GLRenderTarget::RGB | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL | GLRenderTarget::MULTISAMPLE_4);
 	else screen = new GLRenderTarget(screen_width, screen_height, GLRenderTarget::RGB | GLRenderTarget::DEPTH | GLRenderTarget::STENCIL);
 	screen->enable();
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	device->setDepthTest(true);
+	device->setFaceCulling(true);
 	screen->disable();
 	screen_texture = new GLTexture(screen_width, screen_height, GLTexture::TEXTURE_2D, GLTexture::RGB | GLTexture::CLAMP | GLTexture::LINEAR);
 	screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
@@ -330,7 +312,6 @@ int Engine::init(Paths& paths, const char* config)
 	num_visible_mirrors = 0;
 	visible_mirrors = NULL;
 
-	glGenQueriesARB(1, &query_id);
 	sphere_mesh = loadMesh(ENGINE_SPHERE_MESH, paths);
 
 	shadow_volume_shader = loadShader(ENGINE_SHADOW_VOLUME_SHADER, paths);
@@ -606,11 +587,11 @@ void Engine::update(float ifps) {
 
 void Engine::render_light() {
 
-	glDepthMask(GL_FALSE);
+	device->setDepthWrite(false);
 
 	if (have_occlusion) {
-		glDisable(GL_CULL_FACE);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		device->setFaceCulling(false);
+		device->setColorWrite(false, false, false, false);
 	}
 
 	// find visible lights
@@ -623,17 +604,13 @@ void Engine::render_light() {
 			if (frustum->inside(l->pos, l->radius) == 0) continue;
 
 			if (have_occlusion && (l->pos - camera).length() > l->radius) {
-				glPushMatrix();
-				glTranslatef(l->pos.x, l->pos.y, l->pos.z);
-				glScalef(l->radius, l->radius, l->radius);
-				glBeginQueryARB(GL_SAMPLES_PASSED_ARB, query_id);
+				device->beginOcclusionQuery();
+				device->pushModelView();
+				device->translateModelView(l->pos);
+				device->scaleModelView(l->radius);
 				sphere_mesh->render();
-				glEndQueryARB(GL_SAMPLES_PASSED_ARB);
-				glPopMatrix();
-
-				GLuint samples;
-				glGetQueryObjectuivARB(query_id, GL_QUERY_RESULT_ARB, &samples);
-				if (samples == 0) continue;
+				device->popModelView();
+				if (device->endOcclusionQuery() == 0) continue;
 			}
 
 			lights.visible_lights[lights.num_visible_lights++] = l;
@@ -652,13 +629,9 @@ void Engine::render_light() {
 				if (frustum->inside(fog->getMin(), fog->getMax()) == 0) continue;
 
 				if (have_occlusion && !fog->inside(camera)) {
-					glBeginQueryARB(GL_SAMPLES_PASSED_ARB, query_id);
+					device->beginOcclusionQuery();
 					fog->mesh->render();
-					glEndQueryARB(GL_SAMPLES_PASSED_ARB);
-
-					GLuint samples;
-					glGetQueryObjectuivARB(query_id, GL_QUERY_RESULT_ARB, &samples);
-					if (samples == 0) continue;
+					if (device->endOcclusionQuery() == 0) continue;
 				}
 
 				visible_fogs[num_visible_fogs++] = fog;
@@ -668,13 +641,13 @@ void Engine::render_light() {
 	}
 
 	if (have_occlusion) {
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glEnable(GL_CULL_FACE);
+		device->setColorWrite(true, true, true, true);
+		device->setFaceCulling(true);
 	}
 
-	if (scissor_toggle) glEnable(GL_SCISSOR_TEST);
+	if (scissor_toggle) device->setScissorTest(true);
 
-	if (shadows_toggle) glEnable(GL_STENCIL_TEST);
+	if (shadows_toggle) device->setStencilTest(true);
 
 	// render lights
 	for (int i = 0; i < lights.num_visible_lights; i++) {
@@ -690,17 +663,17 @@ void Engine::render_light() {
 		// scissor
 		int scissor[4];
 		l->getScissor(scissor, camera, modelview, projection);
-		if (scissor_toggle) glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+		if (scissor_toggle) device->setScissor(scissor);
 
 		// shadows
 		if (shadows_toggle && l->shadows) {
 
 			if (show_shadows_toggle) {
-				glEnable(GL_BLEND);
-				glBlendFunc(GL_ONE, GL_ONE);
+				device->setBlend(true);
+				device->setBlendFunc(BlendFactor::one, BlendFactor::one);
 			}
 			else {
-				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+				device->setColorWrite(false, false, false, false);
 			}
 
 			// shadow volume extrusion and depth clamp on ATI
@@ -708,18 +681,18 @@ void Engine::render_light() {
 			shadow_volume_shader->bind();
 
 			// depth clamp extension
-			if (defines.isDefine("NV3X")) glEnable(GL_DEPTH_CLAMP_NV);
+			device->setDepthClamp(true);
 
 			if (have_stencil_two_side) {
-				glDisable(GL_CULL_FACE);
-				glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+				device->setFaceCulling(false);
+				device->setStencilTwoSided(true);
 
-				glActiveStencilFaceEXT(GL_BACK);
-				glStencilFunc(GL_ALWAYS, 0, ~0);
-				glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP);
-				glActiveStencilFaceEXT(GL_FRONT);
-				glStencilFunc(GL_ALWAYS, 0, ~0);
-				glStencilOp(GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+				device->setStencilFace(StencilFace::back);
+				device->setStencilCompare(CompareFunction::always, 0);
+				device->setStencilOperation(StencilOperation::increment_wrap);
+				device->setStencilFace(StencilFace::front);
+				device->setStencilCompare(CompareFunction::always, 0);
+				device->setStencilOperation(StencilOperation::decrement_wrap);
 			}
 
 			// shadow volumes
@@ -736,7 +709,7 @@ void Engine::render_light() {
 						if (o->materials[j]->alpha_test) continue;
 						if (frustum->inside(light, l->radius, o->getCenter(j), o->getRadius(j)) == 0) continue;
 
-						glFlush();
+						device->flush();
 
 						o->findSilhouette(vec4(light, 1), j);
 						stencil_value += o->getNumIntersections(light, camera, j);
@@ -745,14 +718,14 @@ void Engine::render_light() {
 							num_triangles += o->renderShadowVolume(j);
 						}
 						else {
-							glCullFace(GL_FRONT);
-							glStencilFunc(GL_ALWAYS, 0, ~0);
-							glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP);
+							device->setCullFace(CullFace::front);
+							device->setStencilCompare(CompareFunction::always, 0);
+							device->setStencilOperation(StencilOperation::increment_wrap);
 							num_triangles += o->renderShadowVolume(j);
 
-							glCullFace(GL_BACK);
-							glStencilFunc(GL_ALWAYS, 0, ~0);
-							glStencilOp(GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+							device->setCullFace(CullFace::back);
+							device->setStencilCompare(CompareFunction::always, 0);
+							device->setStencilOperation(StencilOperation::decrement_wrap);
 							num_triangles += o->renderShadowVolume(j);
 						}
 					}
@@ -772,7 +745,7 @@ void Engine::render_light() {
 						if (o->materials[j]->alpha_test) continue;
 						if (frustum->inside(light, l->radius, o->pos + o->getCenter(j), o->getRadius(j)) == 0) continue;
 
-						glFlush();
+						device->flush();
 
 						o->findSilhouette(vec4(ilight, 1), j);
 						stencil_value += o->getNumIntersections(ilight, icamera, j);
@@ -781,14 +754,14 @@ void Engine::render_light() {
 							num_triangles += o->renderShadowVolume(j);
 						}
 						else {
-							glCullFace(GL_FRONT);
-							glStencilFunc(GL_ALWAYS, 0, ~0);
-							glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP);
+							device->setCullFace(CullFace::front);
+							device->setStencilCompare(CompareFunction::always, 0);
+							device->setStencilOperation(StencilOperation::increment_wrap);
 							num_triangles += o->renderShadowVolume(j);
 
-							glCullFace(GL_BACK);
-							glStencilFunc(GL_ALWAYS, 0, ~0);
-							glStencilOp(GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+							device->setCullFace(CullFace::back);
+							device->setStencilCompare(CompareFunction::always, 0);
+							device->setStencilOperation(StencilOperation::decrement_wrap);
 							num_triangles += o->renderShadowVolume(j);
 						}
 					}
@@ -799,32 +772,32 @@ void Engine::render_light() {
 			}
 
 			if (have_stencil_two_side) {
-				glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-				glEnable(GL_CULL_FACE);
+				device->setStencilTwoSided(false);
+				device->setFaceCulling(true);
 			}
 
-			if (defines.isDefine("NV3X")) glDisable(GL_DEPTH_CLAMP_NV);
+			device->setDepthClamp(false);
 
 			shadow_volume_shader->disable();
 
 			if (show_shadows_toggle) {
-				glDisable(GL_BLEND);
+				device->setBlend(false);
 			}
 			else {
-				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+				device->setColorWrite(true, true, true, true);
 			}
 
 			if ((camera.sector == -1 || Bsp::sectors[camera.sector].inside(camera) == 0) && --stencil_value < 0) stencil_value = 0;
 
-			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-			glStencilFunc(GL_EQUAL, stencil_value, ~0);
+			device->setStencilOperation(StencilOperation::keep);
+			device->setStencilCompare(CompareFunction::equal, stencil_value);
 		}
 
-		if (shadows_toggle && l->shadows == 0) glDisable(GL_STENCIL_TEST);
+		if (shadows_toggle && l->shadows == 0) device->setStencilTest(false);
 
-		glDepthFunc(GL_EQUAL);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
+		device->setDepthCompare(CompareFunction::equal);
+		device->setBlend(true);
+		device->setBlendFunc(BlendFactor::one, BlendFactor::one);
 
 		// all visible opacitie objects
 		for (int i = 0; i < Bsp::num_visible_sectors; i++) {
@@ -842,10 +815,10 @@ void Engine::render_light() {
 				portal_scissor[2] -= portal_scissor[0];
 				portal_scissor[3] -= portal_scissor[1];
 				if (portal_scissor[2] < 0 || portal_scissor[3] < 0) continue;
-				if (scissor_toggle) glScissor(portal_scissor[0], portal_scissor[1], portal_scissor[2], portal_scissor[3]);
+				if (scissor_toggle) device->setScissor(portal_scissor);
 			}
 			else {
-				if (scissor_toggle) glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+				if (scissor_toggle) device->setScissor(scissor);
 			}
 			for (int j = 0; j < s->num_visible_objects; j++) {
 				Object* o = s->visible_objects[j];
@@ -855,7 +828,7 @@ void Engine::render_light() {
 			}
 		}
 
-		if (scissor_toggle) glScissor(viewport[0], viewport[1], viewport[2], viewport[3]);
+		if (scissor_toggle) device->setScissor(viewport);
 
 		// mirrors
 		for (int i = 0; i < num_visible_mirrors; i++) {
@@ -867,30 +840,30 @@ void Engine::render_light() {
 		// disable material
 		if (Material::old_material) Material::old_material->disable();
 
-		glDisable(GL_BLEND);
-		glDepthFunc(GL_LEQUAL);
+		device->setBlend(false);
+		device->setDepthCompare(CompareFunction::lequal);
 
-		if (shadows_toggle && l->shadows == 0) glEnable(GL_STENCIL_TEST);
+		if (shadows_toggle && l->shadows == 0) device->setStencilTest(true);
 
 		// clear stensil only if it is needed
-		if (l != lights.visible_lights[lights.num_visible_lights - 1]) glClear(GL_STENCIL_BUFFER_BIT);
+		if (l != lights.visible_lights[lights.num_visible_lights - 1]) device->clear(false, true);
 	}
 	lights.current_light = NULL;
 
-	if (shadows_toggle) glDisable(GL_STENCIL_TEST);
+	if (shadows_toggle) device->setStencilTest(false);
 
 	if (scissor_toggle) {
-		glScissor(viewport[0], viewport[1], viewport[2], viewport[3]);
-		glDisable(GL_SCISSOR_TEST);
+		device->setScissor(viewport);
+		device->setScissorTest(false);
 	}
 
-	glDepthMask(GL_TRUE);
+	device->setDepthWrite(true);
 }
 
 
 void Engine::render_transparent() {
 
-	glDepthMask(GL_FALSE);
+	device->setDepthWrite(false);
 
 	// volume fogs
 	if (fog_toggle) {
@@ -916,8 +889,8 @@ void Engine::render_transparent() {
 	}
 	current_fog = NULL;
 
-	glEnable(GL_BLEND);
-	glDisable(GL_CULL_FACE);
+	device->setBlend(true);
+	device->setFaceCulling(false);
 
 	// transparent objects
 	// ambient shader
@@ -969,18 +942,18 @@ void Engine::render_transparent() {
 	// disable all materials
 	if (Material::old_material) Material::old_material->disable();
 
-	glEnable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
+	device->setFaceCulling(true);
+	device->setBlend(false);
 
-	glDepthMask(GL_TRUE);
+	device->setDepthWrite(true);
 }
 
 
 void Engine::render(float ifps) {
 
 	// get matrixes
-	glGetFloatv(GL_PROJECTION_MATRIX, projection);
-	glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+	device->getProjection(projection);
+	device->getModelView(modelview);
 	imodelview = modelview.inverse();
 
 	transform.identity();
@@ -1000,18 +973,16 @@ void Engine::render(float ifps) {
 	screen->enable();
 
 	// get viewport
-	glGetIntegerv(GL_VIEWPORT, viewport);
+	device->getViewport(viewport);
 
 	// set matrixes
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(projection);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(modelview);
+	device->setProjection(projection);
+	device->setModelView(modelview);
 
 	// ambient pass
 	// clear depth buffer
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	glDepthFunc(GL_LESS);
+	device->clear(true, true);
+	device->setDepthCompare(CompareFunction::less);
 
 	// number of visible lights
 	// zero - ambient shader
@@ -1028,9 +999,9 @@ void Engine::render(float ifps) {
 	if (mirror_toggle) {
 
 		if (have_occlusion) {
-			glDisable(GL_CULL_FACE);
-			glDepthMask(GL_FALSE);
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+			device->setFaceCulling(false);
+			device->setDepthWrite(false);
+			device->setColorWrite(false, false, false, false);
 		}
 
 		for (int i = 0; i < num_mirrors; i++) {
@@ -1040,13 +1011,9 @@ void Engine::render(float ifps) {
 			if (frustum->inside(mirror->getMin(), mirror->getMax()) == 0) continue;
 
 			if (have_occlusion) {
-				glBeginQueryARB(GL_SAMPLES_PASSED_ARB, query_id);
+				device->beginOcclusionQuery();
 				mirror->mesh->render();
-				glEndQueryARB(GL_SAMPLES_PASSED_ARB);
-
-				GLuint samples;
-				glGetQueryObjectuivARB(query_id, GL_QUERY_RESULT_ARB, &samples);
-				if (samples == 0) continue;
+				if (device->endOcclusionQuery() == 0) continue;
 			}
 
 			visible_mirrors[num_visible_mirrors++] = mirror;
@@ -1054,9 +1021,9 @@ void Engine::render(float ifps) {
 		}
 
 		if (have_occlusion) {
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			glDepthMask(GL_TRUE);
-			glEnable(GL_CULL_FACE);
+			device->setColorWrite(true, true, true, true);
+			device->setDepthWrite(true);
+			device->setFaceCulling(true);
 		}
 	}
 
@@ -1080,8 +1047,8 @@ void Engine::render(float ifps) {
 			mirror->enable();
 
 			// clear
-			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			glDepthFunc(GL_LESS);
+			device->clear(true, true);
+			device->setDepthCompare(CompareFunction::less);
 
 			// ambient mirror pass
 			lights.num_visible_lights = 0;
@@ -1122,10 +1089,9 @@ void Engine::render(float ifps) {
 
 	// wireframe
 	if (wireframe_toggle) {
-		glColor3f(0, 1, 0);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glEnable(GL_POLYGON_OFFSET_LINE);
-		glPolygonOffset(-0.5, 0.0);
+		device->setColor(vec4(0, 1, 0, 1));
+		device->setPolygonMode(PolygonMode::line);
+		device->setPolygonOffset(true, -0.5f, 0.0f);
 		for (int i = 0; i < Bsp::num_visible_sectors; i++) {
 			Sector* s = Bsp::visible_sectors[i];
 			for (int j = 0; j < s->num_visible_objects; j++) {
@@ -1133,11 +1099,11 @@ void Engine::render(float ifps) {
 				num_triangles += o->render(Object::RENDER_ALL);
 			}
 		}
-		glDisable(GL_POLYGON_OFFSET_LINE);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		device->setPolygonOffset(false, 0.0f, 0.0f);
+		device->setPolygonMode(PolygonMode::fill);
 	}
 
-	glFlush();
+	device->flush();
 
 	/* calculate physics
 	 */
@@ -1156,17 +1122,14 @@ void Engine::render(float ifps) {
 	screen->disable();
 
 	// get viewport
-	glGetIntegerv(GL_VIEWPORT, viewport);
+	device->getViewport(viewport);
 
 	// postprocessing
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(-1, 1, -1, 1, -1, 1);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	device->setOrthoProjection(-1, 1, -1, 1, -1, 1);
+	device->setModelView(mat4());
 
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
+	device->setDepthTest(false);
+	device->setDepthWrite(false);
 
 	screen_material->enable();
 	screen_material->bind();

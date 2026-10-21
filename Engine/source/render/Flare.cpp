@@ -1,6 +1,7 @@
 #include "render/Flare.h"
 
 #include "engine.h"
+#include "render/Device.h"
 #include "render/GLTexture.h"
 #include "render/MeshData.h"
 #include "Paths.h"
@@ -38,13 +39,10 @@ void Flare::render(const vec3& pos, const vec4& color)
 	glPushMatrix();
 	glTranslatef(pos.x, pos.y, pos.z);
 	glScalef(sphere_radius, sphere_radius, sphere_radius);
-	glBeginQueryARB(GL_SAMPLES_PASSED_ARB, Engine::query_id);
+	Engine::device->beginOcclusionQuery();
 	Engine::sphere_mesh->render(false);
-	glEndQueryARB(GL_SAMPLES_PASSED_ARB);
+	unsigned int samples_0 = Engine::device->endOcclusionQuery();
 	glPopMatrix();
-
-	GLuint samples_0;
-	glGetQueryObjectuivARB(Engine::query_id, GL_QUERY_RESULT_ARB, &samples_0);
 
 	glDepthFunc(GL_LESS);
 
@@ -57,14 +55,11 @@ void Flare::render(const vec3& pos, const vec4& color)
 	glPushMatrix();
 	glTranslatef(pos.x, pos.y, pos.z);
 	glScalef(sphere_radius, sphere_radius, sphere_radius);
-	glBeginQueryARB(GL_SAMPLES_PASSED_ARB, Engine::query_id);
+	Engine::device->beginOcclusionQuery();
 
 	Engine::sphere_mesh->render(false);
-	glEndQueryARB(GL_SAMPLES_PASSED_ARB);
+	unsigned int samples_1 = Engine::device->endOcclusionQuery();
 	glPopMatrix();
-
-	GLuint samples_1;
-	glGetQueryObjectuivARB(Engine::query_id, GL_QUERY_RESULT_ARB, &samples_1);
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glDepthMask(GL_TRUE);

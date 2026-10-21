@@ -35,6 +35,7 @@ class GLProgram;
 class GLTexture;
 class Material;
 class Paths;
+class RenderDevice;
 
 #define ENGINE_SCREEN_MATERIAL		"screen.mat"
 #define ENGINE_FONT_NAME			"font.png"
@@ -52,7 +53,7 @@ public:
 	static void load(const char* name, Paths& paths);
 
 	static GLProgram* loadShader(const char* name, const Paths& paths);
-	static GLTexture* loadTexture(const char* name, const Paths& paths, GLuint target = GLTexture::TEXTURE_2D, int flag = texture_filter);
+	static GLTexture* loadTexture(const char* name, const Paths& paths, unsigned int target = GLTexture::TEXTURE_2D, int flag = texture_filter);
 	static Material* loadMaterial(const char* name, const Paths& paths);
 	static MeshData* loadMesh(const char* name, const Paths& paths);
 
@@ -86,6 +87,9 @@ public:
 	static char* renderer;
 	static char* version;
 	static char* extensions;
+
+	// the graphics device
+	static RenderDevice* device;
 
 	// screen
 	static int screen_width;
@@ -128,7 +132,6 @@ public:
 	static Mirror* current_mirror;
 
 	// occlusion test
-	static GLuint query_id;
 	static MeshData* sphere_mesh;
 
 	// shadow volume

@@ -10,6 +10,7 @@
 #include "physics/RagDoll.h"
 
 #include "render/GLTexture.h"
+#include "render/Device.h"
 #include "graphics/Light.h"
 #include "render/Console.h"
 #include "render/Flare.h"
@@ -210,10 +211,8 @@ int GLAppMain::init() {
 
 void GLAppMain::render() {
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(projection);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(modelview);
+	Engine::device->setProjection(projection);
+	Engine::device->setModelView(modelview);
 
 	// engine render
 	Engine::update(pause_toggle ? 0 : ifps);
@@ -225,22 +224,19 @@ void GLAppMain::render() {
 
 	// cross
 	if (!Engine::console->getActivity() && robot_toggle == 0) {
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(-30, 30, -22.5, 22.5, -1, 1);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+		Engine::device->setOrthoProjection(-30, 30, -22.5, 22.5, -1, 1);
+		Engine::device->setModelView(mat4());
 
-		glDepthFunc(GL_ALWAYS);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		Engine::device->setDepthCompare(CompareFunction::always);
+		Engine::device->setBlend(true);
+		Engine::device->setBlendFunc(BlendFactor::src_alpha, BlendFactor::one);
 
 		cross_tex->enable();
 		cross_tex->bind();
 		cross_tex->render();
 		cross_tex->disable();
 
-		glDisable(GL_BLEND);
+		Engine::device->setBlend(false);
 	}
 
 #ifndef GRAB
@@ -249,9 +245,9 @@ void GLAppMain::render() {
 
 		// fps
 		Engine::console->enable(800, 600);
-		glColor3f(0.19, 0.0, 0.82);
+		Engine::device->setColor(vec4(0.19f, 0.0f, 0.82f, 1.0f));
 		Engine::console->printf(9, 9, "fps: %.0f", fps);
-		glColor3f(0.77, 1.0, 0.15);
+		Engine::device->setColor(vec4(0.77f, 1.0f, 0.15f, 1.0f));
 		Engine::console->printf(8, 8, "fps: %.0f", fps);
 		Engine::console->disable();
 
@@ -259,16 +255,16 @@ void GLAppMain::render() {
 		if (info_toggle) {
 			Engine::console->enable(1024, 768);
 			vec3 c = modelview.inverse() * vec3(0, 0, 0);
-			glColor3f(0.19, 0.0, 0.82);
+			Engine::device->setColor(vec4(0.19f, 0.0f, 0.82f, 1.0f));
 			Engine::console->printf(13, 35, "triangles: %d\nsectors %d\nlights %d\nrun \"help\" for more information\n%f %f %f",
 				Engine::num_triangles, Bsp::num_visible_sectors, Engine::lights.num_visible_lights, c.x, c.y, c.z);
-			glColor3f(0.77, 1.0, 0.15);
+			Engine::device->setColor(vec4(0.77f, 1.0f, 0.15f, 1.0f));
 			Engine::console->printf(12, 34, "triangles: %d\nsectors %d\nlights %d\nrun \"help\" for more information\n%f %f %f",
 				Engine::num_triangles, Bsp::num_visible_sectors, Engine::lights.num_visible_lights, c.x, c.y, c.z);
 			Engine::console->disable();
 		}
 
-		glColor3f(1, 1, 1);
+		Engine::device->setColor(vec4(1, 1, 1, 1));
 	}
 #endif
 
@@ -276,7 +272,7 @@ void GLAppMain::render() {
 	static float count = 0;
 	count += ifps;
 	if (count > 1.0 / 25.0) {
-		glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		Engine::device->readPixels(WIDTH, HEIGHT, buffer);
 		video->save(buffer, true);
 		count -= 1.0 / 25.0;
 	}

@@ -5,6 +5,7 @@
 #include "bsp/Bsp.h"
 #include "render/Sector.h"
 #include "math/Position.h"
+#include "render/Device.h"
 #include "render/GLProgram.h"
 #include "render/Material.h"
 #include "physics/RigidBody.h"
@@ -109,7 +110,7 @@ void Object::enable() {
 	Engine::imodelview = itransform * Engine::imodelview;
 	Engine::transform = Engine::transform * transform;
 	Engine::itransform = itransform * Engine::itransform;
-	glLoadMatrixf(Engine::modelview);
+	Engine::device->setModelView(Engine::modelview);
 	// new transformation
 	if(GLProgram::old_shader) GLProgram::old_shader->bind();
 }
@@ -120,6 +121,6 @@ void Object::disable() {
 	Engine::imodelview = old_imodelview;
 	Engine::transform = old_transform;
 	Engine::itransform = old_itransform;
-	glLoadMatrixf(Engine::modelview);
+	Engine::device->setModelView(Engine::modelview);
 	if(GLProgram::old_shader) GLProgram::old_shader->bind();
 }

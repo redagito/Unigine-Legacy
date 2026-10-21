@@ -91,6 +91,34 @@ enum class CompareFunction {
 	always
 };
 
+enum class CullFace {
+	front,
+	back,
+	front_and_back
+};
+
+enum class StencilFace {
+	front,
+	back
+};
+
+enum class StencilOperation {
+	keep,
+	zero,
+	replace,
+	increment,
+	decrement,
+	invert,
+	increment_wrap,
+	decrement_wrap
+};
+
+enum class PolygonMode {
+	fill,
+	line,
+	point
+};
+
 struct TextureDesc {
 	TextureTarget target = TextureTarget::texture_2d;
 	TextureFormat format = TextureFormat::rgba;

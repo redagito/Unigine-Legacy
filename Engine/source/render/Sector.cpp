@@ -7,6 +7,7 @@
 #include "render/Material.h"
 #include "object/ObjectMesh.h"
 #include "engine.h"
+#include "render/Device.h"
 
 Sector::Sector() : center(0, 0, 0), radius(1000000.0), num_planes(0), planes(NULL), root(NULL),
 num_portals(0), portals(NULL), num_objects(0), objects(NULL), num_node_objects(0), node_objects(NULL),
@@ -162,15 +163,13 @@ void Sector::render(Frustum* frustum, Portal* portal) {
 				glDisable(GL_CULL_FACE);
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 				glDepthMask(GL_FALSE);
-				glBeginQueryARB(GL_SAMPLES_PASSED_ARB, Engine::query_id);
+				Engine::device->beginOcclusionQuery();
 				p->render();
-				glEndQueryARB(GL_SAMPLES_PASSED_ARB);
+				unsigned int samples = Engine::device->endOcclusionQuery();
 				glDepthMask(GL_TRUE);
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glEnable(GL_CULL_FACE);
 
-				GLuint samples = 0;
-				glGetQueryObjectuivARB(Engine::query_id, GL_QUERY_RESULT_ARB, &samples);
 				if (samples == 0) continue;
 			}
 
