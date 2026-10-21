@@ -18,7 +18,6 @@
 #include "render/GLProgram.h"
 #include "render/GLTexture.h"
 #include "render/Material.h"
-#include "render/ShaderSupport.h"
 #include "physics/Physic.h"
 #include "map.h"
 #include "Paths.h"
@@ -242,8 +241,8 @@ int Engine::init(Paths& paths, const char* config)
 		return 0;
 	}
 
-	if (!device->hasCapability(Capability::vertex_program)) {	// fatal error
-		spdlog::error("can`t find the vertex program stage");
+	if (!device->hasCapability(Capability::shader_program)) {	// fatal error
+		spdlog::error("the device can not run the shaders");
 		return 0;
 	}
 
@@ -254,17 +253,6 @@ int Engine::init(Paths& paths, const char* config)
 	if (device->hasCapability(Capability::stencil_two_side)) {
 		have_stencil_two_side = 1;
 		spdlog::info("the device can write the stencil from both faces");
-	}
-
-	if (!ShaderSupport::select(*device, defines)) {
-		spdlog::error("pls upgrade you video card...");
-		return 0;
-	}
-
-	if (defines.isDefine("VERTEX")) {
-		if (!defines.isDefine("DEPTH_CLAMP")) shadows_toggle = 0;
-		fog_toggle = 0;
-		mirror_toggle = 0;
 	}
 
 	console->addBool("wireframe", &wireframe_toggle);

@@ -210,9 +210,10 @@ void Material::bind() {
 		if (blend) glBlendFunc(sfactor, dfactor);
 		if (alpha_test) glAlphaFunc(alpha_func, alpha_ref);
 		for (int i = 0; i < GLProgram::NUM_PARAMETERS; i++) GLProgram::setParameter(i, parameters[i]);
-		for (int i = 0; i < GLProgram::NUM_TEXTURES; i++) bindTexture(i, textures[i]);
 		old_material = this;
 	}
+	// the fog and the flares take the units, the maps go back every time
+	for (int i = 0; i < GLProgram::NUM_TEXTURES; i++) bindTexture(i, textures[i]);
 	if (Engine::lights.num_visible_lights) {
 		if (light_shader) {
 			if (Engine::lights.current_light && Engine::lights.current_light->material && Engine::lights.current_light->material->light_shader) {

@@ -39,8 +39,6 @@ static void help(int, char**, void*) {
 		"'r' - robot view toggle\n"
 		"' ' - pause toggle"
 		"\n"
-		"'1' - vertex lighting toggle //%s\n"
-		"'2' - Teylor toggle //%s\n"
 		"'3' - half angle specular toggle //%s\n"
 		"\n"
 		"('z'|'v'|'c')&middle button - add rigid body object\n"
@@ -49,8 +47,6 @@ static void help(int, char**, void*) {
 		"\"ls\" - prints all variables and commands\n"
 		"\"set\" - sets value of variable\n"
 		"\"clear\" - clears console\n",
-		Engine::defines.isDefine("VERTEX") ? "on" : "off",
-		Engine::defines.isDefine("TEYLOR") ? "on" : "off",
 		Engine::defines.isDefine("HALF") ? "on" : "off");
 }
 
@@ -517,17 +513,7 @@ void GLAppMain::keyPress(int key) {
 
 	if (Engine::console->getActivity()) return;
 
-	if (key == '1') {
-		if (Engine::defines.isDefine("VERTEX")) Engine::defines.undef("VERTEX");
-		else Engine::defines.define("VERTEX");
-		Engine::reload(paths);
-	}
-	else if (key == '2') {
-		if (Engine::defines.isDefine("TEYLOR")) Engine::defines.undef("TEYLOR");
-		else Engine::defines.define("TEYLOR");
-		Engine::reload(paths);
-	}
-	else if (key == '3') {
+	if (key == '3') {
 		if (Engine::defines.isDefine("HALF")) Engine::defines.undef("HALF");
 		else Engine::defines.define("HALF");
 		Engine::reload(paths);

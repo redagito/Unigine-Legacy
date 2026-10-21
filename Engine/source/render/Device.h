@@ -4,10 +4,7 @@
 
 // what the device can do
 enum class Capability {
-	vertex_program,			// the vertex program stage
-	fragment_program_nv,	// the nvidia fragment program dialect
-	fragment_program_arb,	// the generic fragment program dialect
-	texture_env_combine,	// the fixed function texture environment
+	shader_program,			// the device runs the shaders
 	occlusion_query,		// the device counts the samples a draw covers
 	stencil_two_side,		// the stencil can be written from both faces
 	depth_clamp				// the depth range can be clamped

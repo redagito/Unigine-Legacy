@@ -123,6 +123,16 @@ void GLProgram::load(const char* name, const Defines& defines) {
 	for (int i = 0; i < NUM_UNIFORMS; i++) {
 		uniforms[i] = glGetUniformLocation(program, uniform_names[i]);
 	}
+
+	// the samplers take the texture units
+	glUseProgram(program);
+	for (int i = 0; i < NUM_TEXTURES; i++) {
+		char buf[64];
+		sprintf(buf, "texture%d", i);
+		GLint location = glGetUniformLocation(program, buf);
+		if (location != -1) glUniform1i(location, i);
+	}
+	glUseProgram(0);
 }
 
 
@@ -195,7 +205,6 @@ void GLProgram::setUniforms(const ProgramUniforms& uniforms) {
 /*****************************************************************************/
 
 void GLProgram::bindTexture(int unit, GLTexture* texture) {
-	if (old_textures[unit] == texture) return;
 	glActiveTexture(GL_TEXTURE0 + unit);
 	if (texture) {
 		if (old_textures[unit] == NULL) texture->enable();

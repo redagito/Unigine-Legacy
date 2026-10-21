@@ -87,10 +87,11 @@ GLDevice::GLDevice() {
 		capabilities[static_cast<int>(capability)] = extensions && strstr(extensions, extension) != nullptr;
 	};
 
-	has(Capability::vertex_program, "GL_ARB_vertex_program");
-	has(Capability::fragment_program_nv, "GL_NV_fragment_program");
-	has(Capability::fragment_program_arb, "GL_ARB_fragment_program");
-	has(Capability::texture_env_combine, "GL_ARB_texture_env_combine");
+	// the shaders need glsl 3.30
+	int major = 0, minor = 0;
+	sscanf(version.c_str(), "%d.%d", &major, &minor);
+	capabilities[static_cast<int>(Capability::shader_program)] = major > 3 || (major == 3 && minor >= 3);
+
 	has(Capability::occlusion_query, "GL_ARB_occlusion_query");
 	has(Capability::stencil_two_side, "GL_EXT_stencil_two_side");
 	has(Capability::depth_clamp, "GL_NV_depth_clamp");

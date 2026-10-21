@@ -39,5 +39,5 @@ void main() {
 	float distance = 1.0 / length(distance_vector);
 	float high = floor(distance * 0.00390625);
 
-	frag_color = vec4((high * -256.0 + distance) * 0.00390625, high * 0.00390625, 0.0, 1.0);
+	frag_color = vec4((high * -256.0 + distance) * 0.00390625, high * 0.00390625, 0.0, distance * 0.00390625);
 }
