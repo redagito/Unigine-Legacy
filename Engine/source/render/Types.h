@@ -132,12 +132,18 @@ struct TextureDesc {
 struct ProgramUniforms {
 	mat4 mvp;				// model view projection
 	mat4 model;			// the object transform
+	mat4 modelview;		// the view matrix with the object transform
 	vec4 camera;			// world space camera position
 	vec4 light;			// light position, w holds 1 / radius^2
 	vec4 light_color;
 	vec4 fog_color;
 	vec4 viewport;
 	vec4 user[2];		// the two values a material can set
+	vec4 time;			// time, time / 2, time / 3, time / 5
+	vec4 sin_time;
+	vec4 cos_time;
+	vec4 icamera;			// the camera in the object space
+	vec4 ilight;			// the light in the object space
 };
 
 // what a light contributes to the frame

@@ -1,1 +1,4 @@
-<shader>	screen.shader
+/*	the screen material
+ *
+ *	the engine draws the frame with the fixed function pipeline
+ */

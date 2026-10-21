@@ -7,28 +7,30 @@
 
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-ATTRIB xyz = vertex.attrib[0];
-ATTRIB st = vertex.attrib[4];
+layout(location = 0) in vec3 position;
+layout(location = 4) in vec2 texcoord;
 
-PARAM mvp[4] = { state.matrix.mvp };
+uniform mat4 mvp;
 
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
+out vec2 uv;
 
-MOV result.texcoord, st;
-
-MOV result.color, 0.2;
-
-END
+void main() {
+	uv = texcoord;
+	gl_Position = mvp * vec4(position, 1.0);
+}
 
 <fragment>
 
-!!ARBtec1.0
+#version 330
 
-modulate texture primary
+uniform sampler2D texture0;
 
-END
+in vec2 uv;
+out vec4 frag_color;
+
+void main() {
+	vec4 base = texture(texture0, uv);
+	frag_color = vec4(base.rgb * 0.2, base.a);
+}

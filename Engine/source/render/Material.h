@@ -33,6 +33,12 @@ public:
 	GLuint getBlendFactor(const char* factor);
 	GLuint getAlphaFunc(const char* func);
 
+protected:
+
+	void bindProgram(GLProgram* program);
+
+public:
+
 	GLProgram* light_shader = nullptr;
 	GLProgram* ambient_shader = nullptr;
 	vec4 parameters[GLProgram::NUM_PARAMETERS];

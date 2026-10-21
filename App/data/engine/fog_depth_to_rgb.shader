@@ -5,54 +5,39 @@
  *			http://frustum.org
  */
 
-<matrix0>		transform
-<vertex_local0>	camera
-
-/*
- */
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-ATTRIB xyz = vertex.attrib[0];
+layout(location = 0) in vec3 position;
 
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM transform[4] = { state.matrix.program[0] };
-PARAM camera = program.local[0];
+uniform mat4 mvp;
+uniform mat4 model;
+uniform vec4 camera;
 
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
+out vec2 distance_vector;
 
-TEMP dist;
-DP4 dist.x, transform[0], xyz;
-DP4 dist.y, transform[1], xyz;
-DP4 dist.z, transform[2], xyz;
-DP4 dist.w, transform[3], xyz;
+void main() {
 
-SUB dist, camera, dist;
+	gl_Position = mvp * vec4(position, 1.0);
 
-MUL result.texcoord[0], dist, 512;
+	// the distance from the camera to the vertex
+	vec3 distance = camera.xyz - (model * vec4(position, 1.0)).xyz;
+	distance_vector = distance * 512.0;
+}
 
-END
-
-/*
- */
 <fragment>
 
-!!ARBfp1.0
+#version 330
 
-TEMP dist;
-DP3 dist.w, fragment.texcoord[0], fragment.texcoord[0];
-RSQ dist.w, dist.w;
-RCP dist.w, dist.w;
+in vec2 distance_vector;
+out vec4 frag_color;
 
-MUL dist.y, dist.w, 0.003906250;
-FLR dist.y, dist.y;
+void main() {
 
-MAD dist.x, dist.y, -256.0, dist.w;
+	// the distance goes into the red and the green channel
+	float distance = 1.0 / length(distance_vector);
+	float high = floor(distance * 0.00390625);
 
-MUL result.color, dist, 0.003906250;
-
-END
+	frag_color = vec4((high * -256.0 + distance) * 0.00390625, high * 0.00390625, 0.0, 1.0);
+}

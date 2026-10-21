@@ -5,69 +5,51 @@
  *			http://frustum.org
  */
 
-<matrix0>			transform
-<vertex_local0>		camera
-<vertex_local1>		viewport
-<fragment_local0>	fog_color
-
-/*
- */
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM transform[4] = { state.matrix.program[0] };
-PARAM camera = program.local[0];
-PARAM viewport = program.local[1];
+layout(location = 0) in vec3 position;
 
-ATTRIB xyz = vertex.attrib[0];
+uniform mat4 mvp;
+uniform mat4 model;
+uniform vec4 camera;
+uniform vec4 viewport;
 
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
+out vec2 distance_vector;
+out vec2 screen;
 
-TEMP dist;
-DP4 dist.x, transform[0], xyz;
-DP4 dist.y, transform[1], xyz;
-DP4 dist.z, transform[2], xyz;
-DP4 dist.w, transform[3], xyz;
+void main() {
 
-SUB dist, camera, dist;
+	gl_Position = mvp * vec4(position, 1.0);
 
-MUL result.texcoord[0], dist, 2;
+	// the distance from the camera to the front face of the fog
+	vec3 distance = camera.xyz - (model * vec4(position, 1.0)).xyz;
+	distance_vector = distance * 2.0;
 
-RCP result.texcoord[1].x, viewport.z;
-RCP result.texcoord[1].y, viewport.w;
+	screen = 1.0 / viewport.zw;
+}
 
-END
-
-/*
- */
 <fragment>
 
-!!ARBfp1.0
+#version 330
 
-PARAM fog_color = program.local[0];
+uniform sampler2D texture0;
+uniform vec4 fog_color;
 
-TEMP front;
-DP3 front.w, fragment.texcoord[0], fragment.texcoord[0];
-RSQ front.w, front.w;
-RCP front.w, front.w;
+in vec2 distance_vector;
+in vec2 screen;
+out vec4 frag_color;
 
-TEMP back;
-MUL back, fragment.position, fragment.texcoord[1];
-TEX back, back, texture[0], 2D;
-DP3 back.w, back, { 1.0, 256.0, 0.0, 0.0 };
+void main() {
 
-TEMP dist;
-SUB dist.w, back.w, front.w;
+	// the distance to the front face of the fog
+	float front = 1.0 / length(distance_vector);
 
-MUL dist.w, dist.w, fog_color.w;
+	// the depth of the scene behind the fog
+	float back = dot(texture(texture0, gl_FragCoord.xy * screen).rgb, vec3(1.0, 256.0, 0.0));
 
-EX2 result.color.w, -dist.w;
+	float distance = back - front;
 
-MOV result.color.xyz, fog_color;
-
-END
+	frag_color = vec4(fog_color.rgb, exp2(-distance * fog_color.w));
+}

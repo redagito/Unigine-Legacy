@@ -5,42 +5,33 @@
  *			http://frustum.org
  */
 
-<vertex_local0> parameter0
-
-/*
- */
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-ATTRIB xyz = vertex.attrib[0];
+layout(location = 0) in vec3 position;
 
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM texture[4] = { state.matrix.texture };
-PARAM param = program.local[0];
+uniform mat4 mvp;
+uniform vec4 user0;
 
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
+out vec2 uv;
 
-DP4 result.texcoord[0].x, texture[0], xyz;
-DP4 result.texcoord[0].y, texture[1], xyz;
-DP4 result.texcoord[0].z, texture[2], xyz;
-DP4 result.texcoord[0].w, texture[3], xyz;
+void main() {
+	// the mirror texture holds the scene of the mirrored view
+	vec4 clip = mvp * vec4(position, 1.0);
+	uv = clip.xy * 0.5 + 0.5;
+	gl_Position = clip;
+}
 
-MOV result.color, param;
-
-END
-
-/*
- */
 <fragment>
 
-!!ARBfp1.0
+#version 330
 
-TEMP color;
-TXP color, fragment.texcoord[0], texture[0], 2D;
-MUL result.color, color, fragment.color;
+uniform sampler2D texture0;
 
-END
+in vec2 uv;
+out vec4 frag_color;
+
+void main() {
+	frag_color = texture(texture0, uv) * user0;
+}

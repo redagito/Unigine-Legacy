@@ -7,6 +7,12 @@
 class Defines;
 class GLTexture;
 
+/*
+ * A program of the rendering layer.
+ *
+ * The vertex and the fragment stage come from one file, the engine hands the
+ * values over as uniforms.
+ */
 class GLProgram : public RenderProgram {
 public:
 
@@ -26,9 +32,7 @@ public:
 	void bindTexture(int unit, GLTexture* texture);
 
 	enum {
-		NUM_MATRIXES = 4,
 		NUM_PARAMETERS = 2,
-		NUM_LOCAL_PARAMETERS = 4,
 		NUM_TEXTURES = 6,
 	};
 
@@ -37,55 +41,36 @@ public:
 protected:
 
 	enum {
-		TIME = 1,
-		SIN,
-		COS,
-		CAMERA,
-		ICAMERA,
-		LIGHT,
-		ILIGHT,
-		LIGHT_COLOR,
-		FOG_COLOR,
-		VIEWPORT,
-		PARAMETER,
-		PROJECTION,
-		MODELVIEW,
-		IMODELVIEW,
-		TRANSFORM,
-		ITRANSFORM,
-		LIGHT_TRANSFORM,
+		UNIFORM_MVP,
+		UNIFORM_MODEL,
+		UNIFORM_MODELVIEW,
+		UNIFORM_CAMERA,
+		UNIFORM_LIGHT,
+		UNIFORM_LIGHT_COLOR,
+		UNIFORM_FOG_COLOR,
+		UNIFORM_VIEWPORT,
+		UNIFORM_USER0,
+		UNIFORM_USER1,
+		UNIFORM_TIME,
+		UNIFORM_SIN_TIME,
+		UNIFORM_COS_TIME,
+		UNIFORM_ICAMERA,
+		UNIFORM_ILIGHT,
+		NUM_UNIFORMS
 	};
 
-	struct Matrix {
-		int num = 0;	// matrix number
-		int type = 0;	// matrix type
-	};
+	static const char* uniform_names[NUM_UNIFORMS];
 
-	struct LocalParameter {
-		int num = 0;		// parameter number
-		int type = 0;		// parameter type
-		int parameter = 0;
-	};
-
-	GLuint compileARBtec(const char* src);
-
+	GLuint compile(GLenum type, const char* source, const char* name);
 	void release();
-	void getMatrix(const char* name, Matrix* m);
-	void getLocalParameter(const char* name, LocalParameter* p);
 
-	int num_matrixes;
-	Matrix matrixes[NUM_MATRIXES];
+	GLuint program = 0;
+	GLuint vertex_shader = 0;
+	GLuint fragment_shader = 0;
 
-	int num_vertex_parameters;
-	LocalParameter vertex_parameters[NUM_LOCAL_PARAMETERS];
+	GLint uniforms[NUM_UNIFORMS];
 
-	int num_fragment_parameters;
-	LocalParameter fragment_parameters[NUM_LOCAL_PARAMETERS];
-
-	GLuint vertex_target = 0;
-	GLuint vertex_id = 0;
-	GLuint fragment_target = 0;
-	GLuint fragment_id = 0;
+	ProgramUniforms values;
 
 	static vec4 parameters[NUM_PARAMETERS];
 	static GLTexture* old_textures[GLProgram::NUM_TEXTURES];

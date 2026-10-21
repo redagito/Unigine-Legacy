@@ -219,16 +219,25 @@ void Material::bind() {
 				for (int i = 0; i < GLProgram::NUM_TEXTURES; i++) {
 					if (Engine::lights.current_light->material->textures[i]) bindTexture(i, Engine::lights.current_light->material->textures[i]);
 				}
-				Engine::lights.current_light->material->light_shader->bind();
+				bindProgram(Engine::lights.current_light->material->light_shader);
 			}
 			else {
-				light_shader->bind();
+				bindProgram(light_shader);
 			}
 		}
 	}
 	else {
-		if (ambient_shader) ambient_shader->bind();
+		bindProgram(ambient_shader);
 	}
+}
+
+
+void Material::bindProgram(GLProgram* program) {
+	if (!program) return;
+	ProgramUniforms uniforms;
+	Engine::getUniforms(uniforms);
+	program->setUniforms(uniforms);
+	program->bind();
 }
 
 

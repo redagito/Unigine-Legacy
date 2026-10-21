@@ -585,6 +585,23 @@ void Engine::update(float ifps) {
 	}
 }
 
+void Engine::getUniforms(ProgramUniforms& uniforms) {
+	uniforms.mvp = projection * modelview;
+	uniforms.model = transform;
+	uniforms.modelview = modelview;
+	uniforms.camera = vec4(camera, 1);
+	uniforms.light = light;
+	uniforms.light_color = light_color;
+	uniforms.fog_color = fog_color;
+	uniforms.viewport = vec4(viewport[0], viewport[1], viewport[2], viewport[3]);
+	uniforms.time = vec4(time, time / 2.0f, time / 3.0f, time / 5.0f);
+	uniforms.sin_time = vec4(sin(time), sin(time / 2.0f), sin(time / 3.0f), sin(time / 5.0f));
+	uniforms.cos_time = vec4(cos(time), cos(time / 2.0f), cos(time / 3.0f), cos(time / 5.0f));
+	uniforms.icamera = vec4(itransform * camera, 1);
+	uniforms.ilight = vec4(itransform * vec3(light), light.w);
+}
+
+
 void Engine::render_light() {
 
 	device->setDepthWrite(false);

@@ -74,6 +74,9 @@ public:
 
 	static void update(float ifps);
 
+	// the values the programs take
+	static void getUniforms(ProgramUniforms& uniforms);
+
 	// renderers
 	static void render_light();
 	static void render_transparent();

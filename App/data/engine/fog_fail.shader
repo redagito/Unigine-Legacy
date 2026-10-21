@@ -5,53 +5,43 @@
  *			http://frustum.org
  */
 
-<matrix0>		transform
-<vertex_local0>	viewport
-<vertex_local1>	fog_color
-
-/*
- */
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-ATTRIB xyz = vertex.attrib[0];
+layout(location = 0) in vec3 position;
 
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM transform[4] = { state.matrix.program[0] };
-PARAM viewport = program.local[0];
-PARAM fog_color = program.local[1];
+uniform mat4 mvp;
+uniform vec4 viewport;
+uniform vec4 fog_color;
 
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
+out vec2 screen;
+out vec3 weights;
+out vec4 fog;
 
-RCP result.texcoord[0].x, viewport.z;
-RCP result.texcoord[0].y, viewport.w;
+void main() {
 
-MOV result.texcoord[1].x, fog_color.w;
-MUL result.texcoord[1].y, fog_color.w, 256.0;
-MOV result.texcoord[1].z, 0.0;
+	gl_Position = mvp * vec4(position, 1.0);
 
-MOV result.color, fog_color;
+	screen = 1.0 / viewport.zw;
+	weights = vec3(fog_color.w, fog_color.w * 256.0, 0.0);
+	fog = fog_color;
+}
 
-END
-
-/*
- */
 <fragment>
 
-!!ARBfp1.0
+#version 330
 
-TEMP dist;
-MUL dist, fragment.position, fragment.texcoord[0];
-TEX dist, dist, texture[0], 2D;
+uniform sampler2D texture0;
 
-DP3 dist.w, dist, fragment.texcoord[1];
+in vec2 screen;
+in vec3 weights;
+in vec4 fog;
+out vec4 frag_color;
 
-EX2 result.color.w, -dist.w;
+void main() {
 
-MOV result.color.xyz, fragment.color;
+	float distance = dot(texture(texture0, gl_FragCoord.xy * screen).rgb, weights);
 
-END
+	frag_color = vec4(fog.rgb, exp2(-distance));
+}

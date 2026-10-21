@@ -5,48 +5,37 @@
  *			http://frustum.org
  */
 
-<vertex_local0>	ilight
-
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-ATTRIB xyz = vertex.attrib[0];
+layout(location = 0) in vec4 position;
 
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM light = program.local[0];
+uniform mat4 mvp;
+uniform vec4 ilight;
 
-TEMP v;
-SUB v, xyz, light;
-DP3 v.w, v, v;
-RSQ v.w, v.w;
-MUL v, v, v.w;
-MUL v, v, 10000.0;
+out vec4 shadow_color;
 
-SUB v.w, 1.0, xyz.w;
-MAD v, v, v.w, xyz;
-MOV v.w, 1.0;
+void main() {
 
-DP4 result.position.x, mvp[0], v;
-DP4 result.position.y, mvp[1], v;
-DP4 result.position.z, mvp[2], v;
-DP4 result.position.w, mvp[3], v;
+	// the volume grows from the vertex away from the light
+	vec3 v = position.xyz - ilight.xyz;
+	v = normalize(v) * 10000.0;
 
-MOV result.color, { 0, 0.1, 0, 1.0 };
+	vec3 volume = v * (1.0 - position.w) + position.xyz;
 
-END
+	gl_Position = mvp * vec4(volume, 1.0);
 
-/* only for Radeons
- * analog of depth clamp extension
- */
-#ifdef RADEON
+	shadow_color = vec4(0.0, 0.1, 0.0, 1.0);
+}
 
 <fragment>
 
-!!ARBfp1.0
+#version 330
 
-MOV_SAT result.depth, fragment.position.z;
+in vec4 shadow_color;
+out vec4 frag_color;
 
-END
-
-#endif	/* DEPTH_CLAMP */
+void main() {
+	frag_color = shadow_color;
+}
