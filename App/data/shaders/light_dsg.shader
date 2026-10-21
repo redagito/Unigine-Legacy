@@ -17,8 +17,8 @@ layout(location = 3) in vec3 binormal;
 layout(location = 4) in vec2 texcoord;
 
 uniform mat4 mvp;
-uniform vec4 light;
-uniform vec4 camera;
+uniform vec4 ilight;
+uniform vec4 icamera;
 
 out vec2 uv;
 out vec3 light_direction;
@@ -30,14 +30,14 @@ void main() {
 	uv = texcoord;
 
 	// the light and the camera in the tangent space
-	vec3 to_light = light.xyz - position;
-	vec3 to_camera = camera.xyz - position;
+	vec3 to_light = ilight.xyz - position;
+	vec3 to_camera = icamera.xyz - position;
 
 	light_direction = vec3(dot(tangent, to_light), dot(binormal, to_light), dot(normal, to_light));
 	view_direction = vec3(dot(tangent, to_camera), dot(binormal, to_camera), dot(normal, to_camera));
 
 	// the distance to the light falls off with the square of the radius
-	attenuation = max(1.0 - dot(to_light, to_light) * light.w, 0.0);
+	attenuation = max(1.0 - dot(to_light, to_light) * ilight.w, 0.0);
 
 	gl_Position = mvp * vec4(position, 1.0);
 }

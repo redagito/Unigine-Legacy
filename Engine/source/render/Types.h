@@ -133,6 +133,7 @@ struct ProgramUniforms {
 	mat4 mvp;				// model view projection
 	mat4 model;			// the object transform
 	mat4 modelview;		// the view matrix with the object transform
+	mat4 light_transform;	// the transform of the current light
 	vec4 camera;			// world space camera position
 	vec4 light;			// light position, w holds 1 / radius^2
 	vec4 light_color;

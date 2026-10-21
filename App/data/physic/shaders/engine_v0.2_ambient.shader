@@ -5,114 +5,65 @@
  *			http://frustum.org
  */
 
-#ifdef VERTEX
-
-<vertex_local0>	parameter0
-<vertex_local1>	time
-
 <vertex>
 
-!!ARBvp1.0
+#version 330
 
-ATTRIB xyz = vertex.attrib[0];
-ATTRIB st = vertex.attrib[4];
+layout(location = 0) in vec3 position;
+layout(location = 4) in vec2 texcoord;
 
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM param = program.local[0];
-PARAM time = program.local[1];
-PARAM sin = program.local[2];
-PARAM cos = program.local[3];
+uniform mat4 mvp;
+uniform vec4 time;
+uniform vec4 sin_time;
+uniform vec4 cos_time;
 
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
+out vec2 uv;
+out vec2 noise_uv0;
+out vec2 noise_uv1;
 
-SUB result.texcoord[0].x, 1, st.x;
-MAD result.texcoord[0].y, time.x, 0.05, st.y;
+void main() {
 
-MOV result.color, param;
+	// the texture scrolls down
+	uv = vec2(1.0 - texcoord.x, time.x * 0.05 + texcoord.y);
 
-END
+	// two samples of the noise, they drift apart
+	vec2 temp = texcoord * vec2(1.0, 5.0);
+
+	vec2 first = vec2(temp.x + sin_time.z, temp.y + cos_time.z);
+	first += vec2(sin_time.w * 0.3, cos_time.w * 0.3);
+	noise_uv0 = first * 0.4;
+
+	vec2 second = vec2(temp.x + cos_time.z, temp.y - sin_time.z);
+	second += vec2(sin_time.w * -0.3, cos_time.w * 0.3);
+	noise_uv1 = second * 0.4 + 0.4;
+
+	gl_Position = mvp * vec4(position, 1.0);
+}
 
 <fragment>
 
-!!ARBtec1.0
+#version 330
 
-modulate texture primary
+uniform sampler2D texture0;
+uniform sampler2D texture1;
+uniform sampler2D texture2;
+uniform vec4 user0;
 
-END
+in vec2 uv;
+in vec2 noise_uv0;
+in vec2 noise_uv1;
+out vec4 frag_color;
 
-#else
+void main() {
 
-<vertex_local0>	parameter0
-<vertex_local1>	time
-<vertex_local2>	sin
-<vertex_local3>	cos
+	vec4 base = texture(texture0, uv);
 
-<vertex>
+	// the noise picks the colour of the map
+	float value = (texture(texture1, noise_uv0).r + texture(texture1, noise_uv1).r) * base.r;
 
-!!ARBvp1.0
+	vec3 color = texture(texture2, vec2(value, value)).rgb;
+	color *= base.g;
+	color.b += base.b;
 
-ATTRIB xyz = vertex.attrib[0];
-ATTRIB st = vertex.attrib[4];
-
-PARAM mvp[4] = { state.matrix.mvp };
-PARAM param = program.local[0];
-PARAM time = program.local[1];
-PARAM sin = program.local[2];
-PARAM cos = program.local[3];
-
-DP4 result.position.x, mvp[0], xyz;
-DP4 result.position.y, mvp[1], xyz;
-DP4 result.position.z, mvp[2], xyz;
-DP4 result.position.w, mvp[3], xyz;
-
-SUB result.texcoord[0].x, 1, st.x;
-MAD result.texcoord[0].y, time.x, 0.05, st.y;
-
-TEMP temp;
-MUL temp, st, { 1, 5, 0, 0 };
-
-TEMP texcoord;
-
-ADD texcoord.x, temp.x, sin.z;
-ADD texcoord.y, temp.y, cos.z;
-MAD texcoord.x, sin.w, 0.3, texcoord.x;
-MAD texcoord.y, cos.w, 0.3, texcoord.y;
-
-MUL result.texcoord[1], texcoord, 0.4;
-
-ADD texcoord.x, temp.x, cos.z;
-SUB texcoord.y, temp.y, sin.z;
-MAD texcoord.x, sin.w, -0.3, texcoord.x;
-MAD texcoord.y, cos.w, 0.3, texcoord.y;
-
-MAD result.texcoord[2], texcoord, 0.4, 0.4;
-
-MOV result.color, param;
-
-END
-
-<fragment>
-
-!!ARBfp1.0
-
-TEMP color, temp;
-TEX color, fragment.texcoord[1], texture[1], 2D;
-TEX temp, fragment.texcoord[2], texture[1], 2D;
-ADD color, color, temp;
-
-TEX temp, fragment.texcoord[0], texture[0], 2D;
-MUL color, color, temp.x;
-
-TEX color, color, texture[2], 2D;
-
-MUL color, color, temp.y;
-ADD color.z, color.z, temp.z;
-
-MUL result.color, color, fragment.color;
-
-END
-
-#endif /* VERTEX */
+	frag_color = vec4(color * user0.rgb, base.a * user0.a);
+}

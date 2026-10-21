@@ -589,6 +589,7 @@ void Engine::getUniforms(ProgramUniforms& uniforms) {
 	uniforms.mvp = projection * modelview;
 	uniforms.model = transform;
 	uniforms.modelview = modelview;
+	uniforms.light_transform = lights.current_light ? lights.current_light->transform : mat4();
 	uniforms.camera = vec4(camera, 1);
 	uniforms.light = light;
 	uniforms.light_color = light_color;

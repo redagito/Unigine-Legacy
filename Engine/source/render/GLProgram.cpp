@@ -15,6 +15,7 @@ const char* GLProgram::uniform_names[NUM_UNIFORMS] = {
 	"mvp",
 	"model",
 	"modelview",
+	"light_transform",
 	"camera",
 	"light",
 	"light_color",
@@ -165,6 +166,7 @@ void GLProgram::bind() {
 
 	if (uniforms[UNIFORM_MVP] != -1) glUniformMatrix4fv(uniforms[UNIFORM_MVP], 1, GL_FALSE, values.mvp);
 	if (uniforms[UNIFORM_MODELVIEW] != -1) glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEW], 1, GL_FALSE, values.modelview);
+	if (uniforms[UNIFORM_LIGHT_TRANSFORM] != -1) glUniformMatrix4fv(uniforms[UNIFORM_LIGHT_TRANSFORM], 1, GL_FALSE, values.light_transform);
 	if (uniforms[UNIFORM_MODEL] != -1) glUniformMatrix4fv(uniforms[UNIFORM_MODEL], 1, GL_FALSE, values.model);
 	if (uniforms[UNIFORM_CAMERA] != -1) glUniform4fv(uniforms[UNIFORM_CAMERA], 1, values.camera);
 	if (uniforms[UNIFORM_LIGHT] != -1) glUniform4fv(uniforms[UNIFORM_LIGHT], 1, values.light);

@@ -27,6 +27,7 @@ void main() {
 #version 330
 
 uniform sampler2D texture0;
+uniform vec4 user0;
 
 in vec2 uv;
 out vec4 frag_color;
