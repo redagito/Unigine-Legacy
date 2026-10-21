@@ -55,33 +55,28 @@ Font::Font(const char* name)
 	}
 	delete[] data;
 
-	list_id = glGenLists(256);
 	for (int y = 0, i = 0; y < 16; y++) {
 		for (int x = 0; x < 16; x++, i++) {
 			float s = (float)x / 16.0f + (float)space[i][0] / (float)size;
 			float t = (float)y / 16.0f;
 			float ds = (float)space[i][1] / (float)size;
-			float dt = 1.0 / 16.0;
-			glNewList(list_id + i, GL_COMPILE);
-			glBegin(GL_QUADS);
-			glTexCoord2f(s, t);
-			glVertex2i(0, 0);
-			glTexCoord2f(s, t + dt);
-			glVertex2i(0, step);
-			glTexCoord2f(s + ds, t + dt);
-			glVertex2i(space[i][1], step);
-			glTexCoord2f(s + ds, t);
-			glVertex2i(space[i][1], 0);
-			glEnd();
-			glTranslatef(space[i][1], 0, 0);
-			glEndList();
+			float dt = 1.0f / 16.0f;
+
+			float corners[4][2] = { { 0, 0 }, { 0, step }, { space[i][1], step }, { space[i][1], 0 } };
+			float coords[4][2] = { { s, t }, { s, t + dt }, { s + ds, t + dt }, { s + ds, t } };
+
+			for (int j = 0; j < 4; j++) {
+				glyphs[i][j][0] = corners[j][0];
+				glyphs[i][j][1] = corners[j][1];
+				glyphs[i][j][2] = coords[j][0];
+				glyphs[i][j][3] = coords[j][1];
+			}
 		}
 	}
 }
 
 Font::~Font() {
 	glDeleteTextures(1, &tex_id);
-	glDeleteLists(256, list_id);
 }
 
 
@@ -138,7 +133,15 @@ void Font::puts(float x, float y, const char* str) {
 				glTranslatef(step / 2, 0, 0);
 			}
 			else {
-				glCallList(list_id + *(unsigned char*)s);
+				int glyph = *(unsigned char*)s;
+				glEnableClientState(GL_VERTEX_ARRAY);
+				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+				glVertexPointer(2, GL_FLOAT, 4 * sizeof(float), glyphs[glyph][0]);
+				glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(float), glyphs[glyph][0] + 2);
+				glDrawArrays(GL_QUADS, 0, 4);
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				glDisableClientState(GL_VERTEX_ARRAY);
+				glTranslatef(space[glyph][1], 0, 0);
 			}
 		}
 		glPopMatrix();

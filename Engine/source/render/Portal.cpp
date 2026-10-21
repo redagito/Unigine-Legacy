@@ -97,10 +97,8 @@ void Portal::getScissor(int* scissor) const
 
 void Portal::render() 
 {
-	glBegin(GL_QUADS);
-	glVertex3fv(points[0]);
-	glVertex3fv(points[1]);
-	glVertex3fv(points[2]);
-	glVertex3fv(points[3]);
-	glEnd();
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(3, GL_FLOAT, 0, points[0]);
+	glDrawArrays(GL_QUADS, 0, 4);
+	glDisableClientState(GL_VERTEX_ARRAY);
 }

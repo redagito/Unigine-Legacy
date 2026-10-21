@@ -154,12 +154,11 @@ void Console::render(float ifps, int num) {
 	glDisable(GL_TEXTURE_2D);
 	glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0, 0, 0, 0.3);
-	glBegin(GL_QUADS);
-	glVertex2f(0, 0);
-	glVertex2f(0, step * num + step);
-	glVertex2f(width, step * num + step);
-	glVertex2f(width, 0);
-	glEnd();
+	float vertices[4][2] = { { 0, 0 }, { 0, step * num + step }, { width, step * num + step }, { width, 0 } };
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(2, GL_FLOAT, 0, vertices[0]);
+	glDrawArrays(GL_QUADS, 0, 4);
+	glDisableClientState(GL_VERTEX_ARRAY);
 	glEnable(GL_TEXTURE_2D);
 
 	for (int i = 0; i < num; i++) {

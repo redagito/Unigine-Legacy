@@ -245,28 +245,30 @@ void GLTexture::copy(GLuint target) {
 
 
 void GLTexture::render(float x0, float y0, float x1, float y1) {
-	glBegin(GL_QUADS);
-	if (target == TEXTURE_RECT) {
-		glTexCoord2f(0, 0);
-		glVertex2f(x0, y0);
-		glTexCoord2f(width, 0);
-		glVertex2f(x1, y0);
-		glTexCoord2f(width, height);
-		glVertex2f(x1, y1);
-		glTexCoord2f(0, height);
-		glVertex2f(x0, y1);
-	}
-	else {
-		glTexCoord2f(0, 0);
-		glVertex2f(x0, y0);
-		glTexCoord2f(1, 0);
-		glVertex2f(x1, y0);
-		glTexCoord2f(1, 1);
-		glVertex2f(x1, y1);
-		glTexCoord2f(0, 1);
-		glVertex2f(x0, y1);
-	}
-	glEnd();
+	// the position and the texture coordinate of the corners
+	float vertices[4][4];
+
+	vertices[0][0] = x0; vertices[0][1] = y0;
+	vertices[1][0] = x1; vertices[1][1] = y0;
+	vertices[2][0] = x1; vertices[2][1] = y1;
+	vertices[3][0] = x0; vertices[3][1] = y1;
+
+	// the rectangle texture takes the pixels, the others take the unit square
+	float s = target == TEXTURE_RECT ? (float)width : 1.0f;
+	float t = target == TEXTURE_RECT ? (float)height : 1.0f;
+
+	vertices[0][2] = 0.0f; vertices[0][3] = 0.0f;
+	vertices[1][2] = s; vertices[1][3] = 0.0f;
+	vertices[2][2] = s; vertices[2][3] = t;
+	vertices[3][2] = 0.0f; vertices[3][3] = t;
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glVertexPointer(2, GL_FLOAT, 4 * sizeof(float), vertices[0]);
+	glTexCoordPointer(2, GL_FLOAT, 4 * sizeof(float), vertices[0] + 2);
+	glDrawArrays(GL_QUADS, 0, 4);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 /*****************************************************************************/

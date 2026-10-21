@@ -82,43 +82,35 @@ void Flare::render(const vec3& pos, const vec4& color)
 	flare_tex->enable();
 	flare_tex->bind();
 
-	glMatrixMode(GL_TEXTURE);
+	// the corners of the flare
+	vec3 corners[4];
+	corners[0] = pos - (dx + dy) * radius;
+	corners[1] = pos + (dx - dy) * radius;
+	corners[2] = pos - (dx - dy) * radius;
+	corners[3] = pos + (dx + dy) * radius;
 
-	glTranslatef(0.5, 0.5, 0);
-	glRotatef(time * 360.0f / 16.0f, 0, 0, 1);
-	glTranslatef(-0.5, -0.5, 0);
+	float texcoords[4][2] = { { 0, 1 }, { 1, 1 }, { 0, 0 }, { 1, 0 } };
 
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(0, 1);
-	glVertex3fv(pos - (dx + dy) * radius);
-	glTexCoord2f(1, 1);
-	glVertex3fv(pos + (dx - dy) * radius);
-	glTexCoord2f(0, 0);
-	glVertex3fv(pos - (dx - dy) * radius);
-	glTexCoord2f(1, 0);
-	glVertex3fv(pos + (dx + dy) * radius);
-	glEnd();
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glVertexPointer(3, GL_FLOAT, 0, corners[0]);
+	glTexCoordPointer(2, GL_FLOAT, 0, texcoords[0]);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-	glLoadIdentity();
+	// the second flare turns the other way
+	float angle = -time * 360.0f / 16.0f * DEG2RAD;
+	float s = sin(angle);
+	float c2 = cos(angle);
+	for (int i = 0; i < 4; i++) {
+		float x = texcoords[i][0] - 0.5f;
+		float y = texcoords[i][1] - 0.5f;
+		texcoords[i][0] = x * c2 - y * s + 0.5f;
+		texcoords[i][1] = x * s + y * c2 + 0.5f;
+	}
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-	glTranslatef(0.5, 0.5, 0);
-	glRotatef(-time * 360.0f / 16.0f, 0, 0, 1);
-	glTranslatef(-0.5, -0.5, 0);
-
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(0, 1);
-	glVertex3fv(pos - (dx + dy) * radius);
-	glTexCoord2f(1, 1);
-	glVertex3fv(pos + (dx - dy) * radius);
-	glTexCoord2f(0, 0);
-	glVertex3fv(pos - (dx - dy) * radius);
-	glTexCoord2f(1, 0);
-	glVertex3fv(pos + (dx + dy) * radius);
-	glEnd();
-
-	glLoadIdentity();
-
-	glMatrixMode(GL_MODELVIEW);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
 
 	flare_tex->disable();
 	glDisable(GL_BLEND);

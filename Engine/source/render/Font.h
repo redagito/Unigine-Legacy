@@ -18,7 +18,9 @@ public:
 protected:
 
 	GLuint tex_id = 0;
-	GLuint list_id = 0;
+
+	// the position and the texture coordinate of the corners of a glyph
+	float glyphs[256][4][4];
 
 	int step = 0;
 	int space[256][2] = { 0 };
