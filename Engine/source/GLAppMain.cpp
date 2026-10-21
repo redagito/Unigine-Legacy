@@ -39,6 +39,8 @@ static void help(int, char**, void*) {
 		"'r' - robot view toggle\n"
 		"' ' - pause toggle"
 		"\n"
+		"'o' - wireframe mode"
+		"\n"
 		"'3' - half angle specular toggle //%s\n"
 		"\n"
 		"('z'|'v'|'c')&middle button - add rigid body object\n"
@@ -252,11 +254,11 @@ void GLAppMain::render() {
 			Engine::console->enable(1024, 768);
 			vec3 c = modelview.inverse() * vec3(0, 0, 0);
 			Engine::device->setColor(vec4(0.19f, 0.0f, 0.82f, 1.0f));
-			Engine::console->printf(13, 35, "triangles: %d\nsectors %d\nlights %d\nrun \"help\" for more information\n%f %f %f",
-				Engine::num_triangles, Bsp::num_visible_sectors, Engine::lights.num_visible_lights, c.x, c.y, c.z);
+			Engine::console->printf(13, 35, "triangles: %d\nsectors %d\nlights %d\nwireframe %d\nrun \"help\" for more information\n%f %f %f",
+				Engine::num_triangles, Bsp::num_visible_sectors, Engine::lights.num_visible_lights, Engine::wireframe_toggle, c.x, c.y, c.z);
 			Engine::device->setColor(vec4(0.77f, 1.0f, 0.15f, 1.0f));
-			Engine::console->printf(12, 34, "triangles: %d\nsectors %d\nlights %d\nrun \"help\" for more information\n%f %f %f",
-				Engine::num_triangles, Bsp::num_visible_sectors, Engine::lights.num_visible_lights, c.x, c.y, c.z);
+			Engine::console->printf(12, 34, "triangles: %d\nsectors %d\nlights %d\nwireframe %d\nrun \"help\" for more information\n%f %f %f",
+				Engine::num_triangles, Bsp::num_visible_sectors, Engine::lights.num_visible_lights, Engine::wireframe_toggle, c.x, c.y, c.z);
 			Engine::console->disable();
 		}
 
@@ -513,7 +515,10 @@ void GLAppMain::keyPress(int key) {
 
 	if (Engine::console->getActivity()) return;
 
-	if (key == '3') {
+	if (key == 'o') {
+		Engine::wireframe_toggle = !Engine::wireframe_toggle;
+	}
+	else if (key == '3') {
 		if (Engine::defines.isDefine("HALF")) Engine::defines.undef("HALF");
 		else Engine::defines.define("HALF");
 		Engine::reload(paths);

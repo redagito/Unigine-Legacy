@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
 		int h = 768;
 		int fs = 0;
 		int frames = 0;
+		int wireframe = 0;
 		const char* shot = NULL;
 		for (int i = 1; i < argc; i++) {
 			if (!strcmp(argv[i], "-fs")) fs = 1;
@@ -26,6 +27,7 @@ int main(int argc, char** argv) {
 			else if (!strcmp(argv[i], "-headless")) frames = 60;
 			else if (!strcmp(argv[i], "-frames")) sscanf(argv[++i], "%d", &frames);
 			else if (!strcmp(argv[i], "-shot")) shot = argv[++i];
+			else if (!strcmp(argv[i], "-wireframe")) wireframe = 1;
 		}
 
 		if (frames) glApp.setHeadless(frames);
@@ -35,6 +37,7 @@ int main(int argc, char** argv) {
 		glApp.setTitle("3D Engine Demo");
 
 		if (glApp.init() == 0) return 0;
+		if (wireframe) Engine::wireframe_toggle = 1;
 		glApp.main();
 
 		if (shot) {

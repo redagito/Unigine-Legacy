@@ -990,6 +990,12 @@ void Engine::render(float ifps) {
 	device->clear(true, true);
 	device->setDepthCompare(CompareFunction::less);
 
+	// the wireframe draws the whole scene as lines
+	if (wireframe_toggle) {
+		device->setPolygonMode(PolygonMode::line);
+		device->setPolygonOffset(true, -0.5f, 0.0f);
+	}
+
 	// number of visible lights
 	// zero - ambient shader
 	lights.num_visible_lights = 0;
@@ -1090,24 +1096,14 @@ void Engine::render(float ifps) {
 	// transparent pass
 	render_transparent();
 
-	// disable material
-	if (Material::old_material) Material::old_material->disable();
-
-	// wireframe
+	// the screen is a quad, it stays filled
 	if (wireframe_toggle) {
-		device->setColor(vec4(0, 1, 0, 1));
-		device->setPolygonMode(PolygonMode::line);
-		device->setPolygonOffset(true, -0.5f, 0.0f);
-		for (int i = 0; i < Bsp::num_visible_sectors; i++) {
-			Sector* s = Bsp::visible_sectors[i];
-			for (int j = 0; j < s->num_visible_objects; j++) {
-				Object* o = s->visible_objects[j];
-				num_triangles += o->render(Object::RENDER_ALL);
-			}
-		}
 		device->setPolygonOffset(false, 0.0f, 0.0f);
 		device->setPolygonMode(PolygonMode::fill);
 	}
+
+	// disable material
+	if (Material::old_material) Material::old_material->disable();
 
 	device->flush();
 

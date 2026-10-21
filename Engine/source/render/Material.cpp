@@ -159,6 +159,14 @@ GLuint Material::getAlphaFunc(const char* func) {
 
 
 int Material::enable() {
+	// the wireframe mode draws the geometry with the fixed function pipeline,
+	// the maps would only darken the lines
+	if (Engine::wireframe_toggle) {
+		glUseProgram(0);
+		glDisable(GL_TEXTURE_2D);
+		glColor4f(0, 1, 0, 1);
+		return 1;
+	}
 	if (alpha_test) {
 		if (!old_material || (old_material && old_material->alpha_test == 0)) {
 			glDisable(GL_CULL_FACE);
@@ -206,6 +214,8 @@ void Material::disable() {
 
 
 void Material::bind() {
+	// the wireframe mode draws the geometry with the fixed function pipeline
+	if (Engine::wireframe_toggle) return;
 	if (old_material != this) {
 		if (blend) glBlendFunc(sfactor, dfactor);
 		if (alpha_test) glAlphaFunc(alpha_func, alpha_ref);
