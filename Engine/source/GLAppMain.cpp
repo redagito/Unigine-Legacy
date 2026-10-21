@@ -11,9 +11,9 @@
 
 #include "render/GLTexture.h"
 #include "graphics/Light.h"
-#include "graphics/Console.h"
-#include "graphics/Flare.h"
-#include "graphics/Particles.h"
+#include "render/Console.h"
+#include "render/Flare.h"
+#include "render/Particles.h"
 
 #include "object/ObjectMesh.h"
 #include "object/ObjectParticles.h"

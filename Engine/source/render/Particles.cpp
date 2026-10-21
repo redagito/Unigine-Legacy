@@ -1,4 +1,4 @@
-#include "graphics/Particles.h"
+#include "render/Particles.h"
 
 #include "graphics/OpenGL.h"
 

@@ -1,6 +1,6 @@
 #include "light.h"
 
-#include "graphics/Flare.h"
+#include "render/Flare.h"
 #include "engine.h"
 
 Light::Light(const vec3& pos, float radius, const vec4& color, float lifetime, int shadows)

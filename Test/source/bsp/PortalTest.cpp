@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
-#include "bsp/Portal.h"
+#include "render/Portal.h"
 
 using Catch::Approx;
 

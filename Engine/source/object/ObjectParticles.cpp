@@ -1,9 +1,9 @@
 #include "engine.h"
 #include "bsp/Bsp.h"
-#include "graphics/Material.h"
-#include "graphics/Particles.h"
+#include "render/Material.h"
+#include "render/Particles.h"
 #include "object/Object.h"
-#include "graphics/Fog.h"
+#include "render/Fog.h"
 #include "object/ObjectParticles.h"
 
 ObjectParticles::ObjectParticles(Particles *particles) : Object(OBJECT_PARTICLES), particles(particles), off_time(-1.0f) {

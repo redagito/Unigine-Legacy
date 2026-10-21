@@ -1,10 +1,10 @@
-#include "bsp/Sector.h"
+#include "render/Sector.h"
 
 #include "bsp/Node.h"
-#include "bsp/Portal.h"
+#include "render/Portal.h"
 #include "render/MeshData.h"
 #include "graphics/Frustum.h"
-#include "graphics/Material.h"
+#include "render/Material.h"
 #include "object/ObjectMesh.h"
 #include "engine.h"
 

@@ -1,8 +1,8 @@
-#include "graphics/Material.h"
+#include "render/Material.h"
 #include "util/Error.h"
 
 //
-#include "light.h"
+#include "graphics/Light.h"
 #include "render/GLTexture.h"
 #include "render/GLProgram.h"
 #include "script/Parser.h"

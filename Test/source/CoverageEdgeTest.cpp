@@ -8,12 +8,12 @@
 #include "graphics/Frustum.h"
 #include "graphics/Lights.h"
 #include "graphics/Light.h"
-#include "graphics/Particles.h"
+#include "render/Particles.h"
 #include "collide.h"
 #include "bsp/Bsp.h"
 #include "bsp/Node.h"
-#include "bsp/Sector.h"
-#include "bsp/Portal.h"
+#include "render/Sector.h"
+#include "render/Portal.h"
 
 using Catch::Approx;
 

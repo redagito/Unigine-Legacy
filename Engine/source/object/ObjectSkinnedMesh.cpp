@@ -3,7 +3,7 @@
 #include "engine.h"
 #include "bsp/Bsp.h"
 #include "graphics/Frustum.h"
-#include "graphics/Material.h"
+#include "render/Material.h"
 #include "render/GLSkinnedGeometry.h"
 #include "physics/RagDoll.h"
 #include "Paths.h"

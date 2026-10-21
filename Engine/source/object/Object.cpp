@@ -3,10 +3,10 @@
 #include "engine.h"
 #include "graphics/Frustum.h"
 #include "bsp/Bsp.h"
-#include "bsp/Sector.h"
+#include "render/Sector.h"
 #include "math/Position.h"
 #include "render/GLProgram.h"
-#include "graphics/Material.h"
+#include "render/Material.h"
 #include "physics/RigidBody.h"
 #include "util/StringUtil.h"
 

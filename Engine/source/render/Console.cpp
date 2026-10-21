@@ -1,4 +1,4 @@
-#include "graphics/Console.h"
+#include "render/Console.h"
 #include "util/Logger.h"
 
 #include <spdlog/sinks/sink.h>

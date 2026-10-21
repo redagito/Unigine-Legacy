@@ -8,18 +8,18 @@ static bool has_extension(const char* name, const char* extension) {
 	return len >= ext && !strcmp(name + len - ext, extension);
 }
 
-#include "bsp/Portal.h"
+#include "render/Portal.h"
 #include <cstring>
-#include "bsp/Sector.h"
+#include "render/Sector.h"
 #include <cstring>
 #include "bsp/Node.h"
 #include <cstring>
 
-#include "graphics/Console.h"
+#include "render/Console.h"
 #include <cstring>
 #include "graphics/Frustum.h"
 #include <cstring>
-#include "graphics/Material.h"
+#include "render/Material.h"
 #include <cstring>
 #include "engine.h"
 #include <cstring>

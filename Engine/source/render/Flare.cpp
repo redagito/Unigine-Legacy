@@ -1,4 +1,4 @@
-#include "graphics/Flare.h"
+#include "render/Flare.h"
 
 #include "engine.h"
 #include "render/GLTexture.h"

@@ -1,4 +1,4 @@
-#include "graphics/Fog.h"
+#include "render/Fog.h"
 
 #include "graphics/OpenGL.h"
 #include "render/GLRenderTarget.h"

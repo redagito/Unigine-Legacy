@@ -5,9 +5,9 @@
 #include "script/Parser.h"
 
 #include "graphics/Light.h"
-#include "graphics/Particles.h"
-#include "graphics/Fog.h"
-#include "graphics/Mirror.h"
+#include "render/Particles.h"
+#include "render/Fog.h"
+#include "render/Mirror.h"
 
 #include "object/ObjectMesh.h"
 #include "object/ObjectParticles.h"

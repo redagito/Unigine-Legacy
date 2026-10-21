@@ -13,7 +13,7 @@
 #include "bsp/Bsp.h"
 #include "math/Math.h"
 #include "math/Position.h"
-#include "bsp/Sector.h"
+#include "render/Sector.h"
 
 int Collide::counter;
 Position Collide::position;

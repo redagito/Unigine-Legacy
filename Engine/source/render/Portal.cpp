@@ -1,4 +1,4 @@
-#include "bsp/Portal.h"
+#include "render/Portal.h"
 #include "util/Error.h"
 
 #include "graphics/OpenGL.h"

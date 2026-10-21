@@ -6,8 +6,8 @@
 #include "physics/RigidBody.h"
 #include "script/Parser.h"
 #include "bsp/Bsp.h"
-#include "bsp/Sector.h"
-#include "bsp/Portal.h"
+#include "render/Sector.h"
+#include "render/Portal.h"
 #include "math/Spline.h"
 
 Position::Position() : spline(NULL), expression(NULL), sector(-1), radius(0.0), num_sectors(0) {

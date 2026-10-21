@@ -1,10 +1,10 @@
-#include "graphics/Mirror.h"
+#include "render/Mirror.h"
 #include "util/Error.h"
 
 #include "engine.h"
 #include "graphics/Frustum.h"
 #include "render/MeshData.h"
-#include "graphics/Material.h"
+#include "render/Material.h"
 #include "render/GLRenderTarget.h"
 #include "render/GLTexture.h"
 

@@ -1,7 +1,7 @@
 #include "bsp/Node.h"
 #include "util/Error.h"
 
-#include "bsp/Sector.h"
+#include "render/Sector.h"
 #include "render/MeshData.h"
 #include "render/GLGeometry.h"
 #include "graphics/Frustum.h"
