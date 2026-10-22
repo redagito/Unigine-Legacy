@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "engine.h"
+#include "render/Frame.h"
 #include "render/MeshData.h"
 #include "object/ObjectMesh.h"
 #include "physics/Physic.h"
@@ -33,7 +34,7 @@ float rotationZ(const mat4& m) {
 }
 
 TEST_CASE("RigidBody inertia depends on the body shape", "[physics][rigidbody]") {
-	Engine::physic_toggle = 1;
+	currentFrame().physics = 1;
 
 	MeshData* box_mesh = makeCube(1.0f);
 	ObjectMesh box(box_mesh);

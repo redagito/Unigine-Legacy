@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "render/Frame.h"
 #include "bsp/Bsp.h"
 #include "render/Material.h"
 #include "render/Particles.h"
@@ -44,16 +45,16 @@ void ObjectParticles::setOffTime(float time) {
 
 int ObjectParticles::render(int t,int s) {
 	int num_triangles = 0;
-	frame = Engine::frame;
+	frame = currentFrame().frame;
 	if(t == RENDER_TRANSPARENT) {
 		if(num_transparents) {
 			if(materials[0]->enable()) {
 				float min_density = 1.0;
-				Engine::fog_color = vec4(1.0,1.0,1.0,1.0);	// without fog
+				currentFrame().fog_color = vec4(1.0,1.0,1.0,1.0);	// without fog
 				for(int i = 0; i < Engine::num_visible_fogs; i++) {
 					float density = Engine::visible_fogs[i]->getDensity(pos);
 					if(min_density > density) {
-						Engine::fog_color = vec4(Engine::visible_fogs[i]->color,density);
+						currentFrame().fog_color = vec4(Engine::visible_fogs[i]->color,density);
 						min_density = density;
 					}
 				}

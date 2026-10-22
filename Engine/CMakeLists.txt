@@ -1,23 +1,34 @@
 project(Engine)
 
-# the render backend, the scene and the engine, they are split into their own
-# libraries when the seam between the scene and the backend is cut
-file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cxx
-	${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
-	${CMAKE_CURRENT_SOURCE_DIR}/source/*.hpp
+)
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS
+	${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
 )
 # Source group to preserve folder structure in ide
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})
 
-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
+add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADERS})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES 
+set_target_properties(${PROJECT_NAME} PROPERTIES
 	CXX_STANDARD 17
 )
 
+# the public headers are the interface of the module, the rest stays inside
+target_include_directories(${PROJECT_NAME}
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source
+)
+
 target_link_libraries(${PROJECT_NAME}
+	PUBLIC Scene
+	PUBLIC RenderGl
+	PUBLIC RenderApi
+	PUBLIC Platform
+	PUBLIC Core
 	PUBLIC glm::glm
 	PUBLIC spdlog::spdlog
 	PUBLIC glad::glad
@@ -27,8 +38,6 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC libmad::libmad
 	PUBLIC vorbis::vorbis
 	PUBLIC PNG::PNG
-	# PRIVATE JPEG::JPEG
-    # PRIVATE ffmpeg::avcodec
 )
 
 if(WIN32)
@@ -36,17 +45,5 @@ if(WIN32)
 	target_link_libraries(${PROJECT_NAME} PUBLIC dbghelp)
 endif()
 
-# TODO Move public header to include dir
-target_include_directories(${PROJECT_NAME}
-	PUBLIC source
-)
-
 # the release build keeps the symbols, the crash report needs them
 target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Zi>)
-
-# the layers below
-target_link_libraries(${PROJECT_NAME}
-	PUBLIC Core
-	PUBLIC Platform
-	PUBLIC RenderApi
-)

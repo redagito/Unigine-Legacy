@@ -1,8 +1,7 @@
 #include "FrameCapture.h"
 
 #include "engine.h"
-#include "graphics/OpenGL.h"
-#include "render/GLTexture.h"
+#include "render/Resources.h"
 
 #include <png.h>
 
@@ -11,16 +10,15 @@
 
 int FrameCapture::write(const char* path) {
 
-	GLTexture* texture = Engine::screen_texture;
+	RenderTexture* texture = Engine::screen_texture;
 	if (!texture) return -1;
 
-	int width = texture->width;
-	int height = texture->height;
+	int width = Engine::screen_width;
+	int height = Engine::screen_height;
 
 	std::vector<unsigned char> pixels(width * height * 3);
 
-	texture->bind();
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+	texture->readPixels(pixels.data());
 
 	int lit = 0;
 	for (int i = 0; i < width * height; i++) {

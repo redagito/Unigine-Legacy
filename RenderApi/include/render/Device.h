@@ -60,6 +60,10 @@ public:
 	// faces
 	virtual void setFaceCulling(bool enabled) = 0;
 	virtual void setCullFace(CullFace face) = 0;
+	virtual void setFrontFace(FrontFace face) = 0;
+
+	// the alpha test
+	virtual void setAlphaTest(bool enabled, CompareFunction compare, float reference) = 0;
 
 	// the scissor rectangle
 	virtual void setScissorTest(bool enabled) = 0;
@@ -81,7 +85,8 @@ public:
 	virtual void setPolygonOffset(bool enabled, float factor, float units) = 0;
 
 	// the buffers
-	virtual void clear(bool depth, bool stencil) = 0;
+	virtual void setClearColor(float red, float green, float blue, float alpha) = 0;
+	virtual void clear(bool color, bool depth, bool stencil) = 0;
 	virtual void flush() = 0;
 	virtual void readPixels(int width, int height, unsigned char* pixels) = 0;
 

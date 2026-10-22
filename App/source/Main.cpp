@@ -1,5 +1,6 @@
 #include "GLAppMain.h"
 #include "engine.h"
+#include "render/Frame.h"
 #include "util/Logger.h"
 #include "graphics/GLApp.h"
 #include "util/Error.h"
@@ -37,7 +38,7 @@ int main(int argc, char** argv) {
 		glApp.setTitle("3D Engine Demo");
 
 		if (glApp.init() == 0) return 0;
-		if (wireframe) Engine::wireframe_toggle = 1;
+		if (wireframe) currentFrame().wireframe = 1;
 		glApp.main();
 
 		if (shot) {

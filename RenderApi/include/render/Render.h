@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render/Material.h"
 #include "render/Resources.h"
 #include "render/Types.h"
 
@@ -57,6 +58,6 @@ public:
 	virtual void endFrame() = 0;
 
 	// drawing
-	virtual void draw(const RenderGeometry& geometry, const RenderMaterial& material) = 0;
+	virtual void draw(const RenderGeometry& geometry, const Material& material) = 0;
 	virtual void blit(RenderTarget* target, const RenderTexture& texture) = 0;
 };

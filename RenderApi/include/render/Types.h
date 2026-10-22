@@ -3,6 +3,7 @@
 #include "math/Math.h"
 
 class RenderGeometry;
+class Material;
 
 // the maps a material carries
 //
@@ -119,6 +120,11 @@ enum class PolygonMode {
 	point
 };
 
+enum class FrontFace {
+	clockwise,
+	counter_clockwise
+};
+
 struct TextureDesc {
 	TextureTarget target = TextureTarget::texture_2d;
 	TextureFormat format = TextureFormat::rgba;
@@ -126,6 +132,20 @@ struct TextureDesc {
 	Anisotropy anisotropy = Anisotropy::none;
 	WrapMode wrap = WrapMode::repeat;
 	bool mipmaps = true;
+};
+
+// the filter the textures use when they do not ask for one
+struct TextureFilter {
+	Filter filter = Filter::linear_mipmap_linear;
+	Anisotropy anisotropy = Anisotropy::none;
+};
+
+// the description of a render target
+struct TargetDesc {
+	TextureFormat format = TextureFormat::rgba;
+	bool depth = false;
+	bool stencil = false;
+	int samples = 0;
 };
 
 // the values the engine hands to a program
@@ -153,6 +173,8 @@ struct RenderLight {
 	float radius = 1.0f;
 	vec4 color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	bool shadows = false;
+	mat4 transform;
+	Material* material = nullptr;
 };
 
 // the volume a fog pass renders
@@ -175,4 +197,3 @@ struct Vertex {
 	vec3 binormal;
 	vec2 texcoord;
 };
-

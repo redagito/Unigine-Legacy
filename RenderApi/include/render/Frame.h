@@ -4,6 +4,9 @@
 #include "render/Types.h"
 #include "script/Defines.h"
 
+class Material;
+class RenderProgram;
+
 /*
  * The state of the frame.
  *
@@ -19,6 +22,7 @@ struct RenderFrame {
 	mat4 itransform;
 
 	vec4 camera;			// the world space camera position
+	int camera_sector = -1;	// the sector of the camera
 	int viewport[4] = { 0, 0, 0, 0 };
 
 	vec4 light;			// the light position, w holds 1 / radius^2
@@ -43,6 +47,7 @@ struct RenderFrame {
 	int fog = 0;
 	int mirror = 0;
 	int show_shadows = 0;
+	int physics = 0;
 
 	// what the device can do
 	int occlusion = 0;
@@ -50,10 +55,16 @@ struct RenderFrame {
 	int depth_clamp = 0;
 
 	// the default filter of the textures
-	int texture_filter = 0;
+	TextureFilter texture_filter;
 
 	// the device of the renderer
 	RenderDevice* device = nullptr;
+
+	// the program of the wireframe mode
+	RenderProgram* wireframe_program = nullptr;
+
+	// the program that is bound at the moment
+	RenderProgram* current_program = nullptr;
 };
 
 // the defines of the shaders
@@ -61,3 +72,15 @@ Defines& defines();
 
 // the frame of the current draw
 RenderFrame& currentFrame();
+
+// the values the programs take, they come from the frame
+void getUniforms(ProgramUniforms& uniforms);
+
+// binds the program with the values of the frame
+void bindProgram(RenderProgram* program);
+
+// the material of the light that is drawn
+Material* currentLightMaterial();
+
+// the light that is drawn
+RenderLight* currentLight();

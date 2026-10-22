@@ -2,6 +2,10 @@
 #include "util/Error.h"
 
 #include "engine.h"
+#include "render/Frame.h"
+#include "render/Material.h"
+#include "render/MeshData.h"
+#include "render/Resources.h"
 #include "script/Parser.h"
 
 #include "graphics/Light.h"
@@ -24,7 +28,7 @@ void Map::load(const char* name, Paths& paths) {
 	if (!name) {
 		THROW_ERROR("Map::load(): null name\n");
 	}
-	Parser* parser = new Parser(name, Engine::defines);
+	Parser* parser = new Parser(name, defines());
 
 	char file_name[1024];
 	strcpy(file_name, name);
@@ -171,7 +175,7 @@ void Map::load_bsp(const Paths& paths) {
 		else if (!strcmp(token, "save")) Engine::bsp->save(read_string());
 		else if (!strcmp(token, "material")) {
 			const char* name = read_string();
-			Engine::bsp->bindMaterial(name, Engine::loadMaterial(read_string(), paths));
+			Engine::bsp->bindMaterial(name, loadMaterial(read_string(), paths));
 		}
 		else THROW_ERROR("unknown token \"%s\" in bsp block", token);
 	}
@@ -263,7 +267,7 @@ void Map::load_light(const Paths& paths) {
 		else if (!strcmp(token, "shadows")) shadows = read_bool();
 		else if (!strcmp(token, "material")) {
 			read_string();
-			material = Engine::loadMaterial(read_string(), paths);
+			material = loadMaterial(read_string(), paths);
 		}
 		else THROW_ERROR("unknown token \"%s\" in light block", token);
 	}
@@ -283,7 +287,7 @@ void Map::load_fog(const Paths& paths) {
 	while (1) {
 		const char* token = read_token();
 		if (!token || !strcmp(token, "}")) break;
-		else if (!strcmp(token, "mesh")) mesh = Engine::loadMesh(read_string(), paths);
+		else if (!strcmp(token, "mesh")) mesh = loadMesh(read_string(), paths);
 		else if (!strcmp(token, "color")) color = read_vec4();
 		else THROW_ERROR("unknown token \"%s\" in fog block", token);
 	}
@@ -298,10 +302,10 @@ void Map::load_mirror(const Paths& paths) {
 	while (1) {
 		const char* token = read_token();
 		if (!token || !strcmp(token, "}")) break;
-		else if (!strcmp(token, "mesh")) mirror = new Mirror(Engine::loadMesh(read_string(), paths));
+		else if (!strcmp(token, "mesh")) mirror = new Mirror(loadMesh(read_string(), paths));
 		else if (mirror && !strcmp(token, "material")) {
 			const char* name = read_string();
-			mirror->bindMaterial(name, Engine::loadMaterial(read_string(), paths));
+			mirror->bindMaterial(name, loadMaterial(read_string(), paths));
 		}
 		else THROW_ERROR("unknown token \"%s\" in mirror block", token);
 	}
@@ -321,7 +325,7 @@ void Map::load_mesh(const Paths& paths) {
 		else if (!strcmp(token, "shadows")) shadows = read_bool();
 		else if (mesh && !strcmp(token, "material")) {
 			const char* name = read_string();
-			mesh->bindMaterial(name, Engine::loadMaterial(read_string(), paths));
+			mesh->bindMaterial(name, loadMaterial(read_string(), paths));
 		}
 		else if (mesh && !strcmp(token, "pos")) {
 			mat4 matrix;
@@ -402,7 +406,7 @@ void Map::load_particles(const Paths& paths)
 		else if (!strcmp(token, "color")) color = read_vec4();
 		else if (!strcmp(token, "material")) {
 			read_string();
-			material = Engine::loadMaterial(read_string(), paths);
+			material = loadMaterial(read_string(), paths);
 		}
 		else THROW_ERROR("unknown token \"%s\" in particles block", token);
 	}

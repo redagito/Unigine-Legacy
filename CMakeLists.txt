@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25.0)
 project(UnigineLegacy)
 
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Engine)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT App)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CXX_STANDARD_REQUIRED ON)
 
@@ -36,7 +36,8 @@ find_package(PNG REQUIRED)
 add_subdirectory(Core)
 add_subdirectory(Platform)
 add_subdirectory(RenderApi)
-# Engine
+add_subdirectory(RenderGl)
+add_subdirectory(Scene)
 add_subdirectory(Engine)
 # App
 add_subdirectory(App)

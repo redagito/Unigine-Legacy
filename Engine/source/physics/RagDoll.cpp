@@ -3,6 +3,7 @@
 
 #include "script/Parser.h"
 #include "engine.h"
+#include "render/Frame.h"
 #include "Paths.h"
 
 #include "render/MeshData.h"
@@ -17,7 +18,7 @@
 
 RagDoll::RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& paths) : skinnedmesh(skinnedmesh), num_bones(0), root(-1) {
 
-	Parser* parser = new Parser(paths.findFile(name).c_str(), Engine::defines);
+	Parser* parser = new Parser(paths.findFile(name).c_str(), defines());
 
 	if (!parser->get("mesh")) {
 		THROW_ERROR("RagDoll::RagDoll(): can`t find mesh in \"%s\" file\n", name);

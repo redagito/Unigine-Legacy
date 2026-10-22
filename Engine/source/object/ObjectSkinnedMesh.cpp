@@ -1,6 +1,7 @@
 #include "object/ObjectSkinnedMesh.h"
 
 #include "engine.h"
+#include "render/Frame.h"
 #include "bsp/Bsp.h"
 #include "graphics/Frustum.h"
 #include "render/Material.h"
@@ -56,34 +57,34 @@ void ObjectSkinnedMesh::update(float ifps) {
 int ObjectSkinnedMesh::render(int t, int s) {
 	int num_triangles = 0;
 	enable();
-	if (frame != Engine::frame) {
+	if (frame != currentFrame().frame) {
 		for (int i = 0; i < getNumSurfaces(); i++) {
-			frames[i] = Engine::frustum->inside(pos + getMin(i), pos + getMax(i)) ? Engine::frame : 0;
+			frames[i] = sceneFrustum().inside(pos + getMin(i), pos + getMax(i)) ? currentFrame().frame : 0;
 		}
-		frame = Engine::frame;
+		frame = currentFrame().frame;
 	}
 	if (t == RENDER_ALL) {
 		for (int i = 0; i < getNumSurfaces(); i++) {
-			if (frames[i] != Engine::frame) continue;
-			num_triangles += skinnedmesh->render(false, i);
+			if (frames[i] != currentFrame().frame) continue;
+			num_triangles += skinnedmesh->draw(i);
 		}
 	}
 	else if (t == RENDER_OPACITY) {
 		for (int i = 0; i < num_opacities; i++) {
 			int j = opacities[i];
-			if (frames[j] != Engine::frame) continue;
+			if (frames[j] != currentFrame().frame) continue;
 			if (!materials[j]->enable()) continue;
 			materials[j]->bind();
-			num_triangles += skinnedmesh->render(true, j);
+			num_triangles += skinnedmesh->draw(j);
 		}
 	}
 	else if (t == RENDER_TRANSPARENT) {
 		for (int i = 0; i < num_transparents; i++) {
 			int j = transparents[i];
-			if (frames[j] != Engine::frame) continue;
+			if (frames[j] != currentFrame().frame) continue;
 			if (!materials[j]->enable()) continue;
 			materials[j]->bind();
-			num_triangles += skinnedmesh->render(true, j);
+			num_triangles += skinnedmesh->draw(j);
 		}
 	}
 	disable();
@@ -100,7 +101,7 @@ int ObjectSkinnedMesh::getNumIntersections(const vec3& line0, const vec3& line1,
 }
 
 int ObjectSkinnedMesh::renderShadowVolume(int s) {
-	return skinnedmesh->renderShadowVolume(s);
+	return skinnedmesh->drawShadowVolume(s);
 }
 
 
