@@ -1,7 +1,6 @@
 #include "render/GLDevice.h"
 
 #include "graphics/OpenGL.h"
-#include "graphics/win32/glext.h"
 
 #include <cstring>
 
@@ -68,10 +67,6 @@ static GLenum to_gl(PolygonMode mode) {
 }
 
 GLDevice::GLDevice() {
-
-#ifdef _WIN32
-	glext_init();
-#endif
 
 	const char* vendor_string = (const char*)glGetString(GL_VENDOR);
 	const char* renderer_string = (const char*)glGetString(GL_RENDERER);

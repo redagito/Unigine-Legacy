@@ -32,6 +32,10 @@ find_package(wglext REQUIRED)
 find_package(PNG REQUIRED)
 # find_package(ffmpeg REQUIRED)
 
+# the layers of the engine, from the foundation up
+add_subdirectory(Core)
+add_subdirectory(Platform)
+add_subdirectory(RenderApi)
 # Engine
 add_subdirectory(Engine)
 # App

@@ -412,7 +412,6 @@ void GLApp::main() {
 #include <windows.h>
 #include "graphics/GLApp.h"
 #include "graphics/DebugCallback.h"
-#include "graphics/win32/glext.h"
 
 #pragma comment (lib,"opengl32.lib")
 #pragma comment (lib,"glu32.lib")
