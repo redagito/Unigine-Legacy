@@ -130,7 +130,7 @@ void Sector::bindMaterial(const char* name, Material* material) {
 
 void Sector::render(Frustum* frustum, Portal* portal) {
 
-	if (frame == Engine::frame) return;
+	if (frame == currentFrame().frame) return;
 	frame = currentFrame().frame;
 
 	this->portal = portal;
@@ -142,7 +142,7 @@ void Sector::render(Frustum* frustum, Portal* portal) {
 
 	for (int i = 0; i < num_objects; i++) {
 		Object* o = objects[i];
-		if (o->frame == Engine::frame) continue;
+		if (o->frame == currentFrame().frame) continue;
 		if (frustum->inside(o->pos + o->getCenter(), o->getRadius())) {
 			currentFrame().num_triangles += o->render(Object::RENDER_OPACITY);
 			visible_objects[num_visible_objects++] = o;
@@ -151,7 +151,7 @@ void Sector::render(Frustum* frustum, Portal* portal) {
 
 	for (int i = 0; i < num_portals; i++) {
 		Portal* p = &Bsp::portals[portals[i]];
-		if (p->frame == Engine::frame) continue;
+		if (p->frame == currentFrame().frame) continue;
 		p->frame = currentFrame().frame;
 		if (frustum->inside(p->center, p->radius)) {
 			float dist = (Engine::camera - p->center).length();
