@@ -27,6 +27,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC RenderApi
 	PUBLIC Core
+	PUBLIC Script
 	PUBLIC glm::glm
 	PUBLIC spdlog::spdlog
 )

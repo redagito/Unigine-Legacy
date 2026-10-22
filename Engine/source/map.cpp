@@ -19,7 +19,7 @@
 #include "physics/RigidBody.h"
 
 #include "math/Spline.h"
-#include "math/Expression.h"
+#include "script/Expression.h"
 #include "Paths.h"
 
 char* Map::data;

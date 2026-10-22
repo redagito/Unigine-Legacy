@@ -34,6 +34,7 @@ find_package(PNG REQUIRED)
 
 # the layers of the engine, from the foundation up
 add_subdirectory(Core)
+add_subdirectory(Script)
 add_subdirectory(Platform)
 add_subdirectory(RenderApi)
 add_subdirectory(RenderGl)

@@ -29,6 +29,7 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC RenderApi
 	PUBLIC Platform
 	PUBLIC Core
+	PUBLIC Script
 	PUBLIC glm::glm
 	PUBLIC spdlog::spdlog
 	PUBLIC glad::glad

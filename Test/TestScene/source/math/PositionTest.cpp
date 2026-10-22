@@ -3,7 +3,7 @@
 #include <catch2/catch_approx.hpp>
 #include "math/Position.h"
 #include "math/Spline.h"
-#include "math/Expression.h"
+#include "script/Expression.h"
 
 using Catch::Approx;
 

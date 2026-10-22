@@ -1,7 +1,7 @@
 #include "math/Position.h"
 #include "util/Error.h"
 //
-#include "math/Expression.h"
+#include "script/Expression.h"
 #include "object/Object.h"
 #include "physics/RigidBody.h"
 #include "script/Parser.h"

@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
-#include "math/Expression.h"
+#include "script/Expression.h"
 #include "AllocationTracker.h"
 
 using Catch::Approx;

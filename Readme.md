@@ -13,16 +13,21 @@ layer can not reach the ones above it.
 | layer | library | uses |
 |---|---|---|
 | the foundation | `Core` | |
+| the data file language | `Script` | Core |
 | the platform | `Platform` | Core |
-| the rendering api | `RenderApi` | Core |
-| the graphics backend | `RenderGl` | RenderApi, Platform, Core |
-| the scene | `Scene` | RenderApi, Core |
-| the engine | `Engine` | Scene, RenderGl, RenderApi, Platform, Core |
+| the rendering api | `RenderApi` | Core, Script |
+| the graphics backend | `RenderGl` | RenderApi, Platform, Core, Script |
+| the scene | `Scene` | RenderApi, Core, Script |
+| the engine | `Engine` | Scene, RenderGl, RenderApi, Platform, Core, Script |
 
 The rendering api is the contract of the device: the geometry, the programs,
 the textures, the materials and the state of the frame. The backend maps them
 onto OpenGL, it is the only layer that names a graphics api. The scene draws
 through the api, the engine drives the frame.
+
+The script library holds the language of the data files: the preprocessor that
+reads the maps, the materials and the shaders, and the expressions it
+evaluates.
 
 ## Requirements
 
