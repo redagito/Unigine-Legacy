@@ -23,10 +23,39 @@
 #include <map>
 #include <string>
 
-static std::map<std::string, GLProgram*> programs;
-static std::map<std::string, GLTexture*> textures;
-static std::map<std::string, Material*> materials;
-static std::map<std::string, GLGeometry*> meshes;
+/*
+ * The cache of the backend.
+ */
+class GLResources : public RenderServices {
+public:
+
+	RenderProgram* loadProgram(const char* name, const Paths& paths) override;
+	RenderTexture* loadTexture(const char* name, const Paths& paths, const TextureDesc& desc) override;
+	Material* loadMaterial(const char* name, const Paths& paths) override;
+	MeshData* loadMesh(const char* name, const Paths& paths) override;
+
+	void reloadPrograms(const Paths& paths) override;
+	void reloadTextures(const Paths& paths) override;
+	void reloadMaterials(const Paths& paths) override;
+	void clearResources() override;
+
+	RenderTarget* createTarget(int width, int height, const TargetDesc& desc) override;
+	RenderTexture* createTexture(int width, int height, const TextureDesc& desc) override;
+	RenderQuad* createQuad() override;
+	MeshData* createGeometry(const MeshData* mesh) override;
+
+private:
+
+	// reads the texture of the material, the name comes first, the flags follow
+	void loadTexture(Material* material, int slot, char* s, const Paths& paths);
+
+	void loadMaterialFile(Material* material, const char* name, const Paths& paths);
+
+	std::map<std::string, GLProgram*> programs;
+	std::map<std::string, GLTexture*> textures;
+	std::map<std::string, Material*> materials;
+	std::map<std::string, GLGeometry*> meshes;
+};
 
 static GLuint to_gl_target(TextureTarget target) {
 	switch (target) {
@@ -122,7 +151,7 @@ static CompareFunction getAlphaFunc(const char* func) {
 }
 
 // reads the texture of the material, the name comes first, the flags follow
-static void loadTexture(Material* material, int slot, char* s, const Paths& paths) {
+void GLResources::loadTexture(Material* material, int slot, char* s, const Paths& paths) {
 	TextureDesc desc;
 	desc.format = TextureFormat::rgb;
 	desc.filter = currentFrame().texture_filter.filter;
@@ -173,10 +202,10 @@ static void loadTexture(Material* material, int slot, char* s, const Paths& path
 		else *d++ = *s++;
 	}
 
-	material->textures[slot] = loadTexture(name, paths, desc);
+	material->textures[slot] = this->loadTexture(name, paths, desc);
 }
 
-static void loadMaterialFile(Material* material, const char* name, const Paths& paths) {
+void GLResources::loadMaterialFile(Material* material, const char* name, const Paths& paths) {
 	material->blend = false;
 	material->alpha_test = false;
 	material->light_program = nullptr;
@@ -229,7 +258,7 @@ static void loadMaterialFile(Material* material, const char* name, const Paths& 
 /*****************************************************************************/
 
 
-RenderProgram* loadProgram(const char* name, const Paths& paths) {
+RenderProgram* GLResources::loadProgram(const char* name, const Paths& paths) {
 	std::map<std::string, GLProgram*>::iterator it = programs.find(name);
 	if (it != programs.end()) return it->second;
 	GLProgram* program = new GLProgram(paths.findFile(name).c_str(), defines());
@@ -237,7 +266,7 @@ RenderProgram* loadProgram(const char* name, const Paths& paths) {
 	return program;
 }
 
-RenderTexture* loadTexture(const char* name, const Paths& paths, const TextureDesc& desc) {
+RenderTexture* GLResources::loadTexture(const char* name, const Paths& paths, const TextureDesc& desc) {
 	std::map<std::string, GLTexture*>::iterator it = textures.find(name);
 	if (it != textures.end()) return it->second;
 	GLTexture* texture = new GLTexture(paths.findFile(name).c_str(), to_gl_target(desc.target), to_gl_flag(desc));
@@ -245,7 +274,7 @@ RenderTexture* loadTexture(const char* name, const Paths& paths, const TextureDe
 	return texture;
 }
 
-Material* loadMaterial(const char* name, const Paths& paths) {
+Material* GLResources::loadMaterial(const char* name, const Paths& paths) {
 	std::map<std::string, Material*>::iterator it = materials.find(name);
 	if (it != materials.end()) return it->second;
 	Material* material = new Material();
@@ -254,7 +283,7 @@ Material* loadMaterial(const char* name, const Paths& paths) {
 	return material;
 }
 
-MeshData* loadMesh(const char* name, const Paths& paths) {
+MeshData* GLResources::loadMesh(const char* name, const Paths& paths) {
 	std::map<std::string, GLGeometry*>::iterator it = meshes.find(name);
 	if (it != meshes.end()) return it->second;
 	GLGeometry* mesh = new GLGeometry(paths.findFile(name).c_str());
@@ -262,28 +291,28 @@ MeshData* loadMesh(const char* name, const Paths& paths) {
 	return mesh;
 }
 
-void reloadPrograms(const Paths& paths) {
+void GLResources::reloadPrograms(const Paths& paths) {
 	std::map<std::string, GLProgram*>::iterator it;
 	for (it = programs.begin(); it != programs.end(); it++) {
 		it->second->load(paths.findFile(it->first.c_str()).c_str(), defines());
 	}
 }
 
-void reloadTextures(const Paths& paths) {
+void GLResources::reloadTextures(const Paths& paths) {
 	std::map<std::string, GLTexture*>::iterator it;
 	for (it = textures.begin(); it != textures.end(); it++) {
 		it->second->load(paths.findFile(it->first.c_str()).c_str(), it->second->target, it->second->flag);
 	}
 }
 
-void reloadMaterials(const Paths& paths) {
+void GLResources::reloadMaterials(const Paths& paths) {
 	std::map<std::string, Material*>::iterator it;
 	for (it = materials.begin(); it != materials.end(); it++) {
 		loadMaterialFile(it->second, paths.findFile(it->first.c_str()).c_str(), paths);
 	}
 }
 
-void clearResources() {
+void GLResources::clearResources() {
 	std::map<std::string, GLProgram*>::iterator shaders_it;
 	for (shaders_it = programs.begin(); shaders_it != programs.end(); shaders_it++) delete shaders_it->second;
 	programs.clear();
@@ -308,7 +337,7 @@ void clearResources() {
 /*****************************************************************************/
 
 
-RenderTarget* createTarget(int width, int height, const TargetDesc& desc) {
+RenderTarget* GLResources::createTarget(int width, int height, const TargetDesc& desc) {
 	int flag = desc.format == TextureFormat::rgb ? GLRenderTarget::RGB : GLRenderTarget::RGBA;
 	if (desc.depth) flag |= GLRenderTarget::DEPTH;
 	if (desc.stencil) flag |= GLRenderTarget::STENCIL;
@@ -317,14 +346,18 @@ RenderTarget* createTarget(int width, int height, const TargetDesc& desc) {
 	return new GLRenderTarget(width, height, flag);
 }
 
-RenderTexture* createTexture(int width, int height, const TextureDesc& desc) {
+RenderTexture* GLResources::createTexture(int width, int height, const TextureDesc& desc) {
 	return new GLTexture(width, height, to_gl_target(desc.target), to_gl_flag(desc));
 }
 
-RenderQuad* createQuad() {
+RenderQuad* GLResources::createQuad() {
 	return new GLQuad();
 }
 
-MeshData* createGeometry(const MeshData* mesh) {
+MeshData* GLResources::createGeometry(const MeshData* mesh) {
 	return new GLGeometry(mesh);
+}
+
+RenderServices* createRenderServices() {
+	return new GLResources();
 }

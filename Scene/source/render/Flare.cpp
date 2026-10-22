@@ -25,10 +25,10 @@ Flare::Flare(float min_radius, float max_radius, float sphere_radius, const Path
 		desc.filter = Filter::linear_mipmap_linear;
 		desc.wrap = WrapMode::clamp;
 
-		flare_tex = loadTexture(FLARE_TEX, paths, desc);
-		flare_program = loadProgram(FLARE_SHADER, paths);
-		sphere_mesh = loadMesh(FLARE_SPHERE, paths);
-		quad = createQuad();
+		flare_tex = services().loadTexture(FLARE_TEX, paths, desc);
+		flare_program = services().loadProgram(FLARE_SHADER, paths);
+		sphere_mesh = services().loadMesh(FLARE_SPHERE, paths);
+		quad = services().createQuad();
 	}
 }
 

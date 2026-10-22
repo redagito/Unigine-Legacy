@@ -7,11 +7,6 @@
 
 class Material;
 
-/*
- * The resources of the device.
- *
- * The engine asks for them in api neutral terms, the backend keeps them.
- */
 class RenderTexture {
 public:
 
@@ -79,23 +74,36 @@ public:
 	virtual void draw() = 0;
 };
 
+/*
+ * The resources of the device.
+ *
+ * The engine asks for them in api neutral terms, the backend keeps them.
+ */
+class RenderServices {
+public:
+
+	virtual ~RenderServices() {}
+
+	// the cache
+	virtual RenderProgram* loadProgram(const char* name, const Paths& paths) = 0;
+	virtual RenderTexture* loadTexture(const char* name, const Paths& paths, const TextureDesc& desc) = 0;
+	virtual Material* loadMaterial(const char* name, const Paths& paths) = 0;
+	virtual MeshData* loadMesh(const char* name, const Paths& paths) = 0;
+
+	virtual void reloadPrograms(const Paths& paths) = 0;
+	virtual void reloadTextures(const Paths& paths) = 0;
+	virtual void reloadMaterials(const Paths& paths) = 0;
+	virtual void clearResources() = 0;
+
+	// the resources the engine creates for itself
+	virtual RenderTarget* createTarget(int width, int height, const TargetDesc& desc) = 0;
+	virtual RenderTexture* createTexture(int width, int height, const TextureDesc& desc) = 0;
+	virtual RenderQuad* createQuad() = 0;
+
+	// the geometry of the mesh, the device can draw it
+	virtual MeshData* createGeometry(const MeshData* mesh) = 0;
+};
+
 /* the resources of the engine, the backend keeps them in a cache
  */
-RenderProgram* loadProgram(const char* name, const Paths& paths);
-RenderTexture* loadTexture(const char* name, const Paths& paths, const TextureDesc& desc);
-Material* loadMaterial(const char* name, const Paths& paths);
-MeshData* loadMesh(const char* name, const Paths& paths);
-
-void reloadPrograms(const Paths& paths);
-void reloadTextures(const Paths& paths);
-void reloadMaterials(const Paths& paths);
-void clearResources();
-
-/* the resources the engine creates for itself
- */
-RenderTarget* createTarget(int width, int height, const TargetDesc& desc);
-RenderTexture* createTexture(int width, int height, const TextureDesc& desc);
-RenderQuad* createQuad();
-
-// the geometry of the mesh, the device can draw it
-MeshData* createGeometry(const MeshData* mesh);
+RenderServices* createRenderServices();

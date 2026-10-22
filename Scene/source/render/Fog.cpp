@@ -47,7 +47,7 @@ Fog::Fog(MeshData *mesh,const vec4 &color, const Paths& paths) : mesh(mesh), col
 		fog.mipmaps = false;
 
 		for(int i = 0; i < 3; i++) {
-			pbuffers[i] = createTarget(128 << i,128 << i,target);
+			pbuffers[i] = services().createTarget(128 << i,128 << i,target);
 
 			pbuffers[i]->bind();
 			currentFrame().device->setClearColor(0,0,0,1);
@@ -55,14 +55,14 @@ Fog::Fog(MeshData *mesh,const vec4 &color, const Paths& paths) : mesh(mesh), col
 			currentFrame().device->setFaceCulling(true);
 			pbuffers[i]->unbind();
 
-			depth_texes[i] = createTexture(128 << i,128 << i,depth);
-			fog_texes[i] = createTexture(128 << i,128 << i,fog);
+			depth_texes[i] = services().createTexture(128 << i,128 << i,depth);
+			fog_texes[i] = services().createTexture(128 << i,128 << i,fog);
 		}
 
-		depth_to_rgb_shader = loadProgram(FOG_DEPTH_TO_RGB, paths);
-		pass_shader = loadProgram(FOG_PASS, paths);
-		fail_shader = loadProgram(FOG_FAIL, paths);
-		final_shader = loadProgram(FOG_FINAL, paths);
+		depth_to_rgb_shader = services().loadProgram(FOG_DEPTH_TO_RGB, paths);
+		pass_shader = services().loadProgram(FOG_PASS, paths);
+		fail_shader = services().loadProgram(FOG_FAIL, paths);
+		final_shader = services().loadProgram(FOG_FINAL, paths);
 	}
 }
 

@@ -101,7 +101,7 @@ void Portal::getScissor(int* scissor) const
 void Portal::render()
 {
 	// the quad needs a device, it is made when the portal is drawn
-	if (!quad) quad = createQuad();
+	if (!quad) quad = services().createQuad();
 	quad->setCorners(points);
 	quad->draw();
 }

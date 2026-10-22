@@ -8,7 +8,6 @@
 #include "graphics/Frustum.h"
 #include "graphics/Lights.h"
 #include "graphics/Light.h"
-#include "render/Particles.h"
 #include "collide.h"
 #include "bsp/Bsp.h"
 #include "bsp/Node.h"
@@ -162,17 +161,6 @@ TEST_CASE("Lights update only visible lights", "[graphics][lights]") {
     ls.update(1.0f);
     // Lights::update only updates visible_lights, not the main array
     REQUIRE(l.time == Approx(0.0f));
-}
-
-// ---------------------------------------------------------------------------
-// Particles setColor
-// ---------------------------------------------------------------------------
-TEST_CASE("Particles set and get color", "[graphics][particles]") {
-    Particles p(10, vec3(), 1.0f, 0.0f, vec3(), 1.0f, 1.0f, vec4(1,1,1,1));
-    p.setColor(vec4(0.2f, 0.4f, 0.6f, 0.8f));
-    p.update(0.016f);
-    REQUIRE(p.getMin().x <= p.getMax().x);
-    REQUIRE(p.getCenter().x == Approx((p.getMin().x + p.getMax().x) / 2.0f));
 }
 
 // ---------------------------------------------------------------------------

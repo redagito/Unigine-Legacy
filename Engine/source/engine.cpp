@@ -95,9 +95,9 @@ static void reload(int argc, char** argv, void* p) {
 
 	if (argc == 1) Engine::reload(paths);
 	else {
-		if (!strcmp(argv[1], "shaders")) reloadPrograms(paths);
-		else if (!strcmp(argv[1], "textures")) reloadTextures(paths);
-		else if (!strcmp(argv[1], "materials")) reloadMaterials(paths);
+		if (!strcmp(argv[1], "shaders")) services().reloadPrograms(paths);
+		else if (!strcmp(argv[1], "textures")) services().reloadTextures(paths);
+		else if (!strcmp(argv[1], "materials")) services().reloadMaterials(paths);
 		else spdlog::error("reload: unknown argument (shaders, textures, materials)");
 	}
 }
@@ -174,6 +174,9 @@ int Engine::init(Paths& paths, const char* config)
 	device = createRenderDevice();
 	frame.device = device;
 
+	// the resources of the device
+	frame.services = createRenderServices();
+
 	// console
 	console = new Console(paths.findFile(ENGINE_FONT_NAME).c_str());
 	logger::add_sink(console->createSink());
@@ -239,13 +242,13 @@ int Engine::init(Paths& paths, const char* config)
 	screen_desc.depth = true;
 	screen_desc.stencil = true;
 	screen_desc.samples = screen_multisample == 1 ? 2 : (screen_multisample == 2 ? 4 : 0);
-	screen = createTarget(screen_width, screen_height, screen_desc);
+	screen = services().createTarget(screen_width, screen_height, screen_desc);
 	screen->bind();
 	device->setDepthTest(true);
 	device->setFaceCulling(true);
 	// the scene is drawn in the context of the screen, the program of the
 	// wireframe mode has to live there
-	frame.wireframe_program = loadProgram(ENGINE_WIREFRAME_SHADER, paths);
+	frame.wireframe_program = services().loadProgram(ENGINE_WIREFRAME_SHADER, paths);
 	screen->unbind();
 
 	TextureDesc screen_texture_desc;
@@ -253,8 +256,8 @@ int Engine::init(Paths& paths, const char* config)
 	screen_texture_desc.filter = Filter::linear;
 	screen_texture_desc.wrap = WrapMode::clamp;
 	screen_texture_desc.mipmaps = false;
-	screen_texture = createTexture(screen_width, screen_height, screen_texture_desc);
-	screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
+	screen_texture = services().createTexture(screen_width, screen_height, screen_texture_desc);
+	screen_material = services().loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
 
 	// create new objects
 	bsp = NULL;
@@ -274,9 +277,9 @@ int Engine::init(Paths& paths, const char* config)
 	num_visible_mirrors = 0;
 	visible_mirrors = NULL;
 
-	sphere_mesh = loadMesh(ENGINE_SPHERE_MESH, paths);
+	sphere_mesh = services().loadMesh(ENGINE_SPHERE_MESH, paths);
 
-	shadow_volume_shader = loadProgram(ENGINE_SHADOW_VOLUME_SHADER, paths);
+	shadow_volume_shader = services().loadProgram(ENGINE_SHADOW_VOLUME_SHADER, paths);
 
 	frame.time = 0;
 	frame.frame = 0;
@@ -327,17 +330,17 @@ void Engine::clear(const Paths& paths) {
 	bsp = NULL;
 
 	// the resources of the backend
-	clearResources();
+	services().clearResources();
 
 	// the engine wide assets are recreated for the next map, this must not throw
 	// because clear() runs from a destructor while an exception is in flight
 	try {
-		screen_material = loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
-		sphere_mesh = loadMesh(ENGINE_SPHERE_MESH, paths);
-		shadow_volume_shader = loadProgram(ENGINE_SHADOW_VOLUME_SHADER, paths);
+		screen_material = services().loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
+		sphere_mesh = services().loadMesh(ENGINE_SPHERE_MESH, paths);
+		shadow_volume_shader = services().loadProgram(ENGINE_SHADOW_VOLUME_SHADER, paths);
 		// the wireframe program lives in the context of the screen
 		screen->bind();
-		frame.wireframe_program = loadProgram(ENGINE_WIREFRAME_SHADER, paths);
+		frame.wireframe_program = services().loadProgram(ENGINE_WIREFRAME_SHADER, paths);
 		screen->unbind();
 	}
 	catch (const std::exception& e) {
@@ -357,9 +360,9 @@ void Engine::load(const char* name, Paths& paths) {
 }
 
 void Engine::reload(const Paths& paths) {
-	reloadPrograms(paths);
-	reloadTextures(paths);
-	reloadMaterials(paths);
+	services().reloadPrograms(paths);
+	services().reloadTextures(paths);
+	services().reloadMaterials(paths);
 }
 
 void Engine::setExternLoad(void (*func)(void*), void* data) {

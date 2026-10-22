@@ -33,7 +33,7 @@ ObjectMesh::ObjectMesh(MeshData *mesh) : Object(OBJECT_MESH), mesh(mesh) {
 }
 
 ObjectMesh::ObjectMesh(const char *name, const Paths& paths) : Object(OBJECT_MESH) {
-	mesh = loadMesh(name, paths);
+	mesh = services().loadMesh(name, paths);
 	materials = new Material*[getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];

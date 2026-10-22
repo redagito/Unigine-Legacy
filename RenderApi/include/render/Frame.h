@@ -6,6 +6,7 @@
 
 class Material;
 class RenderProgram;
+class RenderServices;
 
 /*
  * The state of the frame.
@@ -60,6 +61,9 @@ struct RenderFrame {
 	// the device of the renderer
 	RenderDevice* device = nullptr;
 
+	// the resources of the device, the backend provides them
+	RenderServices* services = nullptr;
+
 	// the program of the wireframe mode
 	RenderProgram* wireframe_program = nullptr;
 
@@ -72,6 +76,9 @@ Defines& defines();
 
 // the frame of the current draw
 RenderFrame& currentFrame();
+
+// the resources of the device, the backend provides them
+RenderServices& services();
 
 // the values the programs take, they come from the frame
 void getUniforms(ProgramUniforms& uniforms);

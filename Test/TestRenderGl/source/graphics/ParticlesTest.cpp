@@ -49,3 +49,11 @@ TEST_CASE("Particles getMin and getMax after update", "[graphics][particles]") {
     REQUIRE(p.getMin().y <= p.getMax().y);
     REQUIRE(p.getMin().z <= p.getMax().z);
 }
+
+TEST_CASE("Particles set and get color", "[graphics][particles]") {
+    Particles p(10, vec3(), 1.0f, 0.0f, vec3(), 1.0f, 1.0f, vec4(1,1,1,1));
+    p.setColor(vec4(0.2f, 0.4f, 0.6f, 0.8f));
+    p.update(0.016f);
+    REQUIRE(p.getMin().x <= p.getMax().x);
+    REQUIRE(p.getCenter().x == Approx((p.getMin().x + p.getMax().x) / 2.0f));
+}

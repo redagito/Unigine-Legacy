@@ -13,6 +13,10 @@ Defines& defines() {
 	return current;
 }
 
+RenderServices& services() {
+	return *currentFrame().services;
+}
+
 void getUniforms(ProgramUniforms& uniforms) {
 	RenderFrame& frame = currentFrame();
 

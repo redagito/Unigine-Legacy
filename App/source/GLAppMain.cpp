@@ -64,17 +64,17 @@ void extern_load(void* data) {
 		ObjectMesh* mesh0, * mesh1, * mesh2, * mesh3, * mesh4;
 		RigidBody* rb0, * rb1, * rb2, * rb3, * rb4;
 
-		mesh0 = new ObjectMesh(loadMesh("robot_wheel.mesh", glapp->paths));
-		mesh0->bindMaterial("*", loadMaterial("robot_wheel.mat", glapp->paths));
-		mesh1 = new ObjectMesh(loadMesh("robot_wheel.mesh", glapp->paths));
-		mesh1->bindMaterial("*", loadMaterial("robot_wheel.mat", glapp->paths));
-		mesh2 = new ObjectMesh(loadMesh("robot_wheel.mesh", glapp->paths));
-		mesh2->bindMaterial("*", loadMaterial("robot_wheel.mat", glapp->paths));
-		mesh3 = new ObjectMesh(loadMesh("robot_wheel.mesh", glapp->paths));
-		mesh3->bindMaterial("*", loadMaterial("robot_wheel.mat", glapp->paths));
-		mesh4 = new ObjectMesh(loadMesh("robot.mesh", glapp->paths));
-		mesh4->bindMaterial("robot", loadMaterial("robot_body.mat", glapp->paths));
-		mesh4->bindMaterial("camera", loadMaterial("robot_camera.mat", glapp->paths));
+		mesh0 = new ObjectMesh(services().loadMesh("robot_wheel.mesh", glapp->paths));
+		mesh0->bindMaterial("*", services().loadMaterial("robot_wheel.mat", glapp->paths));
+		mesh1 = new ObjectMesh(services().loadMesh("robot_wheel.mesh", glapp->paths));
+		mesh1->bindMaterial("*", services().loadMaterial("robot_wheel.mat", glapp->paths));
+		mesh2 = new ObjectMesh(services().loadMesh("robot_wheel.mesh", glapp->paths));
+		mesh2->bindMaterial("*", services().loadMaterial("robot_wheel.mat", glapp->paths));
+		mesh3 = new ObjectMesh(services().loadMesh("robot_wheel.mesh", glapp->paths));
+		mesh3->bindMaterial("*", services().loadMaterial("robot_wheel.mat", glapp->paths));
+		mesh4 = new ObjectMesh(services().loadMesh("robot.mesh", glapp->paths));
+		mesh4->bindMaterial("robot", services().loadMaterial("robot_body.mat", glapp->paths));
+		mesh4->bindMaterial("camera", services().loadMaterial("robot_camera.mat", glapp->paths));
 
 		rb0 = new RigidBody(mesh0, 10, 0.1, 0.6, RigidBody::COLLIDE_SPHERE | RigidBody::BODY_SPHERE);
 		rb1 = new RigidBody(mesh1, 10, 0.1, 0.6, RigidBody::COLLIDE_SPHERE | RigidBody::BODY_SPHERE);
@@ -114,17 +114,17 @@ void extern_load(void* data) {
 
 	// flash light
 	glapp->flash_light = new Light(vec3(0, 0, 0), 15, vec4(1.0, 1.0, 1.0, 1.0), -1.0, 0);
-	glapp->flash_light->bindMaterial("*", loadMaterial("flash_light.mat", glapp->paths));
+	glapp->flash_light->bindMaterial("*", services().loadMaterial("flash_light.mat", glapp->paths));
 
 	// shoot light
 	glapp->shoot_light = new Light(vec3(0, 0, 0), 20, vec4(1.0, 0.4, 0.1, 1.0), 0.5, 1);
 	glapp->shoot_particles = new ObjectParticles(new Particles(128, Particles::OFF, 0.3, 0.3, vec3(0, 0, -3), 0.5, 0.1, vec4(0.8, 0.3, 0.2, 1.0)));
-	glapp->shoot_particles->bindMaterial("*", loadMaterial("fire.mat", glapp->paths));
+	glapp->shoot_particles->bindMaterial("*", services().loadMaterial("fire.mat", glapp->paths));
 	Engine::addObject(glapp->shoot_particles);
 
 	{	// lamp 00
 		ObjectSkinnedMesh* mesh = new ObjectSkinnedMesh("lamp/lamp.txt", glapp->paths);
-		mesh->bindMaterial("*", loadMaterial("default.mat", glapp->paths));
+		mesh->bindMaterial("*", services().loadMaterial("default.mat", glapp->paths));
 		mesh->setShadows(0);
 		mesh->set(vec3(-4.975, 31.403, 2.92));
 
@@ -135,7 +135,7 @@ void extern_load(void* data) {
 
 		glapp->lamp = mesh;
 		glapp->lamp_light = new Light(vec3(0, 0, 1000), 6, vec4(0.9, 0.9, 0.9, 1.0), -1.0, 1);
-		glapp->lamp_light->bindMaterial("*", loadMaterial("lamp_light.mat", glapp->paths));
+		glapp->lamp_light->bindMaterial("*", services().loadMaterial("lamp_light.mat", glapp->paths));
 		Engine::lights.addLight(glapp->lamp_light, false);
 
 		glapp->lamp_light->setFlare(new Flare(0, 0.6, 0.12, glapp->paths));
@@ -143,7 +143,7 @@ void extern_load(void* data) {
 
 	{	// ufo
 		ObjectSkinnedMesh* mesh = new ObjectSkinnedMesh("ufo/ragdoll.txt", glapp->paths);
-		mesh->bindMaterial("*", loadMaterial("ufo_body.mat", glapp->paths));
+		mesh->bindMaterial("*", services().loadMaterial("ufo_body.mat", glapp->paths));
 		mesh->set(mat4(2, 40, 2) * mat4(1, 0, 0, 45));
 
 		Engine::addObject(mesh);
@@ -475,24 +475,24 @@ void GLAppMain::idle() {
 		if (mouseButton & BUTTON_MIDDLE) {
 			if (!press) {
 				if (keys[(int)'z']) {
-					mesh = new ObjectMesh(loadMesh("box.mesh", paths));
-					mesh->bindMaterial("*", loadMaterial("box.mat", paths));
+					mesh = new ObjectMesh(services().loadMesh("box.mesh", paths));
+					mesh->bindMaterial("*", services().loadMaterial("box.mat", paths));
 					mesh->setRigidBody(new RigidBody(mesh, 10, 0.3, 0.5, RigidBody::COLLIDE_MESH | RigidBody::BODY_BOX));
 					Engine::addObject(mesh);
 					mesh->set(modelview.inverse() * m0 * m1 * m2 * m3);
 					press = 1;
 				}
 				if (keys[(int)'x']) {
-					mesh = new ObjectMesh(loadMesh("barrel.mesh", paths));
-					mesh->bindMaterial("*", loadMaterial("barrel.mat", paths));
+					mesh = new ObjectMesh(services().loadMesh("barrel.mesh", paths));
+					mesh->bindMaterial("*", services().loadMaterial("barrel.mat", paths));
 					mesh->setRigidBody(new RigidBody(mesh, 40, 0.3, 0.5, RigidBody::COLLIDE_MESH | RigidBody::BODY_CYLINDER));
 					Engine::addObject(mesh);
 					mesh->set(modelview.inverse() * m0 * m1 * m2 * m3);
 					press = 1;
 				}
 				if (keys[(int)'c']) {
-					mesh = new ObjectMesh(loadMesh("chair.mesh", paths));
-					mesh->bindMaterial("*", loadMaterial("chair.mat", paths));
+					mesh = new ObjectMesh(services().loadMesh("chair.mesh", paths));
+					mesh->bindMaterial("*", services().loadMaterial("chair.mat", paths));
 					mesh->setRigidBody(new RigidBody(mesh, 20, 0.3, 0.5, RigidBody::COLLIDE_MESH | RigidBody::BODY_BOX));
 					Engine::addObject(mesh);
 					mesh->set(modelview.inverse() * m0 * m1 * m2 * m3);

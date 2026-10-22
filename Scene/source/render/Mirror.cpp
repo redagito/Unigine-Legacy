@@ -31,7 +31,7 @@ Mirror::Mirror(MeshData *mesh) : mesh(mesh), material(NULL) {
 	texture.mipmaps = false;
 	texture.wrap = WrapMode::clamp;
 
-	for(int i = 0; i < 3; i++) mirror_texes[i] = createTexture(128 << i,128 << i,texture);
+	for(int i = 0; i < 3; i++) mirror_texes[i] = services().createTexture(128 << i,128 << i,texture);
 
 	if(counter++ == 0) {
 		TargetDesc target;
@@ -40,7 +40,7 @@ Mirror::Mirror(MeshData *mesh) : mesh(mesh), material(NULL) {
 		target.stencil = true;
 
 		for(int i =  0; i < 3; i++) {
-			pbuffers[i] = createTarget(128 << i,128 << i,target);
+			pbuffers[i] = services().createTarget(128 << i,128 << i,target);
 
 			pbuffers[i]->bind();
 			currentFrame().device->setDepthTest(true);
