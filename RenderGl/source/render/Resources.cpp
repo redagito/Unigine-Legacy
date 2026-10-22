@@ -42,6 +42,7 @@ public:
 	RenderTarget* createTarget(int width, int height, const TargetDesc& desc) override;
 	RenderTexture* createTexture(int width, int height, const TextureDesc& desc) override;
 	RenderQuad* createQuad() override;
+	RenderTexture* createTexture(const char* name, const Paths& paths, const TextureDesc& desc) override;
 	MeshData* createGeometry(const MeshData* mesh) override;
 
 private:
@@ -352,6 +353,10 @@ RenderTexture* GLResources::createTexture(int width, int height, const TextureDe
 
 RenderQuad* GLResources::createQuad() {
 	return new GLQuad();
+}
+
+RenderTexture* GLResources::createTexture(const char* name, const Paths& paths, const TextureDesc& desc) {
+	return new GLTexture(paths.findFile(name).c_str(), to_gl_target(desc.target), to_gl_flag(desc));
 }
 
 MeshData* GLResources::createGeometry(const MeshData* mesh) {

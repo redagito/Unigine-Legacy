@@ -272,6 +272,8 @@ void GLTexture::draw(float x0, float y0, float x1, float y1) {
 	vertices[2][2] = s; vertices[2][3] = t;
 	vertices[3][2] = 0.0f; vertices[3][3] = t;
 
+	glEnable(target);
+
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glVertexPointer(2, GL_FLOAT, 4 * sizeof(float), vertices[0]);

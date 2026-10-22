@@ -13,7 +13,6 @@
 #include "physics/RigidBody.h"
 #include "physics/RagDoll.h"
 
-#include "render/GLTexture.h"
 #include "render/Device.h"
 #include "graphics/Light.h"
 #include "render/Console.h"
@@ -177,10 +176,6 @@ int GLAppMain::init() {
 	speed = vec3(0, 0, 0);
 	collide = new Collide();
 
-	// shoot
-	shoot_sound = new Sound("data/fire.wav");
-	cross_tex = new GLTexture("data/cross.tga", GLTexture::TEXTURE_2D, GLTexture::RGBA | GLTexture::LINEAR_MIPMAP_LINEAR);
-
 	// engine
 	paths.addPath("data/,"
 		"data/engine/,"
@@ -192,6 +187,14 @@ int GLAppMain::init() {
 		"data/physic/");
 
 	if (Engine::init(paths, "data/engine.conf") == 0) return 0;
+
+	// shoot
+	shoot_sound = new Sound("data/fire.wav");
+
+	TextureDesc cross;
+	cross.format = TextureFormat::rgba;
+	cross.filter = Filter::linear_mipmap_linear;
+	cross_tex = services().createTexture("cross.tga", paths, cross);
 
 	Engine::console->addCommand("quit", quit);
 	Engine::console->addCommand("help", help);
@@ -233,10 +236,8 @@ void GLAppMain::render() {
 		Engine::device->setBlend(true);
 		Engine::device->setBlendFunc(BlendFactor::src_alpha, BlendFactor::one);
 
-		cross_tex->enable();
-		cross_tex->bind();
+		cross_tex->bind(0);
 		cross_tex->draw();
-		cross_tex->disable();
 
 		Engine::device->setBlend(false);
 	}

@@ -100,6 +100,9 @@ public:
 	virtual RenderTexture* createTexture(int width, int height, const TextureDesc& desc) = 0;
 	virtual RenderQuad* createQuad() = 0;
 
+	// a texture of its own, the cache does not keep it
+	virtual RenderTexture* createTexture(const char* name, const Paths& paths, const TextureDesc& desc) = 0;
+
 	// the geometry of the mesh, the device can draw it
 	virtual MeshData* createGeometry(const MeshData* mesh) = 0;
 };
