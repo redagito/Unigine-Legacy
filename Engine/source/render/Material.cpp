@@ -33,7 +33,7 @@ void Material::load(const char* name, const Paths& paths) {
 	alpha_test = 0;
 	light_shader = NULL;
 	ambient_shader = NULL;
-	Parser* parser = new Parser(name, Engine::defines);
+	Parser* parser = new Parser(name, ::defines());
 	if (parser->get("blend")) {
 		blend = 1;
 		char s[1024] = { 0 };
@@ -115,7 +115,7 @@ void Material::load(const char* name, const Paths& paths) {
 				}
 				else *d++ = *s++;
 			}
-			textures[i] = Engine::loadTexture(name, paths, target, flag | (format == 0 ? GLTexture::RGB : format) | (filter == 0 ? Engine::texture_filter : filter));
+			textures[i] = Engine::loadTexture(name, paths, target, flag | (format == 0 ? GLTexture::RGB : format) | (filter == 0 ? currentFrame().texture_filter : filter));
 		}
 		else {
 			textures[i] = NULL;

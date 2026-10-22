@@ -40,9 +40,9 @@ void Flare::render(const vec3& pos, const vec4& color)
 	glPushMatrix();
 	glTranslatef(pos.x, pos.y, pos.z);
 	glScalef(sphere_radius, sphere_radius, sphere_radius);
-	Engine::device->beginOcclusionQuery();
+	currentFrame().device->beginOcclusionQuery();
 	Engine::sphere_mesh->render(false);
-	unsigned int samples_0 = Engine::device->endOcclusionQuery();
+	unsigned int samples_0 = currentFrame().device->endOcclusionQuery();
 	glPopMatrix();
 
 	glDepthFunc(GL_LESS);
@@ -56,10 +56,10 @@ void Flare::render(const vec3& pos, const vec4& color)
 	glPushMatrix();
 	glTranslatef(pos.x, pos.y, pos.z);
 	glScalef(sphere_radius, sphere_radius, sphere_radius);
-	Engine::device->beginOcclusionQuery();
+	currentFrame().device->beginOcclusionQuery();
 
 	Engine::sphere_mesh->render(false);
-	unsigned int samples_1 = Engine::device->endOcclusionQuery();
+	unsigned int samples_1 = currentFrame().device->endOcclusionQuery();
 	glPopMatrix();
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

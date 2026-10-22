@@ -179,7 +179,7 @@ public:
 	static int physic_toggle;
 
 	// default texture filter
-	static int texture_filter;
+	static int& texture_filter;
 
 	// object managment
 	static std::map<std::string, GLProgram*> shaders;

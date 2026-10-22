@@ -95,7 +95,7 @@ int& Engine::fog_toggle = currentFrame().fog;
 int& Engine::mirror_toggle = currentFrame().mirror;
 int Engine::physic_toggle;
 
-int Engine::texture_filter = GLTexture::LINEAR_MIPMAP_LINEAR;
+int& Engine::texture_filter = currentFrame().texture_filter;
 
 std::map<std::string, GLProgram*> Engine::shaders;
 std::map<std::string, GLTexture*> Engine::textures;

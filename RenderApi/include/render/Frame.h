@@ -1,6 +1,8 @@
 #pragma once
 
+#include "render/Device.h"
 #include "render/Types.h"
+#include "script/Defines.h"
 
 /*
  * The state of the frame.
@@ -46,7 +48,16 @@ struct RenderFrame {
 	int occlusion = 0;
 	int two_sided_stencil = 0;
 	int depth_clamp = 0;
+
+	// the default filter of the textures
+	int texture_filter = 0;
+
+	// the device of the renderer
+	RenderDevice* device = nullptr;
 };
+
+// the defines of the shaders
+Defines& defines();
 
 // the frame of the current draw
 RenderFrame& currentFrame();

@@ -164,9 +164,9 @@ void Sector::render(Frustum* frustum, Portal* portal) {
 				glDisable(GL_CULL_FACE);
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 				glDepthMask(GL_FALSE);
-				Engine::device->beginOcclusionQuery();
+				currentFrame().device->beginOcclusionQuery();
 				p->render();
-				unsigned int samples = Engine::device->endOcclusionQuery();
+				unsigned int samples = currentFrame().device->endOcclusionQuery();
 				glDepthMask(GL_TRUE);
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glEnable(GL_CULL_FACE);
