@@ -1,11 +1,20 @@
 project(Engine)
 
-file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS 
+# the layers of the engine, from the foundation up
+add_subdirectory(source/core)
+add_subdirectory(source/platform)
+add_subdirectory(source/render_api)
+
+# the render backend, the scene and the engine, they are split into their own
+# libraries when the seam between the scene and the backend is cut
+file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.cxx
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/source/*.hpp
 )
+# the layers have their own libraries
+list(FILTER SOURCE_FILES EXCLUDE REGEX "/source/(core|platform|render_api)/")
 # Source group to preserve folder structure in ide
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES})
 
@@ -41,3 +50,10 @@ target_include_directories(${PROJECT_NAME}
 
 # the release build keeps the symbols, the crash report needs them
 target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/Zi>)
+
+# the layers below
+target_link_libraries(${PROJECT_NAME}
+	PUBLIC unigine_core
+	PUBLIC unigine_platform
+	PUBLIC unigine_render_api
+)
