@@ -4,6 +4,26 @@ Unigine engine version 0.2 from http://frustum.org
 
 With a modern build system.
 
+## The layers
+
+Every layer is a static library, a layer only uses the layers below it. The
+include paths of a library hold the public headers of that layer alone, so a
+layer can not reach the ones above it.
+
+| layer | library | uses |
+|---|---|---|
+| the foundation | `Core` | |
+| the platform | `Platform` | Core |
+| the rendering api | `RenderApi` | Core |
+| the graphics backend | `RenderGl` | RenderApi, Platform, Core |
+| the scene | `Scene` | RenderApi, Core |
+| the engine | `Engine` | Scene, RenderGl, RenderApi, Platform, Core |
+
+The rendering api is the contract of the device: the geometry, the programs,
+the textures, the materials and the state of the frame. The backend maps them
+onto OpenGL, it is the only layer that names a graphics api. The scene draws
+through the api, the engine drives the frame.
+
 ## Requirements
 
 Development is done with
@@ -54,6 +74,7 @@ App.exe -frames 60 -shot frame.png
 - `-frames <n>` renders `<n>` frames and stops, without a window
 - `-shot <file>` writes the last frame as a png
 - `-w <n>`, `-h <n>`, `-fs` set the window size and the fullscreen mode
+- `-wireframe` draws the whole scene as white lines
 
 The `ctest` run of the `headless` test does the same and leaves the frame in
 the build folder.
