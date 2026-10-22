@@ -16,7 +16,7 @@ uniform mat4 model;
 uniform vec4 camera;
 uniform vec4 viewport;
 
-out vec2 distance_vector;
+out vec3 distance_vector;
 out vec2 screen;
 
 void main() {
@@ -37,7 +37,7 @@ void main() {
 uniform sampler2D texture0;
 uniform vec4 fog_color;
 
-in vec2 distance_vector;
+in vec3 distance_vector;
 in vec2 screen;
 out vec4 frag_color;
 

@@ -15,7 +15,7 @@ uniform mat4 mvp;
 uniform mat4 model;
 uniform vec4 camera;
 
-out vec2 distance_vector;
+out vec3 distance_vector;
 
 void main() {
 
@@ -30,7 +30,7 @@ void main() {
 
 #version 330
 
-in vec2 distance_vector;
+in vec3 distance_vector;
 out vec4 frag_color;
 
 void main() {
