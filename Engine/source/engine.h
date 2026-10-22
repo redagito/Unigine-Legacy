@@ -145,37 +145,37 @@ public:
 	static GLProgram* wireframe_program;
 
 	// current state
-	static float time;
-	static vec4 light;
-	static vec4 light_color;
-	static vec4 fog_color;
-	static int viewport[4];
-	static mat4 projection;
-	static mat4 modelview;
-	static mat4 imodelview;
-	static mat4 transform;
-	static mat4 itransform;
+	static float& time;
+	static vec4& light;
+	static vec4& light_color;
+	static vec4& fog_color;
+	static int (&viewport)[4];
+	static mat4& projection;
+	static mat4& modelview;
+	static mat4& imodelview;
+	static mat4& transform;
+	static mat4& itransform;
 
 	// 1.0f / fps
-	static float ifps;
+	static float& ifps;
 
 	// current frame
-	static int frame;
+	static int& frame;
 
 	// all triangles
-	static int num_triangles;
+	static int& num_triangles;
 
 	// renderer abilities
-	static int have_occlusion;
-	static int have_stencil_two_side;
+	static int& have_occlusion;
+	static int& have_stencil_two_side;
 
 	// engine toggles
-	static int wireframe_toggle;
-	static int scissor_toggle;
-	static int shadows_toggle;
-	static int show_shadows_toggle;
-	static int fog_toggle;
-	static int mirror_toggle;
+	static int& wireframe_toggle;
+	static int& scissor_toggle;
+	static int& shadows_toggle;
+	static int& show_shadows_toggle;
+	static int& fog_toggle;
+	static int& mirror_toggle;
 	static int physic_toggle;
 
 	// default texture filter

@@ -2,6 +2,7 @@
 #include "util/Error.h"
 
 #include "engine.h"
+#include "render/Frame.h"
 #include "graphics/Frustum.h"
 #include "render/MeshData.h"
 #include "render/Material.h"
@@ -58,23 +59,23 @@ int Mirror::bindMaterial(const char *name,Material *material) {
 void Mirror::enable() {
 	
 	old_camera = Engine::camera;
-	old_modelview = Engine::modelview;
-	old_imodelview = Engine::imodelview;
+	old_modelview = currentFrame().modelview;
+	old_imodelview = currentFrame().imodelview;
 	
 	mat4 transform;
 	transform.reflect(plane);
 	
-	Engine::modelview = Engine::modelview * transform;
-	Engine::imodelview = Engine::modelview.inverse();
+	currentFrame().modelview = currentFrame().modelview * transform;
+	currentFrame().imodelview = currentFrame().modelview.inverse();
 	
 	// save modelview
-	modelview = Engine::modelview;
+	modelview = currentFrame().modelview;
 	
 	// select best resolution
-	if(Engine::viewport[3] > 512) {
+	if(currentFrame().viewport[3] > 512) {
 		pbuffer = pbuffers[2];
 		mirror_tex = mirror_texes[2];
-	} else if(Engine::viewport[3] > 256) {
+	} else if(currentFrame().viewport[3] > 256) {
 		pbuffer = pbuffers[1];
 		mirror_tex = mirror_texes[1];
 	} else {
@@ -84,23 +85,23 @@ void Mirror::enable() {
 	
 	// activate pbuffer
 	pbuffer->enable();
-	glGetIntegerv(GL_VIEWPORT,Engine::viewport);
+	glGetIntegerv(GL_VIEWPORT,currentFrame().viewport);
 	
 	// load matrixes
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(Engine::projection);
+	glLoadMatrixf(currentFrame().projection);
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(Engine::modelview);
+	glLoadMatrixf(currentFrame().modelview);
 	
-	if(Engine::modelview.det() < 0.0) glFrontFace(GL_CW);
+	if(currentFrame().modelview.det() < 0.0) glFrontFace(GL_CW);
 	else glFrontFace(GL_CCW);
 	
 	// get camera
-	Engine::camera = Engine::imodelview * vec3(0,0,0);
+	Engine::camera = currentFrame().imodelview * vec3(0,0,0);
 	Engine::camera.sector = pos.sector;
 	
 	// set frustum
-	Engine::frustum->set(Engine::projection * Engine::modelview);
+	Engine::frustum->set(currentFrame().projection * currentFrame().modelview);
 	
 	// render scene
 }
@@ -112,15 +113,15 @@ void Mirror::disable() {
 	mirror_tex->copy();
 	
 	pbuffer->disable();
-	glGetIntegerv(GL_VIEWPORT,Engine::viewport);
+	glGetIntegerv(GL_VIEWPORT,currentFrame().viewport);
 	
 	// restore matrixes
 	Engine::camera = old_camera;
-	Engine::modelview = old_modelview;
-	Engine::imodelview = old_imodelview;
+	currentFrame().modelview = old_modelview;
+	currentFrame().imodelview = old_imodelview;
 	
 	// restore frustum
-	Engine::frustum->set(Engine::projection * Engine::modelview);
+	Engine::frustum->set(currentFrame().projection * currentFrame().modelview);
 }
 
 
@@ -143,7 +144,7 @@ void Mirror::render() {
 	glMatrixMode(GL_TEXTURE);
 	glTranslatef(0.5,0.5,0);
 	glScalef(0.5,0.5,0);
-	glMultMatrixf(Engine::projection);
+	glMultMatrixf(currentFrame().projection);
 	glMultMatrixf(modelview);
 	
 	glDisable(GL_CULL_FACE);

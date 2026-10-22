@@ -4,6 +4,7 @@
 #include "graphics/OpenGL.h"
 #include "render/MeshData.h"
 #include "engine.h"
+#include "render/Frame.h"
 
 #include <cstdio>
 
@@ -52,14 +53,14 @@ void Portal::getScissor(int* scissor) const
 {
 	if ((center - Engine::camera).length() < radius) 
 	{
-		scissor[0] = Engine::viewport[0];
-		scissor[1] = Engine::viewport[1];
-		scissor[2] = Engine::viewport[2];
-		scissor[3] = Engine::viewport[3];
+		scissor[0] = currentFrame().viewport[0];
+		scissor[1] = currentFrame().viewport[1];
+		scissor[2] = currentFrame().viewport[2];
+		scissor[3] = currentFrame().viewport[3];
 		return;
 	}
 
-	mat4 mvp = Engine::projection * Engine::modelview;
+	mat4 mvp = currentFrame().projection * currentFrame().modelview;
 	vec4 p[4];
 	p[0] = mvp * vec4(points[0], 1);
 	p[1] = mvp * vec4(points[1], 1);
@@ -78,19 +79,19 @@ void Portal::getScissor(int* scissor) const
 		if (max.y < p[i].y) max.y = p[i].y;
 	}
 
-	scissor[0] = Engine::viewport[0] + (int)((float)Engine::viewport[2] * (min.x + 1.0) / 2.0) - 4;	// remove it
-	scissor[1] = Engine::viewport[1] + (int)((float)Engine::viewport[3] * (min.y + 1.0) / 2.0) - 4;
-	scissor[2] = Engine::viewport[0] + (int)((float)Engine::viewport[2] * (max.x + 1.0) / 2.0) + 4;
-	scissor[3] = Engine::viewport[1] + (int)((float)Engine::viewport[3] * (max.y + 1.0) / 2.0) + 4;
+	scissor[0] = currentFrame().viewport[0] + (int)((float)currentFrame().viewport[2] * (min.x + 1.0) / 2.0) - 4;	// remove it
+	scissor[1] = currentFrame().viewport[1] + (int)((float)currentFrame().viewport[3] * (min.y + 1.0) / 2.0) - 4;
+	scissor[2] = currentFrame().viewport[0] + (int)((float)currentFrame().viewport[2] * (max.x + 1.0) / 2.0) + 4;
+	scissor[3] = currentFrame().viewport[1] + (int)((float)currentFrame().viewport[3] * (max.y + 1.0) / 2.0) + 4;
 	
-	if (scissor[0] < Engine::viewport[0]) scissor[0] = Engine::viewport[0];
-	else if (scissor[0] > Engine::viewport[0] + Engine::viewport[2]) scissor[0] = Engine::viewport[0] + Engine::viewport[2];
-	if (scissor[1] < Engine::viewport[1]) scissor[1] = Engine::viewport[1];
-	else if (scissor[1] > Engine::viewport[1] + Engine::viewport[3]) scissor[1] = Engine::viewport[1] + Engine::viewport[3];
-	if (scissor[2] < Engine::viewport[0]) scissor[2] = Engine::viewport[0];
-	else if (scissor[2] > Engine::viewport[0] + Engine::viewport[2]) scissor[2] = Engine::viewport[0] + Engine::viewport[2];
-	if (scissor[3] < Engine::viewport[1]) scissor[3] = Engine::viewport[1];
-	else if (scissor[3] > Engine::viewport[1] + Engine::viewport[3]) scissor[3] = Engine::viewport[1] + Engine::viewport[3];
+	if (scissor[0] < currentFrame().viewport[0]) scissor[0] = currentFrame().viewport[0];
+	else if (scissor[0] > currentFrame().viewport[0] + currentFrame().viewport[2]) scissor[0] = currentFrame().viewport[0] + currentFrame().viewport[2];
+	if (scissor[1] < currentFrame().viewport[1]) scissor[1] = currentFrame().viewport[1];
+	else if (scissor[1] > currentFrame().viewport[1] + currentFrame().viewport[3]) scissor[1] = currentFrame().viewport[1] + currentFrame().viewport[3];
+	if (scissor[2] < currentFrame().viewport[0]) scissor[2] = currentFrame().viewport[0];
+	else if (scissor[2] > currentFrame().viewport[0] + currentFrame().viewport[2]) scissor[2] = currentFrame().viewport[0] + currentFrame().viewport[2];
+	if (scissor[3] < currentFrame().viewport[1]) scissor[3] = currentFrame().viewport[1];
+	else if (scissor[3] > currentFrame().viewport[1] + currentFrame().viewport[3]) scissor[3] = currentFrame().viewport[1] + currentFrame().viewport[3];
 	scissor[2] -= scissor[0];
 	scissor[3] -= scissor[1];
 }

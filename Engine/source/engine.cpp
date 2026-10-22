@@ -3,6 +3,7 @@
 #include "util/Error.h"
 
 #include "render/Device.h"
+#include "render/Frame.h"
 #include "render/GLRenderTarget.h"
 #include "render/Console.h"
 #include "graphics/Frustum.h"
@@ -66,32 +67,32 @@ MeshData* Engine::sphere_mesh;
 GLProgram* Engine::shadow_volume_shader;
 GLProgram* Engine::wireframe_program;
 
-float Engine::time;
-vec4 Engine::light;
-vec4 Engine::light_color;
-vec4 Engine::fog_color;
-int Engine::viewport[4];
-mat4 Engine::projection;
-mat4 Engine::modelview;
-mat4 Engine::imodelview;
-mat4 Engine::transform;
-mat4 Engine::itransform;
+float& Engine::time = currentFrame().time;
+vec4& Engine::light = currentFrame().light;
+vec4& Engine::light_color = currentFrame().light_color;
+vec4& Engine::fog_color = currentFrame().fog_color;
+int (&Engine::viewport)[4] = currentFrame().viewport;
+mat4& Engine::projection = currentFrame().projection;
+mat4& Engine::modelview = currentFrame().modelview;
+mat4& Engine::imodelview = currentFrame().imodelview;
+mat4& Engine::transform = currentFrame().transform;
+mat4& Engine::itransform = currentFrame().itransform;
 
-float Engine::ifps;
+float& Engine::ifps = currentFrame().ifps;
 
-int Engine::frame;
+int& Engine::frame = currentFrame().frame;
 
-int Engine::num_triangles;
+int& Engine::num_triangles = currentFrame().num_triangles;
 
-int Engine::have_occlusion;
-int Engine::have_stencil_two_side;
+int& Engine::have_occlusion = currentFrame().occlusion;
+int& Engine::have_stencil_two_side = currentFrame().two_sided_stencil;
 
-int Engine::wireframe_toggle;
-int Engine::scissor_toggle;
-int Engine::shadows_toggle;
-int Engine::show_shadows_toggle;
-int Engine::fog_toggle;
-int Engine::mirror_toggle;
+int& Engine::wireframe_toggle = currentFrame().wireframe;
+int& Engine::scissor_toggle = currentFrame().scissor;
+int& Engine::shadows_toggle = currentFrame().shadows;
+int& Engine::show_shadows_toggle = currentFrame().show_shadows;
+int& Engine::fog_toggle = currentFrame().fog;
+int& Engine::mirror_toggle = currentFrame().mirror;
 int Engine::physic_toggle;
 
 int Engine::texture_filter = GLTexture::LINEAR_MIPMAP_LINEAR;

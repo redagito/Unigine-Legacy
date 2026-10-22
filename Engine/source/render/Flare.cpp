@@ -1,6 +1,7 @@
 #include "render/Flare.h"
 
 #include "engine.h"
+#include "render/Frame.h"
 #include "render/Device.h"
 #include "render/GLTexture.h"
 #include "render/MeshData.h"
@@ -27,9 +28,9 @@ Flare::~Flare() {
 
 void Flare::render(const vec3& pos, const vec4& color)
 {
-	if (Engine::have_occlusion == 0) return;
+	if (currentFrame().occlusion == 0) return;
 
-	time += Engine::ifps;	// manualy update time
+	time += currentFrame().ifps;	// manualy update time
 
 	glDepthMask(GL_FALSE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -71,8 +72,8 @@ void Flare::render(const vec3& pos, const vec4& color)
 	float radius = min_radius + (max_radius - min_radius) * (float)samples_1 / (float)samples_0;
 	if (radius < 0) radius = 0;
 
-	vec3 dx = Engine::imodelview.rotation() * vec3(1, 0, 0);
-	vec3 dy = Engine::imodelview.rotation() * vec3(0, 1, 0);
+	vec3 dx = currentFrame().imodelview.rotation() * vec3(1, 0, 0);
+	vec3 dy = currentFrame().imodelview.rotation() * vec3(0, 1, 0);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);

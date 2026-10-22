@@ -7,6 +7,7 @@
 #include "render/GLProgram.h"
 #include "script/Parser.h"
 #include "engine.h"
+#include "render/Frame.h"
 #include "Paths.h"
 
 Material* Material::old_material = nullptr;
@@ -161,7 +162,7 @@ GLuint Material::getAlphaFunc(const char* func) {
 int Material::enable() {
 	// the wireframe mode draws the geometry with its own program, the maps
 	// would only darken the lines
-	if (Engine::wireframe_toggle) {
+	if (currentFrame().wireframe) {
 		Engine::wireframe_program->enable();
 		return 1;
 	}
@@ -213,7 +214,7 @@ void Material::disable() {
 
 void Material::bind() {
 	// the wireframe mode draws the geometry with its own program
-	if (Engine::wireframe_toggle) {
+	if (currentFrame().wireframe) {
 		ProgramUniforms uniforms;
 		Engine::getUniforms(uniforms);
 		Engine::wireframe_program->setUniforms(uniforms);

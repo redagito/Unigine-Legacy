@@ -7,6 +7,7 @@
 #include "render/Material.h"
 #include "object/ObjectMesh.h"
 #include "engine.h"
+#include "render/Frame.h"
 #include "render/Device.h"
 
 Sector::Sector() : center(0, 0, 0), radius(1000000.0), num_planes(0), planes(NULL), root(NULL),
@@ -130,7 +131,7 @@ void Sector::bindMaterial(const char* name, Material* material) {
 void Sector::render(Frustum* frustum, Portal* portal) {
 
 	if (frame == Engine::frame) return;
-	frame = Engine::frame;
+	frame = currentFrame().frame;
 
 	this->portal = portal;
 	Bsp::visible_sectors[Bsp::num_visible_sectors++] = this;
@@ -143,7 +144,7 @@ void Sector::render(Frustum* frustum, Portal* portal) {
 		Object* o = objects[i];
 		if (o->frame == Engine::frame) continue;
 		if (frustum->inside(o->pos + o->getCenter(), o->getRadius())) {
-			Engine::num_triangles += o->render(Object::RENDER_OPACITY);
+			currentFrame().num_triangles += o->render(Object::RENDER_OPACITY);
 			visible_objects[num_visible_objects++] = o;
 		}
 	}
@@ -151,11 +152,11 @@ void Sector::render(Frustum* frustum, Portal* portal) {
 	for (int i = 0; i < num_portals; i++) {
 		Portal* p = &Bsp::portals[portals[i]];
 		if (p->frame == Engine::frame) continue;
-		p->frame = Engine::frame;
+		p->frame = currentFrame().frame;
 		if (frustum->inside(p->center, p->radius)) {
 			float dist = (Engine::camera - p->center).length();
 
-			if (Engine::have_occlusion && dist > p->radius) {
+			if (currentFrame().occlusion && dist > p->radius) {
 
 				if (Material::old_material) 
 					Material::old_material->disable();

@@ -6,6 +6,7 @@
 #include "render/GLProgram.h"
 #include "render/MeshData.h"
 #include "engine.h"
+#include "render/Frame.h"
 #include "Paths.h"
 
 #define FOG_DEPTH_TO_RGB	"fog_depth_to_rgb.shader"
@@ -67,15 +68,15 @@ Fog::~Fog() {
 void Fog::enable() {
 	
 	// give color to shader
-	Engine::fog_color = color;
+	currentFrame().fog_color = color;
 	
 	// select best resolution
 	// depend on viewport size
-	if(Engine::viewport[3] > 512) {
+	if(currentFrame().viewport[3] > 512) {
 		pbuffer = pbuffers[2];
 		depth_tex = depth_texes[2];
 		fog_tex = fog_texes[2];
-	} else if(Engine::viewport[2] > 256) {
+	} else if(currentFrame().viewport[2] > 256) {
 		pbuffer = pbuffers[1];
 		depth_tex = depth_texes[1];
 		fog_tex = fog_texes[1];
@@ -87,15 +88,15 @@ void Fog::enable() {
 	
 	// activate pbuffer
 	pbuffer->enable();
-	glGetIntegerv(GL_VIEWPORT,Engine::viewport);
+	glGetIntegerv(GL_VIEWPORT,currentFrame().viewport);
 	
 	// load matrixes
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(Engine::projection);
+	glLoadMatrixf(currentFrame().projection);
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(Engine::modelview);
+	glLoadMatrixf(currentFrame().modelview);
 	
-	if(Engine::modelview.det() < 0.0) glFrontFace(GL_CW);
+	if(currentFrame().modelview.det() < 0.0) glFrontFace(GL_CW);
 	else glFrontFace(GL_CCW);
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -110,7 +111,7 @@ void Fog::disable() {
 	
 	// render back triangles
 	glCullFace(GL_FRONT);
-	Engine::num_triangles += mesh->render(true);
+	currentFrame().num_triangles += mesh->render(true);
 	glCullFace(GL_BACK);
 	depth_to_rgb_shader->disable();
 	
@@ -124,7 +125,7 @@ void Fog::disable() {
 	pass_shader->enable();
 	pass_shader->bind();
 	depth_tex->bind();
-	Engine::num_triangles += mesh->render(true);
+	currentFrame().num_triangles += mesh->render(true);
 	pass_shader->disable();
 	
 	// find fog fail area
@@ -135,10 +136,10 @@ void Fog::disable() {
 	glStencilFunc(GL_ALWAYS,1,~0);
 	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);
 	glCullFace(GL_FRONT);
-	Engine::num_triangles += mesh->render();
+	currentFrame().num_triangles += mesh->render();
 	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
 	glCullFace(GL_BACK);
-	Engine::num_triangles += mesh->render();
+	currentFrame().num_triangles += mesh->render();
 	glStencilFunc(GL_EQUAL,1,~0);
 	glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
 	glCullFace(GL_FRONT);
@@ -148,7 +149,7 @@ void Fog::disable() {
 	fail_shader->enable();
 	fail_shader->bind();
 	depth_tex->bind();
-	Engine::num_triangles += mesh->render(true);
+	currentFrame().num_triangles += mesh->render(true);
 	fail_shader->disable();
 	
 	glCullFace(GL_BACK);
@@ -158,7 +159,7 @@ void Fog::disable() {
 	fog_tex->bind();
 	fog_tex->copy();
 	pbuffer->disable();
-	glGetIntegerv(GL_VIEWPORT,Engine::viewport);
+	glGetIntegerv(GL_VIEWPORT,currentFrame().viewport);
 }
 
 
