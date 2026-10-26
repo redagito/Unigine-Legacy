@@ -12,14 +12,14 @@
 float ObjectSkinnedMesh::skin_time_step = 1.0f / 25.0f;
 
 
-ObjectSkinnedMesh::ObjectSkinnedMesh(GLSkinnedGeometry* skinnedmesh) : Object(OBJECT_SKINNEDMESH), skinnedmesh(skinnedmesh), ragdoll(NULL), skin_time(0.0) {
+ObjectSkinnedMesh::ObjectSkinnedMesh(GLSkinnedGeometry* skinnedmesh, bool owned) : Object(OBJECT_SKINNEDMESH), skinnedmesh(skinnedmesh), owned(owned), ragdoll(NULL), skin_time(0.0) {
 	materials = new Material * [getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];
 	frames = new int[getNumSurfaces()];
 }
 
-ObjectSkinnedMesh::ObjectSkinnedMesh(const char* name, const Paths& paths) : Object(OBJECT_SKINNEDMESH), ragdoll(NULL), skin_time(0.0) {
+ObjectSkinnedMesh::ObjectSkinnedMesh(const char* name, const Paths& paths) : Object(OBJECT_SKINNEDMESH), owned(true), ragdoll(NULL), skin_time(0.0) {
 	skinnedmesh = new GLSkinnedGeometry(paths.findFile(name).c_str());
 	materials = new Material * [getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
@@ -28,6 +28,8 @@ ObjectSkinnedMesh::ObjectSkinnedMesh(const char* name, const Paths& paths) : Obj
 }
 
 ObjectSkinnedMesh::~ObjectSkinnedMesh() {
+	delete ragdoll;
+	if (owned) delete skinnedmesh;
 	delete[] materials;
 	delete[] opacities;
 	delete[] transparents;

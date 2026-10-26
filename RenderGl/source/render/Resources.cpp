@@ -21,6 +21,7 @@
 #include "util/Error.h"
 
 #include <map>
+#include <memory>
 #include <string>
 
 /*
@@ -160,7 +161,10 @@ void GLResources::loadTexture(Material* material, int slot, char* s, const Paths
 
 	char name[1024];
 	char* d = name;	// read name
-	while (*s != '\0' && !strchr(" \t\n\r", *s)) *d++ = *s++;
+	while (*s != '\0' && !strchr(" \t\n\r", *s)) {
+		if (d < name + sizeof(name) - 1) *d++ = *s;
+		s++;
+	}
 	*d = '\0';
 
 	char buf[1024];
@@ -200,7 +204,10 @@ void GLResources::loadTexture(Material* material, int slot, char* s, const Paths
 
 			else THROW_ERROR("Material::load(): unknown texture%d flag \"%s\"\n", slot, buf);
 		}
-		else *d++ = *s++;
+		else {
+			if (d < buf + sizeof(buf) - 1) *d++ = *s;
+			s++;
+		}
 	}
 
 	material->textures[slot] = this->loadTexture(name, paths, desc);
@@ -212,7 +219,7 @@ void GLResources::loadMaterialFile(Material* material, const char* name, const P
 	material->light_program = nullptr;
 	material->ambient_program = nullptr;
 
-	Parser* parser = new Parser(name, defines());
+	std::unique_ptr<Parser> parser(new Parser(name, defines()));
 	if (parser->get("blend")) {
 		material->blend = true;
 		char s[1024] = { 0 };
@@ -249,7 +256,6 @@ void GLResources::loadMaterialFile(Material* material, const char* name, const P
 		char* s = parser->get(buf);
 		if (s) loadTexture(material, i, s, paths);
 	}
-	delete parser;
 }
 
 /*****************************************************************************/
@@ -279,7 +285,13 @@ Material* GLResources::loadMaterial(const char* name, const Paths& paths) {
 	std::map<std::string, Material*>::iterator it = materials.find(name);
 	if (it != materials.end()) return it->second;
 	Material* material = new Material();
-	loadMaterialFile(material, paths.findFile(name).c_str(), paths);
+	try {
+		loadMaterialFile(material, paths.findFile(name).c_str(), paths);
+	}
+	catch (...) {
+		delete material;
+		throw;
+	}
 	materials[name] = material;
 	return material;
 }

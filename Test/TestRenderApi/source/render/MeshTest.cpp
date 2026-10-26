@@ -85,6 +85,47 @@ TEST_CASE("MeshData copy keeps its own surfaces", "[graphics][mesh]") {
     remove("mesh_probe_copy.mesh");
 }
 
+TEST_CASE("MeshData copy assignment replaces its own surfaces", "[graphics][mesh]") {
+    writeRawMesh("mesh_probe_assign.mesh", 3);
+    MeshData source;
+    REQUIRE(source.load("mesh_probe_assign.mesh") == 1);
+    MeshData target;
+    REQUIRE(target.load("mesh_probe_assign.mesh") == 1);
+    target = source;
+    REQUIRE(target.getNumSurfaces() == 1);
+    REQUIRE(strcmp(target.getSurfaceName(0), "probe") == 0);
+    REQUIRE(source.getNumSurfaces() == 1);
+    REQUIRE(strcmp(source.getSurfaceName(0), "probe") == 0);
+    remove("mesh_probe_assign.mesh");
+}
+
+TEST_CASE("MeshData copy preserves silhouette flags and vertex data", "[graphics][mesh]") {
+    MeshData source;
+    MeshData::Vertex v[3];
+    v[0].xyz = vec3(0, 0, 0);
+    v[1].xyz = vec3(1, 0, 0);
+    v[2].xyz = vec3(0, 1, 0);
+    source.addSurface("triangle", v, 3);
+    source.create_shadow_volumes();
+    source.findSilhouette(vec4(0, 0, 1, 1));
+    int expected = source.getNumIntersections(vec3(0.25f, 0.25f, -1), vec3(0.25f, 0.25f, 1));
+    REQUIRE(expected == 1);
+
+    MeshData copy(&source);
+    REQUIRE(copy.getNumIntersections(vec3(0.25f, 0.25f, -1), vec3(0.25f, 0.25f, 1)) == expected);
+}
+
+TEST_CASE("MeshData addSurface truncates a long name", "[graphics][mesh]") {
+    MeshData m;
+    MeshData::Vertex vertex[3] = {};
+    char name[300];
+    memset(name, 'a', sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+    m.addSurface(name, vertex, 3);
+    REQUIRE(m.getNumSurfaces() == 1);
+    REQUIRE(strlen(m.getSurfaceName(0)) == 127);
+}
+
 TEST_CASE("MeshData addSurface from another mesh", "[graphics][mesh]") {
     writeRawMesh("mesh_probe_add.mesh", 3);
     MeshData source;

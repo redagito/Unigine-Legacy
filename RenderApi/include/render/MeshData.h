@@ -18,6 +18,7 @@ public:
 	MeshData();
 	MeshData(const char* name);
 	MeshData(const MeshData* mesh);
+	MeshData& operator=(const MeshData& mesh);
 	virtual ~MeshData();
 
 	void findSilhouette(const vec4& light, int s = -1);
@@ -134,5 +135,5 @@ protected:
 	};
 
 	int num_surfaces = 0;
-	Surface* surfaces[NUM_SURFACES];
+	Surface* surfaces[NUM_SURFACES] = {};
 };

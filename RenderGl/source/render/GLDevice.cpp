@@ -136,6 +136,7 @@ void GLDevice::setModelView(const mat4& modelview) {
 
 void GLDevice::setOrthoProjection(float left, float right, float bottom, float top, float near_plane, float far_plane) {
 	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
 	glOrtho(left, right, bottom, top, near_plane, far_plane);
 }
 
@@ -295,7 +296,11 @@ void GLDevice::flush() {
 }
 
 void GLDevice::readPixels(int width, int height, unsigned char* pixels) {
+	GLint alignment;
+	glGetIntegerv(GL_PACK_ALIGNMENT, &alignment);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	glPixelStorei(GL_PACK_ALIGNMENT, alignment);
 }
 
 void GLDevice::beginOcclusionQuery() {

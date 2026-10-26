@@ -6,6 +6,8 @@
 #pragma warning(disable: 4305)
 #endif
 
+#include <spdlog/sinks/sink.h>
+
 #include "math/Math.h"
 #include "bsp/Bsp.h"
 #include "math/Position.h"
@@ -39,6 +41,7 @@ class Engine {
 public:
 	static int init(Paths& paths, const char* config = NULL);
 	static void clear(const Paths& paths);
+	static void shutdown();
 
 	// loaders
 	static void load(const char* name, Paths& paths);
@@ -87,6 +90,7 @@ public:
 
 	// console
 	static Console* console;
+	static spdlog::sink_ptr console_sink;
 
 	// objects
 	static Bsp* bsp;

@@ -5,6 +5,8 @@
 #include "render/MeshData.h"
 #include "render/Resources.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 Portal::Portal() : center(0, 0, 0), radius(1000000.0), num_sectors(0), sectors(NULL), frame(0)
@@ -20,33 +22,61 @@ Portal::~Portal() {
 void Portal::create(MeshData* mesh, int s) {
 	center = mesh->getCenter(s);
 	radius = mesh->getRadius(s);
-	for (int i = 0; i < 4; i++) points[i] = vec3(0, 0, 0);
 	int num_vertex = mesh->getNumVertex(s);
 	if (num_vertex != 6) {
 		THROW_ERROR("Portal::create(): portal mesh must have only two triangle\n");
 	}
 	MeshData::Vertex* v = mesh->getVertex(s);
-	int flag[6] = { 0 };	// create quad from the six vertexes
+
+	vec3 unique[6];
+	int num_unique = 0;
 	for (int i = 0; i < 6; i++) {
-		flag[i] = 0;
-		for (int j = 0; j < 6; j++) {
-			if (i == j) continue;
-			if (v[i].xyz == v[j].xyz) flag[i] = 1;
+		int found = 0;
+		for (int j = 0; j < num_unique; j++) {
+			if (v[i].xyz.x == unique[j].x && v[i].xyz.y == unique[j].y && v[i].xyz.z == unique[j].z) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			if (num_unique == 4) THROW_ERROR("Portal::create(): portal mesh must have four vertexes\n");
+			unique[num_unique++] = v[i].xyz;
 		}
 	}
-	for (int i = 0, j = 0; i < 6; i++) {
-		if (flag[i] == 0) points[j++] = v[i].xyz;
-		if (i == 5 && j != 2) {
-			THROW_ERROR("Portal::create(): can`t find two similar vertexes for create quad\n");
-		}
+	if (num_unique != 4) {
+		THROW_ERROR("Portal::create(): portal mesh must have four unique vertexes\n");
 	}
-	points[2] = points[1];
-	for (int i = 0, j = 1; i < 3; i++) {
-		if (flag[i] != 0) {
-			points[j] = v[i].xyz;
-			j += 2;
-		}
+
+	vec3 c(0, 0, 0);
+	for (int i = 0; i < 4; i++) c += unique[i];
+	c /= 4.0f;
+
+	vec3 normal;
+	normal.cross(unique[1] - unique[0], unique[2] - unique[0]);
+	if (normal.length() < 1e-6f) normal.cross(unique[2] - unique[0], unique[3] - unique[0]);
+	if (normal.length() < 1e-6f) THROW_ERROR("Portal::create(): portal quad is degenerate\n");
+	normal.normalize();
+
+	vec3 tangent = unique[0] - c;
+	if (tangent.length() < 1e-6f) tangent = unique[1] - c;
+	tangent.normalize();
+	vec3 binormal;
+	binormal.cross(normal, tangent);
+
+	struct OrderedPoint {
+		vec3 p;
+		float angle;
+	};
+	OrderedPoint ordered[4];
+	for (int i = 0; i < 4; i++) {
+		vec3 d = unique[i] - c;
+		ordered[i].p = unique[i];
+		ordered[i].angle = atan2(d * binormal, d * tangent);
 	}
+	std::sort(ordered, ordered + 4, [](const OrderedPoint& a, const OrderedPoint& b) {
+		return a.angle < b.angle;
+	});
+	for (int i = 0; i < 4; i++) points[i] = ordered[i].p;
 }
 
 void Portal::getScissor(int* scissor) const
@@ -94,8 +124,8 @@ void Portal::getScissor(int* scissor) const
 	else if (scissor[2] > frame.viewport[0] + frame.viewport[2]) scissor[2] = frame.viewport[0] + frame.viewport[2];
 	if (scissor[3] < frame.viewport[1]) scissor[3] = frame.viewport[1];
 	else if (scissor[3] > frame.viewport[1] + frame.viewport[3]) scissor[3] = frame.viewport[1] + frame.viewport[3];
-	scissor[2] -= scissor[0];
-	scissor[3] -= scissor[1];
+	scissor[2] = scissor[2] > scissor[0] ? scissor[2] - scissor[0] : 0;
+	scissor[3] = scissor[3] > scissor[1] ? scissor[3] - scissor[1] : 0;
 }
 
 void Portal::render()

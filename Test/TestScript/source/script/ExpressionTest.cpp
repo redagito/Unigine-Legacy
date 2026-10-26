@@ -38,6 +38,24 @@ TEST_CASE("Expression copy constructor", "[math][expression]") {
     REQUIRE(ra.z == Approx(rb.z));
 }
 
+TEST_CASE("Expression copy assignment replaces and releases storage", "[math][expression]") {
+    long delta = 0;
+    {
+        alloc::Scope scope;
+        {
+            Expression a("1,2,3, 0,0,0,1");
+            Expression b("4,5,6, 0,0,0,1");
+            b = a;
+            mat4 m = b.to_matrix(0.0f);
+            REQUIRE(m[12] == Approx(1.0f));
+            REQUIRE(m[13] == Approx(2.0f));
+            REQUIRE(m[14] == Approx(3.0f));
+        }
+        delta = scope.delta();
+    }
+    REQUIRE(delta == 0);
+}
+
 TEST_CASE("Expression time-based", "[math][expression]") {
     Expression exp("time,time*2,0, 0,0,0,1");
     mat4 m = exp.to_matrix(5.0f);

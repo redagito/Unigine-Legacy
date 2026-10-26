@@ -319,3 +319,10 @@ TEST_CASE("Parser::interpret assignment keeps the following text", "[script][par
     REQUIRE(strcmp(r, "text") == 0);
     delete[] r;
 }
+
+TEST_CASE("Parser::interpret skips a for body when the condition is false", "[script][parser]") {
+    const char* r = Parser::interpret("for($i=0;$i<0;$i++){body}");
+    REQUIRE(r != nullptr);
+    REQUIRE(strcmp(r, "") == 0);
+    delete[] r;
+}

@@ -73,8 +73,12 @@ void Lights::addLight(Light* light, bool owned)
 		lights = newLights;
 		owned_lights = newOwned;
 
+		int old_visible = num_visible_lights;
+		Light** newVisible = new Light * [num_lights + growth];
+		for (int i = 0; i < old_visible; i++) newVisible[i] = visible_lights[i];
 		if (visible_lights) delete[] visible_lights;
-		visible_lights = new Light * [num_lights + growth];
+		visible_lights = newVisible;
+		num_visible_lights = old_visible;
 	}
 
 	// Initial update
@@ -91,12 +95,21 @@ void Lights::removeLight(Light* light)
 		// Find light
 		if (lights[i] == light)
 		{
+			bool owned = owned_lights[i];
 			// Overwrite by moving all lights to left by one
 			num_lights--;
 			for (; i < num_lights; i++) {
 				lights[i] = lights[i + 1];
 				owned_lights[i] = owned_lights[i + 1];
 			}
+			for (int j = 0; j < num_visible_lights; j++) {
+				if (visible_lights[j] != light) continue;
+				num_visible_lights--;
+				for (; j < num_visible_lights; j++) visible_lights[j] = visible_lights[j + 1];
+				break;
+			}
+			if (current_light == light) current_light = nullptr;
+			if (owned) delete light;
 			return;
 		}
 	}

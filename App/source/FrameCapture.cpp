@@ -1,24 +1,27 @@
 #include "FrameCapture.h"
 
 #include "engine.h"
-#include "render/Resources.h"
+#include "render/Device.h"
 
 #include <png.h>
 
 #include <cstdio>
 #include <vector>
 
+namespace {
+	int width = 0, height = 0;
+	std::vector<unsigned char> pixels;
+}
+
+void FrameCapture::capture(int w, int h) {
+	width = w;
+	height = h;
+	pixels.resize(width * height * 3);
+	Engine::device->readPixels(width, height, pixels.data());
+}
+
 int FrameCapture::write(const char* path) {
-
-	RenderTexture* texture = Engine::screen_texture;
-	if (!texture) return -1;
-
-	int width = Engine::screen_width;
-	int height = Engine::screen_height;
-
-	std::vector<unsigned char> pixels(width * height * 3);
-
-	texture->readPixels(pixels.data());
+	if (pixels.empty()) return -1;
 
 	int lit = 0;
 	for (int i = 0; i < width * height; i++) {

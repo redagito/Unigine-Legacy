@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <utility>
 
 Expression::Expression(const char* str) {
 	int length = strlen(str) + 1;
@@ -43,6 +44,13 @@ Expression::Expression(const Expression& expression) {
 		exp[i] = new char[strlen(expression.exp[i]) + 1];
 		strcpy(exp[i], expression.exp[i]);
 	}
+}
+
+Expression& Expression::operator=(const Expression& expression) {
+	if (this == &expression) return *this;
+	Expression copy(expression);
+	for (int i = 0; i < 14; i++) std::swap(exp[i], copy.exp[i]);
+	return *this;
 }
 
 Expression::~Expression() {

@@ -15,6 +15,7 @@ ObjectParticles::ObjectParticles(Particles *particles) : Object(OBJECT_PARTICLES
 }
 
 ObjectParticles::~ObjectParticles() {
+	delete particles;
 	delete[] materials;
 	delete[] opacities;
 	delete[] transparents;

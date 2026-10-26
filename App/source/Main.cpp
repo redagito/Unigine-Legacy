@@ -23,22 +23,44 @@ int main(int argc, char** argv) {
 		const char* shot = NULL;
 		for (int i = 1; i < argc; i++) {
 			if (!strcmp(argv[i], "-fs")) fs = 1;
-			else if (!strcmp(argv[i], "-w")) sscanf(argv[++i], "%d", &w);
-			else if (!strcmp(argv[i], "-h")) sscanf(argv[++i], "%d", &h);
+			else if (!strcmp(argv[i], "-w")) {
+				if (i + 1 >= argc || sscanf(argv[++i], "%d", &w) != 1) {
+					spdlog::critical("invalid value for -w");
+					return 1;
+				}
+			}
+			else if (!strcmp(argv[i], "-h")) {
+				if (i + 1 >= argc || sscanf(argv[++i], "%d", &h) != 1) {
+					spdlog::critical("invalid value for -h");
+					return 1;
+				}
+			}
 			else if (!strcmp(argv[i], "-headless")) frames = 60;
-			else if (!strcmp(argv[i], "-frames")) sscanf(argv[++i], "%d", &frames);
-			else if (!strcmp(argv[i], "-shot")) shot = argv[++i];
+			else if (!strcmp(argv[i], "-frames")) {
+				if (i + 1 >= argc || sscanf(argv[++i], "%d", &frames) != 1) {
+					spdlog::critical("invalid value for -frames");
+					return 1;
+				}
+			}
+			else if (!strcmp(argv[i], "-shot")) {
+				if (i + 1 >= argc) {
+					spdlog::critical("missing value for -shot");
+					return 1;
+				}
+				shot = argv[++i];
+			}
 			else if (!strcmp(argv[i], "-wireframe")) wireframe = 1;
 		}
 
 		if (frames) glApp.setHeadless(frames);
 
-		if (glApp.setVideoMode(w, h, fs) == 0) return 0;
+		if (glApp.setVideoMode(w, h, fs) == 0) return 1;
 
 		glApp.setTitle("3D Engine Demo");
 
-		if (glApp.init() == 0) return 0;
+		if (glApp.init() == 0) return 1;
 		if (wireframe) currentFrame().wireframe = 1;
+		glApp.capture_frame = shot != nullptr;
 		glApp.main();
 
 		if (shot) {
@@ -47,7 +69,7 @@ int main(int argc, char** argv) {
 				spdlog::critical("can not write the frame to \"{}\"", shot);
 				return 1;
 			}
-			spdlog::info("wrote \"{}\", {} of {} pixels are lit", shot, lit, Engine::screen_width * Engine::screen_height);
+			spdlog::info("wrote \"{}\", {} of {} pixels are lit", shot, lit, glApp.windowWidth * glApp.windowHeight);
 			if (lit == 0) {
 				spdlog::critical("the frame is empty");
 				return 1;

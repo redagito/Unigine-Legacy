@@ -9,7 +9,8 @@ class Paths;
 class ObjectSkinnedMesh : public Object {
 public:
 
-	ObjectSkinnedMesh(GLSkinnedGeometry *skinnedmesh);
+	// the pointer constructor owns the geometry only when owned is true
+	ObjectSkinnedMesh(GLSkinnedGeometry *skinnedmesh, bool owned = false);
 	ObjectSkinnedMesh(const char *name, const Paths& paths);
 	virtual ~ObjectSkinnedMesh();
 	
@@ -43,6 +44,7 @@ public:
 	virtual void set(const mat4 &m);
 	
 	GLSkinnedGeometry *skinnedmesh;
+	bool owned = false;
 	
 	RagDoll *ragdoll;
 	

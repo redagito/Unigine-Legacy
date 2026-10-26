@@ -20,16 +20,51 @@
 #include <stdio.h>
 #include "util/Logger.h"
 #include "util/Error.h"
-#include <string.h>
+#include <csetjmp>
+#include <cstring>
+#include <limits>
+#include <memory>
 #include <png.h>
- /*
- #include <setjmp.h>
- extern "C" {
-	 #include <jpeglib.h>
- }
- */
 
 #include "render/GLTexture.h"
+
+namespace {
+
+// the state of a png read, it lives on the heap so the longjmp handler sees
+// well defined values even after the fields change inside the setjmp region
+struct PngReadState {
+	FILE* file = NULL;
+	png_structp png = NULL;
+	png_infop info = NULL;
+	png_byte* img = NULL;
+	png_byte** row = NULL;
+};
+
+// releases everything owned by the state, safe to call more than once
+void release_png_read(PngReadState& state) {
+	if (state.png) png_destroy_read_struct(&state.png, state.info ? &state.info : NULL, NULL);
+	state.info = NULL;
+	if (state.file) fclose(state.file);
+	state.file = NULL;
+	delete[] state.row;
+	state.row = NULL;
+	delete[] state.img;
+	state.img = NULL;
+}
+
+}
+
+static bool checked_image_size(size_t width, size_t height, size_t depth, size_t channels, size_t& size) {
+	const size_t max = (std::numeric_limits<size_t>::max)();
+	if (!width || !height || !depth || !channels) return false;
+	if (width > max / channels) return false;
+	size = width * channels;
+	if (size > max / height) return false;
+	size *= height;
+	if (size > max / depth) return false;
+	size *= depth;
+	return true;
+}
 
 #ifdef _WIN32
 
@@ -129,6 +164,16 @@ void GLTexture::release() {
 
 
 void GLTexture::load(const char* name, GLuint target, int flag) {
+	struct UnpackAlignment {
+		GLint value;
+		UnpackAlignment() {
+			glGetIntegerv(GL_UNPACK_ALIGNMENT, &value);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		}
+		~UnpackAlignment() {
+			glPixelStorei(GL_UNPACK_ALIGNMENT, value);
+		}
+	} unpack_alignment;
 	release();
 	width = 0;
 	height = 0;
@@ -250,8 +295,12 @@ void GLTexture::copy() {
 
 
 void GLTexture::readPixels(unsigned char* pixels) {
+	GLint alignment;
+	glGetIntegerv(GL_PACK_ALIGNMENT, &alignment);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glBindTexture(target, id);
 	glGetTexImage(target, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	glPixelStorei(GL_PACK_ALIGNMENT, alignment);
 }
 
 void GLTexture::draw(float x0, float y0, float x1, float y1) {
@@ -299,7 +348,6 @@ unsigned char* GLTexture::load(const char* name, int& width, int& height) {
 	unsigned char* data = NULL;
 	if (!strcmp(ext, ".tga")) data = load_tga(name, width, height);
 	else if (!strcmp(ext, ".png")) data = load_png(name, width, height);
-	else if (!strcmp(ext, ".jpg")) data = load_jpeg(name, width, height);
 	else if (!strcmp(ext, ".dds")) data = load_dds(name, width, height);
 	else THROW_ERROR("GLTexture::load(): unknown format of \"%s\" file", name);
 	return data;
@@ -312,7 +360,6 @@ int GLTexture::save(const char* name, const unsigned char* data, int width, int 
 	}
 	int ret = 0;
 	if (!strcmp(ext, ".tga")) ret = save_tga(name, data, width, height);
-	else if (!strcmp(ext, ".jpg")) ret = save_jpeg(name, data, width, height, 80);
 	else THROW_ERROR("GLTexture::save(): unknown format of \"%s\" file", name);
 	return ret;
 }
@@ -327,7 +374,8 @@ int GLTexture::save(const char* name, const unsigned char* data, int width, int 
  * only for 24 and 32 bits per pixel
  */
 unsigned char* GLTexture::load_tga(const char* name, int& width, int& height) {
-	int i, j, k, l, components, size;
+	size_t i, j, k, l, size, data_size;
+	int components;
 	unsigned char rep, * data, * buf, * ptr, info[18];
 	FILE* file = fopen(name, "rb");
 	if (!file) {
@@ -353,9 +401,13 @@ unsigned char* GLTexture::load_tga(const char* name, int& width, int& height) {
 		fclose(file);
 		return NULL;
 	}
-	size = width * height * components;
+	if (!checked_image_size(width, height, 1, components, size) ||
+		!checked_image_size(width, height, 1, 4, data_size)) {
+		fclose(file);
+		THROW_ERROR("GLTexture::load_tga(): image is too large in \"%s\" file\n", name);
+	}
 	buf = new unsigned char[size];
-	data = new unsigned char[width * height * 4];
+	data = new unsigned char[data_size];
 	fseek(file, info[0], SEEK_CUR);
 	switch (info[2]) {
 	case 2:
@@ -453,13 +505,18 @@ unsigned char* GLTexture::load_tga(const char* name, int& width, int& height) {
 /* save tga image
  */
 int GLTexture::save_tga(const char* name, const unsigned char* data, int width, int height) {
-	int i, j;
+	size_t i, j, size;
 	unsigned char* buf;
 	FILE* file = fopen(name, "wb");
 	if (!file) {
 		THROW_ERROR("GLTexture::save_tga(): error create \"%s\" file\n", name);
 	}
-	buf = new unsigned char[18 + width * height * 4];
+	if (width <= 0 || height <= 0 || width > 65535 || height > 65535 ||
+		!checked_image_size(width, height, 1, 4, size)) {
+		fclose(file);
+		THROW_ERROR("GLTexture::save_tga(): invalid dimensions\n");
+	}
+	buf = new unsigned char[18 + size];
 	memset(buf, 0, 18);
 	buf[2] = 2;
 	buf[12] = width % 256;
@@ -468,13 +525,13 @@ int GLTexture::save_tga(const char* name, const unsigned char* data, int width, 
 	buf[15] = height / 256;
 	buf[16] = 32;
 	buf[17] = 0x28;
-	memcpy(buf + 18, data, width * height * 4);
-	for (i = 18; i < 18 + width * height * 4; i += 4) {
+	memcpy(buf + 18, data, size);
+	for (i = 18; i < 18 + size; i += 4) {
 		j = buf[i];
 		buf[i] = buf[i + 2];
 		buf[i + 2] = j;
 	}
-	fwrite(buf, 1, 18 + width * height * 4, file);
+	fwrite(buf, 1, 18 + size, file);
 	fclose(file);
 	delete[] buf;
 	return 1;
@@ -483,204 +540,100 @@ int GLTexture::save_tga(const char* name, const unsigned char* data, int width, 
 /* load png image
  */
 unsigned char* GLTexture::load_png(const char* name, int& width, int& height) {
-	FILE* file = fopen(name, "rb");
-	if (!file) {
+	std::unique_ptr<PngReadState> state(new PngReadState());
+	state->file = fopen(name, "rb");
+	if (!state->file) {
 		THROW_ERROR("GLTexture::load_png(): error open \"%s\" file\n", name);
 	}
 	png_byte sig[8];
-	if (fread(sig, 8, 1, file) != 1) {
+	if (fread(sig, 8, 1, state->file) != 1) {
+		release_png_read(*state);
 		THROW_ERROR("GLTexture::load_png(): error reading signature from \"%s\" file\n", name);
-		fclose(file);
-		return NULL;
 	}
 	if (!png_check_sig(sig, 8)) {
+		release_png_read(*state);
 		THROW_ERROR("GLTexture::load_png(): wrong signature in \"%s\" file\n", name);
-		fclose(file);
+	}
+	state->png = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+	if (!state->png) {
+		release_png_read(*state);
 		return NULL;
 	}
-	png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
-	if (!png_ptr) {
-		fclose(file);
+
+	// the state is reached through a pointer that does not change after setjmp
+	if (setjmp(png_jmpbuf(state->png))) {
+		release_png_read(*state);
 		return NULL;
 	}
-	png_infop info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr) {
-		png_destroy_read_struct(&png_ptr, 0, 0);
-		fclose(file);
+
+	state->info = png_create_info_struct(state->png);
+	if (!state->info) {
+		release_png_read(*state);
 		return NULL;
 	}
-	png_init_io(png_ptr, file);
-	png_set_sig_bytes(png_ptr, 8);
-	png_read_info(png_ptr, info_ptr);
+
+	png_init_io(state->png, state->file);
+	png_set_sig_bytes(state->png, 8);
+	png_read_info(state->png, state->info);
 
 	png_uint_32 w, h;
 	int bit_depth, color_type;
-	png_get_IHDR(png_ptr, info_ptr, &w, &h, &bit_depth, &color_type, 0, 0, 0);
+	if (!png_get_IHDR(state->png, state->info, &w, &h, &bit_depth, &color_type, 0, 0, 0)) {
+		release_png_read(*state);
+		THROW_ERROR("GLTexture::load_png(): error reading header from \"%s\" file\n", name);
+	}
 
-	if (bit_depth == 16) png_set_strip_16(png_ptr);
-	if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_expand(png_ptr);
-	if (bit_depth < 8) png_set_expand(png_ptr);
-	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) png_set_expand(png_ptr);
-	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) png_set_gray_to_rgb(png_ptr);
+	if (bit_depth == 16) png_set_strip_16(state->png);
+	if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_expand(state->png);
+	if (bit_depth < 8) png_set_expand(state->png);
+	if (png_get_valid(state->png, state->info, PNG_INFO_tRNS)) png_set_expand(state->png);
+	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) png_set_gray_to_rgb(state->png);
 
 	double gamma;
-	if (png_get_gAMA(png_ptr, info_ptr, &gamma)) png_set_gamma(png_ptr, (double)2.2, gamma);
-	png_read_update_info(png_ptr, info_ptr);
-	png_get_IHDR(png_ptr, info_ptr, &w, &h, &bit_depth, &color_type, 0, 0, 0);
-	png_uint_32 row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-	png_uint_32 channels = png_get_channels(png_ptr, info_ptr);
-	png_byte* img = new png_byte[row_bytes * h];
-	png_byte** row = new png_byte * [h];
-	for (int i = 0; i < (int)h; i++) row[i] = img + row_bytes * i;
-	png_read_image(png_ptr, row);
-	png_read_end(png_ptr, NULL);
-	png_destroy_read_struct(&png_ptr, 0, 0);
-	fclose(file);
-	delete[] row;
-	width = w;
-	height = h;
-	unsigned char* data = new unsigned char[width * height * 4];
+	if (png_get_gAMA(state->png, state->info, &gamma)) png_set_gamma(state->png, (double)2.2, gamma);
+	png_read_update_info(state->png, state->info);
+	if (!png_get_IHDR(state->png, state->info, &w, &h, &bit_depth, &color_type, 0, 0, 0)) {
+		release_png_read(*state);
+		THROW_ERROR("GLTexture::load_png(): error reading header from \"%s\" file\n", name);
+	}
+	size_t row_bytes = png_get_rowbytes(state->png, state->info);
+	size_t channels = png_get_channels(state->png, state->info);
+	if (w == 0 || h == 0 || w > (png_uint_32)(std::numeric_limits<int>::max)() || h > (png_uint_32)(std::numeric_limits<int>::max)()) {
+		release_png_read(*state);
+		THROW_ERROR("GLTexture::load_png(): invalid dimensions in \"%s\" file\n", name);
+	}
+	if (channels < 3 || channels > 4) {
+		release_png_read(*state);
+		THROW_ERROR("GLTexture::load_png(): unsupported channel count %u in \"%s\" file\n", (unsigned)channels, name);
+	}
+	size_t image_size;
+	size_t output_size;
+	if (row_bytes < (size_t)w * channels || !checked_image_size(row_bytes, h, 1, 1, image_size) ||
+		!checked_image_size(w, h, 1, 4, output_size)) {
+		release_png_read(*state);
+		THROW_ERROR("GLTexture::load_png(): image is too large in \"%s\" file\n", name);
+	}
+	state->img = new png_byte[image_size];
+	state->row = new png_byte * [h];
+	for (png_uint_32 i = 0; i < h; i++) state->row[i] = state->img + row_bytes * i;
+	png_read_image(state->png, state->row);
+	png_read_end(state->png, NULL);
+	width = (int)w;
+	height = (int)h;
+	unsigned char* data = new unsigned char[output_size];
 	unsigned char* ptr = data;
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
-			int k = row_bytes * i + j * channels;
-			*ptr++ = img[k + 0];
-			*ptr++ = img[k + 1];
-			*ptr++ = img[k + 2];
-			if (channels == 4) *ptr++ = img[k + 3];
+			size_t k = (size_t)row_bytes * i + (size_t)j * channels;
+			*ptr++ = state->img[k + 0];
+			*ptr++ = state->img[k + 1];
+			*ptr++ = state->img[k + 2];
+			if (channels == 4) *ptr++ = state->img[k + 3];
 			else *ptr++ = 255;
 		}
 	}
-	delete[] img;
+	release_png_read(*state);
 	return data;
-}
-
-/* load jpeg image
- */
- /*
- struct my_error_mgr {
-	 struct jpeg_error_mgr pub;
-	 jmp_buf setjmp_buffer;
- };
-
- typedef struct my_error_mgr *my_error_ptr;
-
- static void my_error_exit(j_common_ptr cinfo) {
-	 my_error_ptr myerr = (my_error_ptr)cinfo->err;
-	 (*cinfo->err->output_message)(cinfo);
-	 longjmp(myerr->setjmp_buffer,1);
- }
- */
-
-unsigned char* GLTexture::load_jpeg(const char* name, int& width, int& height) {
-
-	/*
-	struct jpeg_decompress_struct cinfo;
-	struct my_error_mgr jerr;
-	FILE *file;
-	JSAMPARRAY buffer;
-	int row_stride;
-	long cont;
-	JSAMPLE *data_buffer;
-	int i,j;
-	unsigned char *data;
-	file = fopen(name,"rb");
-	if(!file) {
-		THROW_ERROR("GLTexture::load_jpeg(): error open \"%s\" file\n",name);
-	}
-	cinfo.err = jpeg_std_error(&jerr.pub);
-	jerr.pub.error_exit = my_error_exit;
-	if(setjmp(jerr.setjmp_buffer)) {
-		jpeg_destroy_decompress(&cinfo);
-		fclose(file);
-		return NULL;
-	}
-	jpeg_create_decompress(&cinfo);
-	jpeg_stdio_src(&cinfo,file);
-	jpeg_read_header(&cinfo,TRUE);
-	jpeg_start_decompress(&cinfo);
-	row_stride = cinfo.output_width * cinfo.output_components;
-	buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo,JPOOL_IMAGE,row_stride,1);
-	data_buffer = new JSAMPLE[cinfo.image_width * cinfo.image_height * cinfo.output_components];
-	cont = 0;
-	while(cinfo.output_scanline < cinfo.output_height) {
-		jpeg_read_scanlines(&cinfo,buffer,1);
-		memcpy(data_buffer + cinfo.image_width * cinfo.output_components * cont,buffer[0],row_stride);
-		cont++;
-	}
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
-	width = cinfo.image_width;
-	height = cinfo.image_height;
-	data = new unsigned char[width * height * 4];
-	switch(cinfo.output_components) {
-		case 1:
-			for(i = 0, j = 0; i < width * height; i++, j += 4) {
-				data[j] = data[j + 1] = data[j + 2] = data_buffer[i];
-				data[j + 3] = 255;
-			}
-			break;
-		case 3:
-			for(i = 0, j = 0; i < width * height * 3; i += 3, j += 4) {
-				data[j] = data_buffer[i];
-				data[j + 1] = data_buffer[i + 1];
-				data[j + 2] = data_buffer[i + 2];
-				data[j + 3] = 255;
-			}
-			break;
-		default:
-	delete[] data;
-	delete[] data_buffer;
-			return NULL;
-	}
-	delete[] data_buffer;
-	fclose(file);
-	return data;
-	*/
-	return nullptr;
-}
-
-/* save jpeg image
- */
-int GLTexture::save_jpeg(const char* name, const unsigned char* data, int width, int height, int quality) {
-	/*
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
-	JSAMPROW row_pointer[1];
-	int i,j,row_stride;
-	unsigned char *data_buffer;
-	FILE *file = fopen(name,"wb");
-	if(!file) {
-		THROW_ERROR("GLTexture::load_jpeg(): error create \"%s\" file\n",name);
-	}
-	data_buffer = new unsigned char[width * height * 3];
-	for(i = 0, j = 0; i < width * height * 4; i += 4, j += 3) {
-		data_buffer[j + 0] = data[i + 0];
-		data_buffer[j + 1] = data[i + 1];
-		data_buffer[j + 2] = data[i + 2];
-	}
-	cinfo.err = jpeg_std_error(&jerr);
-	jpeg_create_compress(&cinfo);
-	jpeg_stdio_dest(&cinfo,file);
-	cinfo.image_width = width;
-	cinfo.image_height = height;
-	cinfo.input_components = 3;
-	cinfo.in_color_space = JCS_RGB;
-	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality(&cinfo,quality,TRUE);
-	jpeg_start_compress(&cinfo,TRUE);
-	row_stride = width * 3;
-	while(cinfo.next_scanline < cinfo.image_height) {
-		row_pointer[0] = &data_buffer[cinfo.next_scanline * row_stride];
-		jpeg_write_scanlines(&cinfo,row_pointer,1);
-	}
-	jpeg_finish_compress(&cinfo);
-	jpeg_destroy_compress(&cinfo);
-	delete[] data_buffer;
-	fclose(file);
-	return 1;
-	*/
-	return 0;
 }
 
 /* load DDS image
@@ -762,8 +715,12 @@ unsigned char* GLTexture::load_dds(const char* name, int& width, int& height) {
 		fclose(file);
 		return NULL;
 	}
-	width = header.dwWidth;
-	height = header.dwHeight;
+	if (header.dwWidth > (unsigned int)(std::numeric_limits<int>::max)() ||
+		header.dwHeight > (unsigned int)(std::numeric_limits<int>::max)()) {
+		THROW_ERROR("GLTexture::load_dds(): image is too large in \"%s\" file\n", name);
+	}
+	width = (int)header.dwWidth;
+	height = (int)header.dwHeight;
 	int format = DDS_ERROR;
 	if (header.dwPFFlags & DDPF_FOURCC) {
 		switch (header.dwFourCC) {
@@ -791,10 +748,16 @@ unsigned char* GLTexture::load_dds(const char* name, int& width, int& height) {
 		fclose(file);
 		return NULL;
 	}
-	unsigned char* data = new unsigned char[width * height * 4];
+	size_t rgba_size;
+	size_t rgb_size;
+	if (!checked_image_size(width, height, 1, 4, rgba_size) ||
+		!checked_image_size(width, height, 1, 3, rgb_size)) {
+		THROW_ERROR("GLTexture::load_dds(): image is too large in \"%s\" file\n", name);
+	}
+	unsigned char* data = new unsigned char[rgba_size];
 	if (format == DDS_RGB) {
-		unsigned char* buf = new unsigned char[width * height * 3];
-		if (fread(buf, width * height * 3, 1, file) != 1) {
+		unsigned char* buf = new unsigned char[rgb_size];
+		if (fread(buf, rgb_size, 1, file) != 1) {
 			THROW_ERROR("GLTexture::load_dds(): error reading RGB data from \"%s\" file\n", name);
 			fclose(file);
 			delete[] buf;
@@ -814,8 +777,8 @@ unsigned char* GLTexture::load_dds(const char* name, int& width, int& height) {
 		delete[] buf;
 	}
 	else if (format == DDS_RGBA) {
-		unsigned char* buf = new unsigned char[width * height * 4];
-		if (fread(buf, width * height * 4, 1, file) != 1) {
+		unsigned char* buf = new unsigned char[rgba_size];
+		if (fread(buf, rgba_size, 1, file) != 1) {
 			THROW_ERROR("GLTexture::load_dds(): error reading RGBA data from \"%s\" file\n", name);
 			fclose(file);
 			delete[] buf;
@@ -835,10 +798,16 @@ unsigned char* GLTexture::load_dds(const char* name, int& width, int& height) {
 		delete[] buf;
 	}
 	else {
-		int blocks_x = (width + 3) / 4;
-		int blocks_y = (height + 3) / 4;
-		int block_size = (format == DDS_DXT1) ? 8 : 16;
-		size_t buf_size = (size_t)blocks_x * blocks_y * block_size;
+		size_t blocks_x = ((size_t)width + 3) / 4;
+		size_t blocks_y = ((size_t)height + 3) / 4;
+		size_t block_size = (format == DDS_DXT1) ? 8 : 16;
+		size_t buf_size;
+		if (!checked_image_size(blocks_x, blocks_y, 1, block_size, buf_size)) {
+			THROW_ERROR("GLTexture::load_dds(): image is too large in \"%s\" file\n", name);
+			fclose(file);
+			delete[] data;
+			return NULL;
+		}
 		unsigned char* buf = new unsigned char[buf_size];
 		unsigned char* src = buf;
 		if (fread(buf, buf_size, 1, file) != 1) {
@@ -933,7 +902,9 @@ unsigned char* GLTexture::load_dds(const char* name, int& width, int& height) {
 /*****************************************************************************/
 
 unsigned char* GLTexture::rgba2rgb(unsigned char* data, int width, int height) {
-	unsigned char* dest = new unsigned char[width * height * 3];
+	size_t size;
+	if (!checked_image_size(width, height, 1, 3, size)) THROW_ERROR("GLTexture::rgba2rgb(): image is too large\n");
+	unsigned char* dest = new unsigned char[size];
 	unsigned char* d = dest;
 	unsigned char* s = data;
 	for (int i = 0; i < width * height; i++) {
@@ -947,7 +918,9 @@ unsigned char* GLTexture::rgba2rgb(unsigned char* data, int width, int height) {
 }
 
 unsigned char* GLTexture::rgba2luminance(unsigned char* data, int width, int height) {
-	unsigned char* dest = new unsigned char[width * height];
+	size_t size;
+	if (!checked_image_size(width, height, 1, 1, size)) THROW_ERROR("GLTexture::rgba2luminance(): image is too large\n");
+	unsigned char* dest = new unsigned char[size];
 	unsigned char* d = dest;
 	unsigned char* s = data;
 	for (int i = 0; i < width * height; i++) {
@@ -959,7 +932,9 @@ unsigned char* GLTexture::rgba2luminance(unsigned char* data, int width, int hei
 }
 
 unsigned char* GLTexture::rgba2luminance_alpha(unsigned char* data, int width, int height) {
-	unsigned char* dest = new unsigned char[width * height * 2];
+	size_t size;
+	if (!checked_image_size(width, height, 1, 2, size)) THROW_ERROR("GLTexture::rgba2luminance_alpha(): image is too large\n");
+	unsigned char* dest = new unsigned char[size];
 	unsigned char* d = dest;
 	unsigned char* s = data;
 	for (int i = 0; i < width * height; i++) {
@@ -1006,13 +981,19 @@ unsigned char* GLTexture::load_3d(const char* name, int& width, int& height, int
 		fclose(file);
 		return NULL;
 	}
-	int size = width * height * depth;
-	if (format == LUMINANCE) size *= 1;
-	else if (format == LUMINANCE_ALPHA) size *= 2;
-	else if (format == RGB) size *= 3;
-	else if (format == RGBA) size *= 4;
+	size_t size;
+	int channels;
+	if (format == LUMINANCE) channels = 1;
+	else if (format == LUMINANCE_ALPHA) channels = 2;
+	else if (format == RGB) channels = 3;
+	else if (format == RGBA) channels = 4;
 	else {
 		THROW_ERROR("GLTexture::load_3d(): unknown format %d of \"%s\" file\n", format, name);
+		fclose(file);
+		return NULL;
+	}
+	if (!checked_image_size(width, height, depth, channels, size)) {
+		THROW_ERROR("GLTexture::load_3d(): image is too large in \"%s\" file\n", name);
 		fclose(file);
 		return NULL;
 	}
@@ -1039,12 +1020,17 @@ int GLTexture::save_3d(const char* name, const unsigned char* data, int width, i
 	fwrite(&height, sizeof(int), 1, file);
 	fwrite(&depth, sizeof(int), 1, file);
 	fwrite(&format, sizeof(int), 1, file);
-	int size = width * height * depth;
-	if (format == LUMINANCE) size *= 1;
-	else if (format == LUMINANCE_ALPHA) size *= 2;
-	else if (format == RGB) size *= 3;
-	else if (format == RGBA) size *= 4;
+	size_t size;
+	int channels;
+	if (format == LUMINANCE) channels = 1;
+	else if (format == LUMINANCE_ALPHA) channels = 2;
+	else if (format == RGB) channels = 3;
+	else if (format == RGBA) channels = 4;
 	else THROW_ERROR("GLTexture::save_3d(): unknown format\n");
+	if (!checked_image_size(width, height, depth, channels, size)) {
+		fclose(file);
+		THROW_ERROR("GLTexture::save_3d(): image is too large\n");
+	}
 	fwrite(data, sizeof(unsigned char), size, file);
 	fclose(file);
 	return 1;

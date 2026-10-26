@@ -22,7 +22,7 @@ Node::~Node() {
 	if (left) delete left;
 	if (right) delete right;
 	if (object) {
-		delete object->mesh;
+		// the object owns its geometry (it is created with owned = true)
 		delete object;
 	}
 }
@@ -138,7 +138,7 @@ void Node::create(MeshData* mesh) {
 		else {
 			mesh->create_shadow_volumes();
 			mesh->create_triangle_strips();
-			object = new ObjectMesh(services().createGeometry(mesh));
+			object = new ObjectMesh(services().createGeometry(mesh), true);
 			delete right_mesh;
 			delete left_mesh;
 		}
@@ -146,7 +146,7 @@ void Node::create(MeshData* mesh) {
 	else {
 		mesh->create_shadow_volumes();
 		mesh->create_triangle_strips();
-		object = new ObjectMesh(services().createGeometry(mesh));
+		object = new ObjectMesh(services().createGeometry(mesh), true);
 	}
 	delete mesh;
 }
@@ -177,7 +177,7 @@ void Node::load(FILE* file) {
 		max = mesh->getMax();
 		center = mesh->getCenter();
 		radius = mesh->getRadius();
-		object = new ObjectMesh(services().createGeometry(mesh));
+		object = new ObjectMesh(services().createGeometry(mesh), true);
 		delete mesh;
 	}
 }

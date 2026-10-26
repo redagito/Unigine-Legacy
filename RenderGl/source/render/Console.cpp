@@ -1,6 +1,7 @@
 #include "render/Console.h"
 #include "util/Logger.h"
 
+#include <cstdio>
 #include <spdlog/sinks/sink.h>
 
 #define CONSOLE_CMD	"~# "
@@ -46,6 +47,8 @@ Console::Console(const char* name) : Font(name), current_line(0), last_history(0
 Console::~Console() {
 	for (int i = 0; i < NUM_LINES; i++) delete[] lines[i].str;
 	for (int i = 0; i < HISTORY; i++) delete[] history[i];
+	for (int i = 0; i < (int)variables.size(); i++) delete variables[i];
+	for (int i = 0; i < (int)commands.size(); i++) delete commands[i];
 }
 
 
@@ -209,7 +212,7 @@ void Console::keyPress(int key) {
 				if (!*cmd_ptr) printf("usage: set <variable> <value>\n");
 				else {
 					char name[1024];
-					sscanf(cmd_ptr, "%s", name);
+					sscanf(cmd_ptr, "%1023s", name);
 					Variable* v = NULL;
 					for (int i = 0; i < (int)variables.size(); i++) {
 						if (!strncmp(cmd_ptr, variables[i]->name, strlen(variables[i]->name))) {
@@ -221,7 +224,7 @@ void Console::keyPress(int key) {
 						if (v->type == BOOL) {
 							char val[128];
 							memset(val, 0, sizeof(char) * 128);
-							if (sscanf(cmd_ptr, "%s %s", name, val) == 2) {
+							if (sscanf(cmd_ptr, "%1023s %127s", name, val) == 2) {
 								if (!strcmp(val, "on")) *v->b = 1;
 								else if (!strcmp(val, "off")) *v->b = 0;
 								else if (!strcmp(val, "1")) *v->b = 1;
@@ -230,11 +233,11 @@ void Console::keyPress(int key) {
 							printf("%s set to %d\n", name, *v->b);
 						}
 						else if (v->type == INT) {
-							sscanf(cmd_ptr, "%s %d", name, v->i);
+							sscanf(cmd_ptr, "%1023s %d", name, v->i);
 							printf("%s set to %d\n", name, *v->i);
 						}
 						else if (v->type == FLOAT) {
-							sscanf(cmd_ptr, "%s %f", name, v->f);
+							sscanf(cmd_ptr, "%1023s %f", name, v->f);
 							printf("%s set to %g\n", name, *v->f);
 						}
 					}
@@ -245,7 +248,7 @@ void Console::keyPress(int key) {
 				Command* c = NULL;
 				int argc = 1;
 				static char* argv[3];
-				static char argv_buf[3][64];
+				static char argv_buf[3][1024];
 				argv[0] = argv_buf[0];
 				argv[1] = argv_buf[1];
 				argv[2] = argv_buf[2];
@@ -253,7 +256,9 @@ void Console::keyPress(int key) {
 				char* d = argv[0];
 				*d = '\0';
 				while (1) {
-					if (*s != ' ' && *s != '\t') *d++ = *s;
+					if (*s != ' ' && *s != '\t') {
+						if (d - argv[argc - 1] < (int)sizeof(argv_buf[0]) - 1) *d++ = *s;
+					}
 					else if (d != argv[argc - 1]) {
 						*d = '\0';
 						if (argc < 3) argc++;
@@ -327,7 +332,7 @@ void Console::addBool(const char* name, int* b) {
 	Variable* v = new Variable;
 	v->type = BOOL;
 	v->b = b;
-	strcpy(v->name, name);
+	snprintf(v->name, sizeof(v->name), "%s", name);
 	variables.push_back(v);
 }
 
@@ -335,7 +340,7 @@ void Console::addInt(const char* name, int* i) {
 	Variable* v = new Variable;
 	v->type = INT;
 	v->i = i;
-	strcpy(v->name, name);
+	snprintf(v->name, sizeof(v->name), "%s", name);
 	variables.push_back(v);
 }
 
@@ -343,7 +348,7 @@ void Console::addFloat(const char* name, float* f) {
 	Variable* v = new Variable;
 	v->type = FLOAT;
 	v->f = f;
-	strcpy(v->name, name);
+	snprintf(v->name, sizeof(v->name), "%s", name);
 	variables.push_back(v);
 }
 
@@ -351,6 +356,6 @@ void Console::addCommand(const char* name, void (*func)(int, char**, void*), voi
 	Command* c = new Command;
 	c->func = func;
 	c->data = data;
-	strcpy(c->name, name);
+	snprintf(c->name, sizeof(c->name), "%s", name);
 	commands.push_back(c);
 }

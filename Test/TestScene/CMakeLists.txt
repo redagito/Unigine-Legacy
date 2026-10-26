@@ -22,7 +22,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 target_include_directories(${PROJECT_NAME}
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/source
+	PRIVATE ${TEST_SUPPORT}
 )
+
+target_sources(${PROJECT_NAME} PRIVATE ${TEST_SUPPORT}/AllocationTracker.cpp)
 
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE Scene

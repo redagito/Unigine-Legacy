@@ -139,9 +139,7 @@ TEST_CASE("Lights add multiple", "[graphics][lights]") {
     REQUIRE(ls->num_lights == 3);
     ls->removeLight(l1);
     REQUIRE(ls->num_lights == 2);
-    delete l3;
-    delete l2;
-    delete l1;
+    ls->clear();
     delete ls;
 }
 

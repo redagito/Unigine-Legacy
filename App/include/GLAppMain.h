@@ -36,7 +36,7 @@ public:
 
 	float phi, psi;					// free camera parameters
 	vec3 camera, speed, dir;
-	Collide* collide;
+	Collide* collide = nullptr;
 
 	mat4 modelview;					// view matrixes
 	mat4 projection;
@@ -57,6 +57,8 @@ public:
 	Light* lamp_light = nullptr;				// lamp light
 
 	Paths paths;
+	bool engine_initialized = false;
+	bool capture_frame = false;
 #ifdef GRAB
 	Video* video = nullptr;					// video grabber
 	unsigned char* buffer = nullptr;

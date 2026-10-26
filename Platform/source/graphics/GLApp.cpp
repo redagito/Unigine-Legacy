@@ -430,17 +430,22 @@ GLApp::GLApp() {
 }
 
 GLApp::~GLApp() {
-	if(window) {
-		HDC hdc = GetDC(window);
-		wglMakeCurrent(hdc,0);
+	HDC hdc = window ? GetDC(window) : NULL;
+	if(hdc) wglMakeCurrent(hdc,0);
+	if(context) {
 		wglDeleteContext(context);
-		ReleaseDC(window,hdc);
+		context = NULL;
+	}
+	if(hdc) ReleaseDC(window,hdc);
+	if(window) {
 		DestroyWindow(window);
+		window = NULL;
 		if(fullScreen) {
 			ChangeDisplaySettings(NULL,0);
 			ShowCursor(true);
 		}
 	}
+	if(glApp == this) glApp = NULL;
 }
 
 
@@ -569,11 +574,15 @@ LRESULT CALLBACK windowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
 
 int GLApp::setVideoMode(int w,int h,int fs) {
 	
+	HDC hdc = NULL;
+	bool display_changed = false;
 	if(window) {
 		DestroyWindow(window);
+		window = NULL;
 		if(fullScreen) {
 			ChangeDisplaySettings(NULL,0);
 			ShowCursor(true);
+			display_changed = false;
 		}
 	}
 	
@@ -583,7 +592,6 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 	glApp = this;
 	
 	try {
-		HDC hdc;
 		int pixelformat;
 		PIXELFORMATDESCRIPTOR pfd = {
 			sizeof(PIXELFORMATDESCRIPTOR), 1, PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
@@ -615,6 +623,7 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 			settings.dmBitsPerPel = 32;
 			settings.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
 			if(ChangeDisplaySettings(&settings,CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL) THROW_ERROR("ChangeDisplaySettings() fail");
+			display_changed = true;
 			window = CreateWindowEx(0,"GLApp","GLApp",WS_POPUP,0,0,windowWidth,windowHeight,NULL,NULL,hInstance,NULL);
 		} else if(headless) {
 			window = CreateWindowEx(0,"GLApp","GLApp",WS_POPUP,0,0,windowWidth,windowHeight,NULL,NULL,hInstance,NULL);
@@ -640,7 +649,20 @@ int GLApp::setVideoMode(int w,int h,int fs) {
 		glViewport(0,0,glApp->windowWidth,glApp->windowHeight);
 	}
 	catch(const EngineError& e) {
-		window = 0;
+		if(context) {
+			wglMakeCurrent(NULL,NULL);
+			wglDeleteContext(context);
+			context = NULL;
+		}
+		if(hdc) ReleaseDC(window,hdc);
+		if(window) {
+			DestroyWindow(window);
+			window = NULL;
+		}
+		if(display_changed) {
+			ChangeDisplaySettings(NULL,0);
+			ShowCursor(true);
+		}
 		spdlog::error("{}", e.getMessage());
 		exit("%s", e.what());
 		return 0;

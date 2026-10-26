@@ -3,6 +3,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include <algorithm>
 #include <memory>
 
 namespace {
@@ -32,6 +33,17 @@ void init(const char* file_name) {
 
 void add_sink(spdlog::sink_ptr sink) {
 	if (engine_logger) engine_logger->sinks().push_back(sink);
+}
+
+void remove_sink(spdlog::sink_ptr sink) {
+	if (!sink) return;
+	auto remove = [&sink](const std::shared_ptr<spdlog::logger>& logger) {
+		if (!logger) return;
+		auto& sinks = logger->sinks();
+		sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+	};
+	remove(engine_logger);
+	spdlog::apply_all([&remove](std::shared_ptr<spdlog::logger> logger) { remove(logger); });
 }
 
 void shutdown() {

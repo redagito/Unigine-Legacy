@@ -22,16 +22,25 @@
 #include "script/Expression.h"
 #include "Paths.h"
 
+#include <cstdio>
+#include <memory>
+
 char* Map::data;
+
+static void copy_string(char* dest, size_t size, const char* source) {
+	if (!size) return;
+	if (!source) {
+		dest[0] = '\0';
+		return;
+	}
+	snprintf(dest, size, "%s", source);
+}
 
 void Map::load(const char* name, Paths& paths) {
 	if (!name) {
 		THROW_ERROR("Map::load(): null name\n");
 	}
-	Parser* parser = new Parser(name, defines());
-
-	char file_name[1024];
-	strcpy(file_name, name);
+	std::unique_ptr<Parser> parser(new Parser(name, defines()));
 
 	char* path_block = parser->get("path");
 	if (path_block) {
@@ -39,18 +48,17 @@ void Map::load(const char* name, Paths& paths) {
 		char path[1024];
 		char* d = path;
 		while (*s) {
-			if (!strchr(" \t\n\r", *s)) *d++ = *s;
+			if (!strchr(" \t\n\r", *s) && d < path + sizeof(path) - 1) *d++ = *s;
 			s++;
 		}
 		*d = '\0';
 		paths.addPath(path);
 	}
 
-	char* data_block = (char*)Parser::interpret(parser->get("data"));
+	std::unique_ptr<char[]> data_owner((char*)Parser::interpret(parser->get("data")));
+	char* data_block = data_owner.get();
 	if (!data_block) {
-		THROW_ERROR("Map::load(): can`t get data block in \"%s\" file\n", file_name);
-		delete parser;
-		return;
+		THROW_ERROR("Map::load(): can`t get data block in \"%s\" file\n", name);
 	}
 
 	data = data_block;
@@ -68,14 +76,16 @@ void Map::load(const char* name, Paths& paths) {
 			else THROW_ERROR("unknown token \"%s\"", token);
 		}
 	}
-	catch (const char* msg) {
-		delete[] data_block;
-		delete parser;
-		THROW_ERROR("Map::load(): %s in \"%s\" file", msg, file_name);
+	catch (const EngineError&) {
+		data = NULL;
+		throw;
+	}
+	catch (...) {
+		data = NULL;
+		throw;
 	}
 
-	delete[] data_block;
-	delete parser;
+	data = NULL;
 }
 
 
@@ -146,10 +156,11 @@ const char* Map::read_string() {
 	char* str = data;
 	char* s = str;
 	if (*str == '\"') {
-		while (*data && !strchr(" \"", *data)) *s++ = *data++;
-		if (*data) data++;
+		data++;
+		while (*data && *data != '\"') *s++ = *data++;
+		if (*data == '\"') data++;
 		*s = '\0';
-		return str + 1;
+		return str;
 	}
 	while (*data && !strchr(" \t\n\r", *data)) *s++ = *data++;
 	if (*data) data++;
@@ -193,7 +204,7 @@ void Map::load_pos(Position& pos, mat4& matrix, const Paths& paths) {
 		while (1) {
 			const char* token = read_token();
 			if (!token || !strcmp(token, "}")) break;
-			else if (!strcmp(token, "path")) strcpy(name, read_string());
+			else if (!strcmp(token, "path")) copy_string(name, sizeof(name), read_string());
 			else if (!strcmp(token, "speed")) speed = read_float();
 			else if (!strcmp(token, "close")) close = read_bool();
 			else if (!strcmp(token, "follow")) follow = read_bool();
@@ -209,7 +220,10 @@ void Map::load_pos(Position& pos, mat4& matrix, const Paths& paths) {
 		char str[1024];
 		char* d = str;
 		if (!*data) return;
-		while (*data && *data != '}') *d++ = *data++;
+		while (*data && *data != '}') {
+			if (d < str + sizeof(str) - 1) *d++ = *data;
+			data++;
+		}
 		if (*data) data++;
 		*d = '\0';
 		Expression* expression = new Expression(str);

@@ -3,6 +3,7 @@
 #include "util/Error.h"
 #include "script/Defines.h"
 
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -23,30 +24,30 @@ bool defines_enabled(const std::vector<int>& define_ok) {
 
 Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 
-	FILE* file = fopen(name, "r");
+	FILE* file = fopen(name, "rb");
 	if (!file) {
 		THROW_ERROR("Parser::Parser(): error open \"%s\" file\n", name);
 	}
 	if (fseek(file, 0, SEEK_END) != 0) {
-		THROW_ERROR("Parser::Parser(): error seeking in \"%s\" file\n", name);
 		fclose(file);
-		return;
+		THROW_ERROR("Parser::Parser(): error seeking in \"%s\" file\n", name);
 	}
 	long size = ftell(file);
 	if (size < 0) {
-		THROW_ERROR("Parser::Parser(): error getting size of \"%s\" file\n", name);
 		fclose(file);
-		return;
+		THROW_ERROR("Parser::Parser(): error getting size of \"%s\" file\n", name);
 	}
-	fseek(file, 0, SEEK_SET);
+	if (fseek(file, 0, SEEK_SET) != 0) {
+		fclose(file);
+		THROW_ERROR("Parser::Parser(): error seeking in \"%s\" file\n", name);
+	}
 	data = new char[size + 1];
 	memset(data, 0, sizeof(char) * (size + 1));
-	if (fread(data, sizeof(char), size, file) == 0) {
-		THROW_ERROR("Parser::Parser(): error reading \"%s\" file\n", name);
+	if (size > 0 && (long)fread(data, sizeof(char), size, file) != size) {
+		fclose(file);
 		delete[] data;
 		data = NULL;
-		fclose(file);
-		return;
+		THROW_ERROR("Parser::Parser(): error reading \"%s\" file\n", name);
 	}
 	fclose(file);
 
@@ -90,6 +91,7 @@ Parser::Parser(const char* name, const Defines& defines) : data(NULL) {
 		}
 		else if (*s == '/' && *(s + 1) == '*') {
 			while (*s && (*s != '*' || *(s + 1) != '/')) s++;
+			if (!*s) THROW_ERROR("Parser::Parser(): unterminated comment\n");
 			s += 2;
 			while (*s && *s == '\n') s++;
 			*d++ = '\n';
@@ -504,6 +506,17 @@ int Parser::interpret_for(const char* src, std::string* dest) {
 	while (*s && strchr(" \t", *s)) s++;
 	if (*s++ != '{') THROW_ERROR("Parser::interpret_for(): can`t find '{'");
 
+	if (!expression(condition.c_str())) {
+		int depth = 1;
+		while (*s && depth) {
+			if (*s == '{') depth++;
+			else if (*s == '}') depth--;
+			s++;
+		}
+		if (depth) THROW_ERROR("Parser::interpret_for(): unterminated block\n");
+		return s - src;
+	}
+
 	const char* begin = NULL;
 	while (expression(condition.c_str())) {
 		if (!begin) {
@@ -546,7 +559,8 @@ int Parser::interpret_main(const char* src, std::string* dest) {
 					s = dollar + interpret_eq(dollar);
 				}
 				else {
-					snprintf(buffer, sizeof(buffer), "%g", variables[tolower(*s++ - 'a')]);
+					int index = tolower((unsigned char)*s++) - 'a';
+					snprintf(buffer, sizeof(buffer), "%g", variables[index]);
 					dest->append(buffer);
 				}
 			}

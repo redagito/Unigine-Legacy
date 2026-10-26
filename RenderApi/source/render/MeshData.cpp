@@ -2,6 +2,8 @@
 #include "util/Logger.h"
 #include "util/Error.h"
 
+#include <utility>
+
 static bool has_extension(const char* name, const char* extension) {
 	size_t len = strlen(name);
 	size_t ext = strlen(extension);
@@ -46,10 +48,20 @@ MeshData::MeshData(const MeshData* mesh) : num_surfaces(0) {
 		}
 		if (mesh->surfaces[i]->silhouettes[0].vertex) {
 			for (int j = 0; j < NUM_SILHOUETTES; j++) {
-				s->silhouettes[j].vertex = new vec4[s->num_edges * 4];
-				s->silhouettes[j].flags = new char[s->num_triangles];
+				const Silhouette& src = mesh->surfaces[i]->silhouettes[j];
+				Silhouette& dst = s->silhouettes[j];
+				dst.light = src.light;
+				dst.num_vertex = src.num_vertex;
+				dst.vertex = new vec4[s->num_edges * 4];
+				memcpy(dst.vertex, src.vertex, sizeof(vec4) * s->num_edges * 4);
+				dst.flags = new char[s->num_triangles];
+				memcpy(dst.flags, src.flags, sizeof(char) * s->num_triangles);
 			}
-			s->silhouette = &s->silhouettes[s->last_silhouette];
+			if (mesh->surfaces[i]->silhouette) {
+				int index = (int)(mesh->surfaces[i]->silhouette - mesh->surfaces[i]->silhouettes);
+				s->silhouette = &s->silhouettes[index];
+			}
+			else s->silhouette = nullptr;
 		}
 		else s->silhouette = nullptr;
 		if (num_surfaces == NUM_SURFACES) {
@@ -58,6 +70,18 @@ MeshData::MeshData(const MeshData* mesh) : num_surfaces(0) {
 		}
 		surfaces[num_surfaces++] = s;
 	}
+}
+
+MeshData& MeshData::operator=(const MeshData& mesh) {
+	if (this == &mesh) return *this;
+	MeshData copy(&mesh);
+	std::swap(min, copy.min);
+	std::swap(max, copy.max);
+	std::swap(center, copy.center);
+	std::swap(radius, copy.radius);
+	for (int i = 0; i < NUM_SURFACES; i++) std::swap(surfaces[i], copy.surfaces[i]);
+	std::swap(num_surfaces, copy.num_surfaces);
+	return *this;
 }
 
 MeshData::~MeshData() {
@@ -100,12 +124,15 @@ void MeshData::findSilhouette(const vec4& light, int s) {
 	if (s < 0) {
 		for (int i = 0; i < num_surfaces; i++) {
 			Surface* s = surfaces[i];
+			bool cached = false;
 			for (int j = 0; j < NUM_SILHOUETTES; j++) {
 				if (s->silhouettes[j].light == light) {
 					s->silhouette = &s->silhouettes[j];
-					continue;
+					cached = true;
+					break;
 				}
 			}
+			if (cached) continue;
 			s->silhouette = &s->silhouettes[s->last_silhouette++];
 			if (s->last_silhouette == NUM_SILHOUETTES) s->last_silhouette = 0;
 			for (int j = 0; j < s->num_edges; j++) s->edges[j].flag = -1;
@@ -488,10 +515,20 @@ void MeshData::addSurface(MeshData* mesh, int surface) {
 	}
 	if (mesh->surfaces[surface]->silhouettes[0].vertex) {
 		for (int j = 0; j < NUM_SILHOUETTES; j++) {
-			s->silhouettes[j].vertex = new vec4[s->num_edges * 4];
-			s->silhouettes[j].flags = new char[s->num_triangles];
+			const Silhouette& src = mesh->surfaces[surface]->silhouettes[j];
+			Silhouette& dst = s->silhouettes[j];
+			dst.light = src.light;
+			dst.num_vertex = src.num_vertex;
+			dst.vertex = new vec4[s->num_edges * 4];
+			memcpy(dst.vertex, src.vertex, sizeof(vec4) * s->num_edges * 4);
+			dst.flags = new char[s->num_triangles];
+			memcpy(dst.flags, src.flags, sizeof(char) * s->num_triangles);
 		}
-		s->silhouette = &s->silhouettes[s->last_silhouette];
+		if (mesh->surfaces[surface]->silhouette) {
+			int index = (int)(mesh->surfaces[surface]->silhouette - mesh->surfaces[surface]->silhouettes);
+			s->silhouette = &s->silhouettes[index];
+		}
+		else s->silhouette = nullptr;
 	}
 	else s->silhouette = nullptr;
 	if (num_surfaces == NUM_SURFACES) {
@@ -505,7 +542,7 @@ void MeshData::addSurface(MeshData* mesh, int surface) {
 void MeshData::addSurface(const char* name, Vertex* vertex, int num_vertex) {
 	Surface* s = new Surface;
 	memset(s, 0, sizeof(Surface));
-	strcpy(s->name, name);
+	snprintf(s->name, sizeof(s->name), "%s", name ? name : "");
 	s->num_vertex = num_vertex;
 	s->vertex = new Vertex[s->num_vertex];
 	memcpy(s->vertex, vertex, sizeof(Vertex) * s->num_vertex);
@@ -529,6 +566,12 @@ int MeshData::load(const char* name) {
 		if (s->edges) delete[] s->edges;
 		if (s->triangles) delete[] s->triangles;
 		if (s->indices) delete[] s->indices;
+		if (s->silhouettes[0].vertex) {
+			for (int j = 0; j < NUM_SILHOUETTES; j++) {
+				delete[] s->silhouettes[j].vertex;
+				delete[] s->silhouettes[j].flags;
+			}
+		}
 		delete s;
 	}
 	num_surfaces = 0;
@@ -539,9 +582,8 @@ int MeshData::load(const char* name) {
 		}
 		int magic;
 		if (fread(&magic, sizeof(int), 1, file) != 1) {
-			THROW_ERROR("MeshData::load(): error reading magic from \"%s\" file\n", name);
 			fclose(file);
-			return 0;
+			THROW_ERROR("MeshData::load(): error reading magic from \"%s\" file\n", name);
 		}
 		if (magic == MESH_STRIP_MAGIC) {	// load mesh file
 			load(file);
@@ -1107,9 +1149,8 @@ int MeshData::load_3ds(const char* name) {
 	int type = load_3ds_read_ushort(file);
 	int size = load_3ds_read_int(file);
 	if (type != LOAD_3DS_CHUNK_MAIN) {
-		THROW_ERROR("MeshData::load_3ds(): wrong main chunk in \"%s\" file\n", name);
 		fclose(file);
-		return 0;
+		THROW_ERROR("MeshData::load_3ds(): wrong main chunk in \"%s\" file\n", name);
 	}
 	load_3ds_mesh* m = new load_3ds_mesh;
 	memset(m, 0, sizeof(load_3ds_mesh));

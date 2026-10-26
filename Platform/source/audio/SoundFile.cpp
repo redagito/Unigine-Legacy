@@ -34,10 +34,9 @@ SoundFileOgg::SoundFileOgg(const char* name) {
 		THROW_ERROR("SoundFileOgg::SoundFileOgg(): error open \"%s\" file\n", name);
 	}
 	if (ov_open(file, &vf, NULL, 0) < 0) {
-		THROW_ERROR("SoundFileOgg::SoundFileOgg(): \"%s\" is not ogg bitstream\n", name);
 		fclose(file);
 		file = NULL;
-		return;
+		THROW_ERROR("SoundFileOgg::SoundFileOgg(): \"%s\" is not ogg bitstream\n", name);
 	}
 	vi = ov_info(&vf, -1);
 	channels = vi->channels;
@@ -47,7 +46,7 @@ SoundFileOgg::SoundFileOgg(const char* name) {
 SoundFileOgg::~SoundFileOgg() {
 	if (file) {
 		ov_clear(&vf);
-		fclose(file);
+		file = nullptr;
 	}
 }
 

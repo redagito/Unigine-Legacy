@@ -35,6 +35,6 @@ public:
 	Node* left = nullptr;
 	Node* right = nullptr;
 
-	// Object
+	// Object, the node owns the object and the object owns its geometry
 	ObjectMesh* object = nullptr;
 };

@@ -30,6 +30,7 @@ GLSkinnedGeometry::~GLSkinnedGeometry() {
 		if (s->vertex) delete[] s->vertex;
 		if (s->edges) delete[] s->edges;
 		if (s->triangles) delete[] s->triangles;
+		if (s->indeices) delete[] s->indeices;
 		if (s->shadow_volume_vertex) delete[] s->shadow_volume_vertex;
 		delete s;
 	}

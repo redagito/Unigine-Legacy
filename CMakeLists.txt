@@ -28,7 +28,6 @@ find_package(Vorbis REQUIRED)
 
 find_package(glext REQUIRED)
 find_package(wglext REQUIRED)
-# find_package(JPEG REQUIRED)
 find_package(PNG REQUIRED)
 # find_package(ffmpeg REQUIRED)
 

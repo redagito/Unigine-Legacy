@@ -8,7 +8,7 @@ class Paths;
 class ObjectMesh : public Object {
 public:
 
-	ObjectMesh(MeshData *mesh);
+	ObjectMesh(MeshData *mesh, bool owned = false);
 	ObjectMesh(const char *name, const Paths& paths);
 	virtual ~ObjectMesh();
 	
@@ -30,6 +30,7 @@ public:
 	virtual float getRadius(int s = -1);
 
 	MeshData *mesh = nullptr;
+	bool owned = false;
 	
 	int *frames = nullptr;
 };

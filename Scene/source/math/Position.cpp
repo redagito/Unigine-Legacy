@@ -21,11 +21,24 @@ Position::~Position() {
 }
 
 Position& Position::operator=(const Position& pos) {
+	if (this == &pos) return *this;
+	// allocate first so a throw leaves the current state untouched
+	Spline* new_spline = pos.spline ? new Spline(*pos.spline) : NULL;
+	Expression* new_expression = NULL;
+	try {
+		new_expression = pos.expression ? new Expression(*pos.expression) : NULL;
+	}
+	catch (...) {
+		delete new_spline;
+		throw;
+	}
+	delete spline;
+	delete expression;
 	x = pos.x;
 	y = pos.y;
 	z = pos.z;
-	spline = pos.spline ? new Spline(*pos.spline) : NULL;
-	expression = pos.expression ? new Expression(*pos.expression) : NULL;
+	spline = new_spline;
+	expression = new_expression;
 	sector = pos.sector;
 	radius = pos.radius;
 	num_sectors = pos.num_sectors;
@@ -99,11 +112,17 @@ void Position::find(int sector, float r) {
 
 
 void Position::setSpline(Spline* spline) {
+	if (this->spline == spline) return;
+	delete this->spline;
+	delete expression;
 	this->spline = spline;
 	expression = NULL;
 }
 
 void Position::setExpression(Expression* expression) {
+	if (this->expression == expression) return;
+	delete spline;
+	delete this->expression;
 	spline = NULL;
 	this->expression = expression;
 }

@@ -25,7 +25,7 @@
 #include "object/Object.h"
 #include "object/ObjectMesh.h"
 
-ObjectMesh::ObjectMesh(MeshData *mesh) : Object(OBJECT_MESH), mesh(mesh) {
+ObjectMesh::ObjectMesh(MeshData *mesh, bool owned) : Object(OBJECT_MESH), mesh(mesh), owned(owned) {
 	materials = new Material*[getNumSurfaces()];
 	opacities = new int[getNumSurfaces()];
 	transparents = new int[getNumSurfaces()];
@@ -41,6 +41,7 @@ ObjectMesh::ObjectMesh(const char *name, const Paths& paths) : Object(OBJECT_MES
 }
 
 ObjectMesh::~ObjectMesh() {
+	if (owned) delete mesh;
 	delete[] materials;
 	delete[] opacities;
 	delete[] transparents;

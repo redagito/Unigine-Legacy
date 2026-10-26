@@ -2,6 +2,7 @@
 #include "util/Error.h"
 #include "util/Logger.h"
 #include <cstring>
+#include <memory>
 
 static bool has_extension(const char* name, const char* extension) {
 	size_t len = strlen(name);
@@ -69,6 +70,7 @@ void Bsp::release() {
 
 
 void Bsp::load(const char* name) {
+	release();
 
 	if (has_extension(name, ".bsp")) {	// read own binary bsp format
 
@@ -190,7 +192,7 @@ void Bsp::load(const char* name) {
 	}
 
 	// else generate bsp tree with portals and sectors
-	MeshData* mesh = new MeshData();
+	std::unique_ptr<MeshData> mesh(new MeshData());
 	if (has_extension(name, ".3ds")) mesh->load_3ds(name);
 	else if (has_extension(name, ".mesh")) mesh->load_mesh(name);
 
@@ -205,10 +207,13 @@ void Bsp::load(const char* name) {
 
 	if (num_portals == 0 || num_sectors == 0) {
 
+		num_portals = 0;
+		portals = nullptr;
 		num_sectors = 1;
 		sectors = new Sector[1];
 		sectors[0].root = new Node();
-		sectors[0].root->create(mesh);
+		// Node::create() takes ownership of the mesh
+		sectors[0].root->create(mesh.release());
 		sectors[0].create();
 
 	}
@@ -224,11 +229,11 @@ void Bsp::load(const char* name) {
 		for (int i = 0; i < mesh->getNumSurfaces(); i++) {
 			const char* name = mesh->getSurfaceName(i);
 			if (!strncmp(name, "portal", 6)) {
-				portals[num_portals++].create(mesh, i);
+				portals[num_portals++].create(mesh.get(), i);
 				usage_flag[i] = 1;
 			}
 			else if (!strncmp(name, "sector", 6)) {
-				sectors[num_sectors++].create(mesh, i);
+				sectors[num_sectors++].create(mesh.get(), i);
 				usage_flag[i] = 1;
 			}
 			else usage_flag[i] = 0;
@@ -253,8 +258,8 @@ void Bsp::load(const char* name) {
 			MeshData* m = new MeshData();
 			for (int j = 0; j < mesh->getNumSurfaces(); j++) {
 				if (usage_flag[j]) continue;
-				if (s->inside(mesh, j)) {
-					m->addSurface(mesh, j);
+				if (s->inside(mesh.get(), j)) {
+					m->addSurface(mesh.get(), j);
 					usage_flag[j] = 1;
 				}
 			}
@@ -264,7 +269,6 @@ void Bsp::load(const char* name) {
 		}
 
 		delete[] usage_flag;
-		delete mesh;
 	}
 
 	visible_sectors = new Sector * [num_sectors];
@@ -275,6 +279,9 @@ void Bsp::load(const char* name) {
 
 
 void Bsp::save(const char* name) {
+	if ((num_portals > 0 && !portals) || (num_sectors > 0 && !sectors)) {
+		THROW_ERROR("Bsp::save(): invalid bsp state\n");
+	}
 	FILE* file = fopen(name, "wb");
 	if (!file) {
 		THROW_ERROR("Bsp::save(): can`t create \"%s\" file\n", name);

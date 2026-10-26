@@ -9,6 +9,7 @@ public:
 	~Lights();
 
 	void addLight(Light* light, bool owned = true);
+	// deletes the light when it was added as owned
 	void removeLight(Light* light);
 
 	void clear();

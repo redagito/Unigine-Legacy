@@ -63,11 +63,9 @@ void enable();
 
 	static unsigned char* load_tga(const char* name, int& width, int& height);
 	static unsigned char* load_png(const char* name, int& width, int& height);
-	static unsigned char* load_jpeg(const char* name, int& width, int& height);
 	static unsigned char* load_dds(const char* name, int& width, int& height);
 
 	static int save_tga(const char* name, const unsigned char* data, int width, int height);
-	static int save_jpeg(const char* name, const unsigned char* data, int width, int height, int quality);
 
 	static unsigned char* rgba2luminance(unsigned char* data, int width, int height);
 	static unsigned char* rgba2luminance_alpha(unsigned char* data, int width, int height);

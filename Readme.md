@@ -81,6 +81,9 @@ App.exe -frames 60 -shot frame.png
 - `-w <n>`, `-h <n>`, `-fs` set the window size and the fullscreen mode
 - `-wireframe` draws the whole scene as white lines
 
+The PNG contains the app's final framebuffer, including the scene presentation
+and overlays, captured before the buffer swap.
+
 The `ctest` run of the `headless` test does the same and leaves the frame in
 the build folder.
 

@@ -1,4 +1,5 @@
 #include "GLAppMain.h"
+#include "FrameCapture.h"
 
 #include "engine.h"
 #include "render/Frame.h"
@@ -154,7 +155,15 @@ void extern_load(void* data) {
 
 GLAppMain::~GLAppMain()
 {
-	Engine::clear(paths);
+	delete cross_tex;
+	delete shoot_sound;
+	delete flash_light;
+	delete shoot_light;
+	delete lamp_light;
+	delete collide;
+
+	if (!engine_initialized) return;
+	Engine::shutdown();
 }
 
 int GLAppMain::init() {
@@ -186,7 +195,12 @@ int GLAppMain::init() {
 		"data/meshes/,"
 		"data/physic/");
 
-	if (Engine::init(paths, "data/engine.conf") == 0) return 0;
+	engine_initialized = true;
+	if (Engine::init(paths, "data/engine.conf") == 0) {
+		Engine::shutdown();
+		engine_initialized = false;
+		return 0;
+	}
 
 	// shoot
 	shoot_sound = new Sound("data/fire.wav");
@@ -280,6 +294,7 @@ void GLAppMain::render() {
 		count -= 1.0 / 25.0;
 	}
 #endif
+	if (capture_frame) FrameCapture::capture(windowWidth, windowHeight);
 }
 
 // Main loop

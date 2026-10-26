@@ -73,7 +73,8 @@ RagDoll::RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& 
 		char* s = parser->get("rigidbodies");
 		while (*s) {
 			char* d = buf;	// get line
-			while (*s && *s != '\n') *d++ = *s++;
+			while (*s && *s != '\n' && d < buf + sizeof(buf) - 1) *d++ = *s++;
+			while (*s && *s != '\n') s++;
 			while (*s && strchr("\n\r", *s)) s++;
 			*d = '\0';
 
@@ -112,7 +113,7 @@ RagDoll::RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& 
 		vec3 center = (m->getMax() + m->getMin()) / 2.0f;
 		offsets[i].translate(-center);
 		m->transform(offsets[i]);
-		meshes[i] = new ObjectMesh(new GLGeometry(m));
+		meshes[i] = new ObjectMesh(new GLGeometry(m), true);
 		delete m;
 
 		//meshes[i]->bindMaterial("*",Engine::loadMaterial("default.mat"));
@@ -140,7 +141,8 @@ RagDoll::RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& 
 		int bone_1 = -1;
 
 		char* d = buf;	// get line
-		while (*s && *s != '\n') *d++ = *s++;
+		while (*s && *s != '\n' && d < buf + sizeof(buf) - 1) *d++ = *s++;
+		while (*s && *s != '\n') s++;
 		while (*s && strchr("\n\r", *s)) s++;
 		*d = '\0';
 
@@ -235,12 +237,8 @@ RagDoll::RagDoll(GLSkinnedGeometry* skinnedmesh, const char* name, const Paths& 
 }
 
 RagDoll::~RagDoll() {
-	for (int i = 0; i < num_bones; i++) {
-		if (meshes[i]) {
-			delete meshes[i];
-		}
-	}
 	delete[] meshes;
+	delete[] rigidbodies;
 	delete[] offsets;
 	delete[] ioffsets;
 }
@@ -271,3 +269,6 @@ void RagDoll::set(const mat4& m) {
 	if (root == -1) return;
 	meshes[root]->set(m);
 }
+
+
+

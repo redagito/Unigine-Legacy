@@ -21,6 +21,9 @@
 #include "map.h"
 #include "Paths.h"
 
+#include <cstdio>
+#include <memory>
+
 char* Engine::vendor = "The Vendor";
 char* Engine::renderer = "The Renderer";
 char* Engine::version = "The Version";
@@ -36,6 +39,7 @@ RenderTexture* Engine::screen_texture;
 Material* Engine::screen_material;
 
 Console* Engine::console;
+spdlog::sink_ptr Engine::console_sink;
 
 Lights Engine::lights;
 
@@ -127,19 +131,19 @@ int Engine::init(Paths& paths, const char* config)
 
 	// load config
 	if (config) {
-		FILE* file = fopen(config, "rb");
+		std::unique_ptr<FILE, decltype(&fclose)> file(fopen(config, "rb"), &fclose);
 		if (!file) THROW_ERROR("Engine::init(): error open \"%s\" file\n", config);
 		else {
 			char buf[1024];
-			while (fscanf(file, "%s", buf) == 1) {
-				if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) { while (fread(buf, 1, 1, file) == 1 && buf[0] != '\n'); }
-				else if (!strcmp(buf, "screen_width")) { if (fscanf(file, "%d", &screen_width) != 1) THROW_ERROR("Engine::init(): error reading screen_width\n"); }
-				else if (!strcmp(buf, "screen_height")) { if (fscanf(file, "%d", &screen_height) != 1) THROW_ERROR("Engine::init(): error reading screen_height\n"); }
-				else if (!strcmp(buf, "screen_multisample")) { if (fscanf(file, "%d", &screen_multisample) != 1) THROW_ERROR("Engine::init(): error reading screen_multisample\n"); }
+			while (fscanf(file.get(), "%1023s", buf) == 1) {
+				if (buf[0] == '#' || (buf[0] == '/' && buf[1] == '/')) { while (fread(buf, 1, 1, file.get()) == 1 && buf[0] != '\n'); }
+				else if (!strcmp(buf, "screen_width")) { if (fscanf(file.get(), "%d", &screen_width) != 1) THROW_ERROR("Engine::init(): error reading screen_width\n"); }
+				else if (!strcmp(buf, "screen_height")) { if (fscanf(file.get(), "%d", &screen_height) != 1) THROW_ERROR("Engine::init(): error reading screen_height\n"); }
+				else if (!strcmp(buf, "screen_multisample")) { if (fscanf(file.get(), "%d", &screen_multisample) != 1) THROW_ERROR("Engine::init(): error reading screen_multisample\n"); }
 				else if (!strcmp(buf, "texture_filter")) {
 					frame.texture_filter.filter = Filter::linear_mipmap_linear;
 					frame.texture_filter.anisotropy = Anisotropy::none;
-					fgets(buf, sizeof(buf), file);
+					fgets(buf, sizeof(buf), file.get());
 					char* s = buf;
 					while (*s) {
 						if (isalpha((unsigned char)*s)) {
@@ -179,7 +183,8 @@ int Engine::init(Paths& paths, const char* config)
 
 	// console
 	console = new Console(paths.findFile(ENGINE_FONT_NAME).c_str());
-	logger::add_sink(console->createSink());
+	console_sink = console->createSink();
+	logger::add_sink(console_sink);
 
 	spdlog::info("3D Engine");
 
@@ -289,51 +294,55 @@ int Engine::init(Paths& paths, const char* config)
 	return 1;
 }
 
+static void clear_scene() {
+	for (int i = 0; i < Engine::num_objects; i++) delete Engine::objects[i];
+	delete[] Engine::objects;
+	Engine::objects = NULL;
+	Engine::num_objects = 0;
+
+	Engine::lights.clear();
+
+	for (int i = 0; i < Engine::num_fogs; i++) delete Engine::fogs[i];
+	delete[] Engine::fogs;
+	Engine::fogs = NULL;
+	Engine::num_fogs = 0;
+	delete[] Engine::visible_fogs;
+	Engine::visible_fogs = NULL;
+	Engine::num_visible_fogs = 0;
+	Engine::current_fog = NULL;
+
+	for (int i = 0; i < Engine::num_mirrors; i++) delete Engine::mirrors[i];
+	delete[] Engine::mirrors;
+	Engine::mirrors = NULL;
+	Engine::num_mirrors = 0;
+	delete[] Engine::visible_mirrors;
+	Engine::visible_mirrors = NULL;
+	Engine::num_visible_mirrors = 0;
+	Engine::current_mirror = NULL;
+
+	delete Engine::bsp;
+	Engine::bsp = NULL;
+}
+
 void Engine::clear(const Paths& paths) {
 	RenderFrame& frame = currentFrame();
 
-	// objects
-	if (num_objects) {
-		for (int i = 0; i < num_objects; i++) delete objects[i];
-		delete[] objects;
-		objects = NULL;
-		num_objects = 0;
-	}
+	clear_scene();
 
-	// lights
-	lights.clear();
-
-	// fogs
-	if (num_fogs) {
-		for (int i = 0; i < num_fogs; i++) delete fogs[i];
-		delete[] fogs;
-		fogs = NULL;
-		num_fogs = 0;
-		delete[] visible_fogs;
-		visible_fogs = NULL;
-		num_visible_fogs = 0;
-	}
-
-	// mirrors
-	if (num_mirrors) {
-		for (int i = 0; i < num_mirrors; i++) delete mirrors[i];
-		delete[] mirrors;
-		mirrors = NULL;
-		num_mirrors = 0;
-		delete[] visible_mirrors;
-		visible_mirrors = NULL;
-		num_visible_mirrors = 0;
-	}
-
-	// bsp at the end
-	if (bsp) delete bsp;
-	bsp = NULL;
+	if (!frame.services) return;
 
 	// the resources of the backend
 	services().clearResources();
+	screen_material = NULL;
+	sphere_mesh = NULL;
+	shadow_volume_shader = NULL;
+	Material::old_material = NULL;
+	frame.current_program = NULL;
+	frame.wireframe_program = NULL;
+	if (!screen) return;
 
-	// the engine wide assets are recreated for the next map, this must not throw
-	// because clear() runs from a destructor while an exception is in flight
+	// the engine wide assets are recreated for the next map, a failure here must
+	// not leave the engine half initialized
 	try {
 		screen_material = services().loadMaterial(ENGINE_SCREEN_MATERIAL, paths);
 		sphere_mesh = services().loadMesh(ENGINE_SPHERE_MESH, paths);
@@ -350,6 +359,37 @@ void Engine::clear(const Paths& paths) {
 		shadow_volume_shader = NULL;
 		frame.wireframe_program = NULL;
 	}
+}
+
+void Engine::shutdown() {
+	RenderFrame& frame = currentFrame();
+
+	clear_scene();
+
+	if (frame.services) {
+		services().clearResources();
+		delete frame.services;
+		frame.services = NULL;
+	}
+
+	screen_material = NULL;
+	sphere_mesh = NULL;
+	shadow_volume_shader = NULL;
+	Material::old_material = NULL;
+	frame.current_program = NULL;
+	frame.wireframe_program = NULL;
+
+	delete screen_texture;
+	screen_texture = NULL;
+	delete screen;
+	screen = NULL;
+	logger::remove_sink(console_sink);
+	console_sink.reset();
+	delete console;
+	console = NULL;
+	delete device;
+	device = NULL;
+	frame.device = NULL;
 }
 
 void Engine::load(const char* name, Paths& paths) {
@@ -482,7 +522,8 @@ void Engine::update(float ifps) {
 void Engine::updateLights() {
 	RenderFrame& frame = currentFrame();
 	frame.num_lights = 0;
-	for (int i = 0; i < lights.num_visible_lights; i++) {
+	int max_lights = (int)(sizeof(frame.lights) / sizeof(frame.lights[0]));
+	for (int i = 0; i < lights.num_visible_lights && frame.num_lights < max_lights; i++) {
 		Light* l = lights.visible_lights[i];
 		RenderLight& rl = frame.lights[frame.num_lights++];
 		rl.position = l->pos;
@@ -562,7 +603,7 @@ void Engine::render_light() {
 	if (frame.shadows) device->setStencilTest(true);
 
 	// render lights
-	for (int i = 0; i < lights.num_visible_lights; i++) {
+	for (int i = 0; i < frame.num_lights; i++) {
 
 		Light* l = lights.visible_lights[i];
 		frame.current_light = i;
@@ -1050,11 +1091,18 @@ void Engine::render(float ifps) {
 	device->setDepthTest(false);
 	device->setDepthWrite(false);
 
+	// Wireframe applies to the scene, not the quad that presents it.
+	int scene_wireframe = frame.wireframe;
+	frame.wireframe = 0;
 	screen_material->enable();
 	screen_material->bind();
 	screen_material->bindTexture(0, screen_texture);
+	// The default screen material uses the fixed function pipeline.
+	// Material::bindTexture only binds textures when a program is present.
+	if (!screen_material->program()) screen_texture->bind(0);
 	screen_texture->draw();
 	screen_material->disable();
+	frame.wireframe = scene_wireframe;
 
 	// console
 	console->enable(frame.viewport[2], frame.viewport[3]);

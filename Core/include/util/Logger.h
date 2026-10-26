@@ -12,6 +12,9 @@ namespace logger {
 	// adds a sink to the engine logger
 	void add_sink(spdlog::sink_ptr sink);
 
+	// removes a sink from all loggers
+	void remove_sink(spdlog::sink_ptr sink);
+
 	void shutdown();
 
 }
