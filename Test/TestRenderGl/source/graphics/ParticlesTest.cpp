@@ -1,8 +1,20 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 #include "render/Particles.h"
+#include <cmath>
+#include <cstdlib>
 
 using Catch::Approx;
+
+TEST_CASE("Particle random velocities stay finite including zero random samples", "[particles][regression]") {
+    struct Samples : Particles { static float next() { return Particles::rand(); } };
+    std::srand(12345);
+    bool finite = true;
+    for (int i = 0; i < 100000; i++) {
+        if (!std::isfinite(Samples::next())) { finite = false; break; }
+    }
+    REQUIRE(finite);
+}
 
 TEST_CASE("Particles OFF static", "[graphics][particles]") {
     REQUIRE(Particles::OFF.x == Approx(0.0f));

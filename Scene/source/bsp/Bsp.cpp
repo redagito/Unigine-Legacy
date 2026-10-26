@@ -340,9 +340,21 @@ void Bsp::bindMaterial(const char* name, Material* material) {
 }
 
 
+int Bsp::findSector(const vec3& point, int hint) {
+	if (hint >= 0 && hint < num_sectors && sectors[hint].inside(point)) return hint;
+	for (int i = 0; i < num_sectors; i++) {
+		if (sectors[i].inside(point)) return i;
+	}
+	return -1;
+}
+
 void Bsp::render(Frustum* frustum) {
 	num_visible_sectors = 0;
 	vec3 camera = vec3(currentFrame().camera);
+	// Mirrors supply an explicit starting sector. Ordinary views locate the
+	// containing volume before falling back for cameras outside the map.
+	if (currentFrame().camera_sector < 0 || currentFrame().camera_sector >= num_sectors)
+		currentFrame().camera_sector = findSector(camera);
 	if (currentFrame().camera_sector != -1) {
 		sectors[currentFrame().camera_sector].render(frustum);
 	}

@@ -152,13 +152,12 @@ TEST_CASE("Lights remove non-existent is safe", "[graphics][lights]") {
     REQUIRE(ls.num_lights == 1);
 }
 
-TEST_CASE("Lights update only visible lights", "[graphics][lights]") {
+TEST_CASE("Lights update includes lights outside the view", "[graphics][lights]") {
     Lights ls;
     Light l(vec3(), 1.0f, vec4(1,1,1,1), 2.0f, 0);
-    ls.addLight(&l);
+    ls.addLight(&l, false);
     ls.update(1.0f);
-    // Lights::update only updates visible_lights, not the main array
-    REQUIRE(l.time == Approx(0.0f));
+    REQUIRE(l.time == Approx(1.0f));
 }
 
 // ---------------------------------------------------------------------------

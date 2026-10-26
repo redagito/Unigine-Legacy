@@ -7,6 +7,29 @@
 
 using Catch::Approx;
 
+TEST_CASE("Culled lights keep aging and expire", "[graphics][lights][regression]") {
+    Lights lights;
+    Light light(vec3(0, 0, 0), 1, vec4(1), 0.5f, 0);
+    lights.addLight(&light, false);
+    lights.update(0.25f);
+    REQUIRE(light.time == Approx(0.25f));
+    lights.update(0.25f);
+    REQUIRE(lights.num_lights == 0);
+}
+
+TEST_CASE("Visible and culled lights advance by the same timestep", "[graphics][lights][regression]") {
+    Lights lights;
+    Light visible(vec3(0, 0, 0), 1, vec4(1), -1, 0);
+    Light culled(vec3(0, 0, 0), 1, vec4(1), -1, 0);
+    lights.addLight(&visible, false);
+    lights.addLight(&culled, false);
+    lights.visible_lights[0] = &visible;
+    lights.num_visible_lights = 1;
+    lights.update(0.125f);
+    REQUIRE(visible.time == Approx(0.125f));
+    REQUIRE(culled.time == Approx(visible.time));
+}
+
 TEST_CASE("Lights default constructor", "[graphics][lights]") {
     Lights l;
     REQUIRE(l.num_lights == 0);

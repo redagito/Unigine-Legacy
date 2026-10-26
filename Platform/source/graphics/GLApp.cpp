@@ -504,6 +504,7 @@ static int translateKey(int key) {
 
 
 LRESULT CALLBACK windowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam) {
+	constexpr int mouse_buttons = GLApp::BUTTON_LEFT | GLApp::BUTTON_MIDDLE | GLApp::BUTTON_RIGHT;
 	switch(message) {
 		case WM_SIZE:
 			glApp->windowWidth = LOWORD(lparam);
@@ -513,12 +514,18 @@ LRESULT CALLBACK windowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
 			break;
 		case WM_KEYDOWN: {
 				int key = translateKey((int)wparam);
+				if (key < 0 || key >= (int)(sizeof(glApp->keys) / sizeof(glApp->keys[0]))) break;
+				// A consumed toggle is cleared by the app. Autorepeat must not
+				// re-arm it before the physical key has been released.
+				bool repeat = (lparam & (1LL << 30)) != 0;
+				if (repeat && !glApp->keys[key]) break;
 				glApp->keys[key] = 1;
 				glApp->keyPress(key);
 			}
 			break;
 		case WM_KEYUP: {
 				int key = translateKey((int)wparam);
+				if (key < 0 || key >= (int)(sizeof(glApp->keys) / sizeof(glApp->keys[0]))) break;
 				glApp->keys[key] = 0;
 				glApp->keyRelease(key);
 			}
@@ -527,28 +534,42 @@ LRESULT CALLBACK windowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
 			glApp->exit();
 			break;
 		case WM_LBUTTONDOWN:
+			if (!glApp->headless) SetCapture(window);
 			glApp->mouseButton |= GLApp::BUTTON_LEFT;
 			glApp->buttonPress(GLApp::BUTTON_LEFT);
 			break;
 		case WM_LBUTTONUP:
 			glApp->mouseButton &= ~GLApp::BUTTON_LEFT;
 			glApp->buttonRelease(GLApp::BUTTON_LEFT);
+			if (!(glApp->mouseButton & mouse_buttons) && GetCapture() == window) ReleaseCapture();
 			break;
 		case WM_MBUTTONDOWN:
+			if (!glApp->headless) SetCapture(window);
 			glApp->mouseButton |= GLApp::BUTTON_MIDDLE;
 			glApp->buttonPress(GLApp::BUTTON_MIDDLE);
 			break;
 		case WM_MBUTTONUP:
 			glApp->mouseButton &= ~GLApp::BUTTON_MIDDLE;
 			glApp->buttonRelease(GLApp::BUTTON_MIDDLE);
+			if (!(glApp->mouseButton & mouse_buttons) && GetCapture() == window) ReleaseCapture();
 			break;
 		case WM_RBUTTONDOWN:
+			if (!glApp->headless) SetCapture(window);
 			glApp->mouseButton |= GLApp::BUTTON_RIGHT;
 			glApp->buttonPress(GLApp::BUTTON_RIGHT);
 			break;
 		case WM_RBUTTONUP:
 			glApp->mouseButton &= ~GLApp::BUTTON_RIGHT;
 			glApp->buttonRelease(GLApp::BUTTON_RIGHT);
+			if (!(glApp->mouseButton & mouse_buttons) && GetCapture() == window) ReleaseCapture();
+			break;
+		case WM_CAPTURECHANGED:
+			glApp->mouseButton = 0;
+			break;
+		case WM_KILLFOCUS:
+			memset(glApp->keys, 0, sizeof(glApp->keys));
+			glApp->mouseButton = 0;
+			if (GetCapture() == window) ReleaseCapture();
 			break;
 		case 0x020A: //WM_MOUSEWHEEL:
 			if((short)HIWORD(wparam) > 0) {

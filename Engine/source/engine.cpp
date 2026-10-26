@@ -501,18 +501,12 @@ void Engine::update(float ifps) {
 	// Update lights
 	lights.update(ifps);
 
-	// update objects
-	Object* objects[Sector::NUM_OBJECTS] = { nullptr };
-	for (int i = 0; i < Bsp::num_visible_sectors; i++) {
-		Sector* s = Bsp::visible_sectors[i];
-		for (int j = 0; j < s->num_objects; j++) objects[j] = s->objects[j];
-		int num_objects = s->num_objects;
-		for (int j = 0; j < num_objects; j++) {
-			Object* o = objects[j];
-			if (o->frame == -frame.frame) continue;
-			o->update(ifps);
-			o->frame = -frame.frame;
-		}
+	// Visibility controls drawing, not simulation. In particular a ragdoll's
+	// collision bodies must keep advancing while its room is out of view.
+	for (int i = 0; i < num_objects; i++) {
+		Object* o = objects[i];
+		o->update(ifps);
+		o->frame = -frame.frame;
 	}
 }
 
@@ -538,6 +532,10 @@ void Engine::updateLights() {
 
 void Engine::render_light() {
 	RenderFrame& frame = currentFrame();
+	// The ambient pass can leave a shader bound, especially in mirrors.
+	// Visibility queries use fixed function matrices rather than its uniforms.
+	if (Material::old_material) Material::old_material->disable();
+	if (frame.current_program) frame.current_program->unbind();
 
 	device->setDepthWrite(false);
 
@@ -906,6 +904,15 @@ void Engine::render_transparent() {
 }
 
 
+static void clear_scene_target(RenderDevice* device) {
+	// Each target owns its state; do not inherit masks or scissor rectangles.
+	device->setScissorTest(false);
+	device->setColorWrite(true, true, true, true);
+	device->setDepthWrite(true);
+	device->setClearColor(0, 0, 0, 1);
+	device->clear(true, true, true);
+}
+
 void Engine::render(float ifps) {
 	RenderFrame& frame = currentFrame();
 
@@ -919,6 +926,7 @@ void Engine::render(float ifps) {
 
 	// get camera
 	frame.camera = vec4(frame.imodelview * vec3(0, 0, 0), 1);
+	frame.camera_sector = Bsp::findSector(vec3(frame.camera), frame.camera_sector);
 
 	// set frustum
 	sceneFrustum().set(frame.projection * frame.modelview);
@@ -938,8 +946,7 @@ void Engine::render(float ifps) {
 	device->setModelView(frame.modelview);
 
 	// ambient pass
-	// clear depth buffer
-	device->clear(false, true, true);
+	clear_scene_target(device);
 	device->setDepthCompare(CompareFunction::less);
 
 	// the wireframe draws the whole scene as lines
@@ -1013,7 +1020,7 @@ void Engine::render(float ifps) {
 			mirror->enable();
 
 			// clear
-			device->clear(false, true, true);
+			clear_scene_target(device);
 			device->setDepthCompare(CompareFunction::less);
 
 			// ambient mirror pass
@@ -1121,10 +1128,7 @@ Object* Engine::intersection(const vec3& line0, const vec3& line1, vec3& point, 
 	vec3 p, n;
 	point = line1;
 	Object* object = NULL;
-	for (int i = 0; i < Bsp::num_visible_sectors; i++) {
-		Sector* s = Bsp::visible_sectors[i];
-		for (int j = 0; j < s->num_visible_objects; j++) {
-			Object* o = s->visible_objects[j];
+	auto intersect = [&](Object* o) {
 			if (o->is_identity) {
 				if (o->intersection(line0, point, p, n)) {
 					point = p;
@@ -1141,7 +1145,12 @@ Object* Engine::intersection(const vec3& line0, const vec3& line1, vec3& point, 
 					object = o;
 				}
 			}
-		}
+	};
+	// Gameplay queries must not depend on the previous frame's culling.
+	for (int i = 0; i < Bsp::num_sectors; i++) {
+		Sector* s = &Bsp::sectors[i];
+		for (int j = 0; j < s->num_node_objects; j++) intersect(s->node_objects[j]);
 	}
+	for (int i = 0; i < num_objects; i++) intersect(objects[i]);
 	return object;
 }

@@ -82,13 +82,13 @@ void Portal::create(MeshData* mesh, int s) {
 void Portal::getScissor(int* scissor) const
 {
 	const RenderFrame& frame = currentFrame();
+	auto full_viewport = [&]() {
+		std::copy(frame.viewport, frame.viewport + 4, scissor);
+	};
 
 	if ((center - vec3(frame.camera)).length() < radius)
 	{
-		scissor[0] = frame.viewport[0];
-		scissor[1] = frame.viewport[1];
-		scissor[2] = frame.viewport[2];
-		scissor[3] = frame.viewport[3];
+		full_viewport();
 		return;
 	}
 
@@ -98,10 +98,22 @@ void Portal::getScissor(int* scissor) const
 	p[1] = mvp * vec4(points[1], 1);
 	p[2] = mvp * vec4(points[2], 1);
 	p[3] = mvp * vec4(points[3], 1);
-	p[0] /= p[0].w;
-	p[1] /= p[1].w;
-	p[2] /= p[2].w;
-	p[3] /= p[3].w;
+	for (int i = 0; i < 4; i++) {
+		// A portal crossing the near plane has no safe bounds obtained by
+		// projecting its corners. Keep the light pass conservative there.
+		if (!std::isfinite(p[i].w) || p[i].w <= EPSILON || p[i].z <= -p[i].w) {
+			full_viewport();
+			return;
+		}
+		p[i] /= p[i].w;
+		if (!std::isfinite(p[i].x) || !std::isfinite(p[i].y)) {
+			full_viewport();
+			return;
+		}
+		// Bound the conversion to integer screen coordinates.
+		p[i].x = std::clamp(p[i].x, -1.0f, 1.0f);
+		p[i].y = std::clamp(p[i].y, -1.0f, 1.0f);
+	}
 	vec3 min = vec3(1000000, 1000000, 1000000);
 	vec3 max = vec3(-1000000, -1000000, -1000000);
 	for (int i = 0; i < 4; i++) {

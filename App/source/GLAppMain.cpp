@@ -266,6 +266,12 @@ void GLAppMain::render() {
 		Engine::console->printf(9, 9, "fps: %.0f", fps);
 		Engine::device->setColor(vec4(0.77f, 1.0f, 0.15f, 1.0f));
 		Engine::console->printf(8, 8, "fps: %.0f", fps);
+		if (pause_toggle) {
+			Engine::console->printf(8, 32, "PAUSED - press Space to resume");
+		}
+		else if (shot_block_reason) {
+			Engine::console->printf(8, 32, "Shooting blocked: %s", shot_block_reason);
+		}
 		Engine::console->disable();
 
 		// info
@@ -302,65 +308,13 @@ void GLAppMain::idle() {
 
 	time += ifps;
 
-	// toggles
-	if (!Engine::console->getActivity()) {
-		if (keys[(int)' ']) {
-			pause_toggle = !pause_toggle;
-			keys[(int)' '] = 0;
-		}
-
-		if (keys[(int)'i']) {
-			info_toggle = !info_toggle;
-			keys[(int)'i'] = 0;
-		}
-
-		if (keys[(int)'f']) {
-			flash_light_toggle = !flash_light_toggle;
-			keys[(int)'f'] = 0;
-		}
-
-		if (keys[(int)'r']) {
-			robot_toggle = !robot_toggle;
-			keys[(int)'r'] = 0;
-		}
-	}
+	// Retain quick clicks between frames; audio playback never gates gameplay.
+	shot_cooldown -= ifps;
+	if (shot_cooldown < 0) shot_cooldown = 0;
+	if (robot_toggle || pause_toggle || Engine::console->getActivity()) shot_pending = false;
 
 	// from camera
 	static int look = 0;
-
-	// shoot before camera
-	if (robot_toggle == 0) {
-		static int shoot = 0;
-		static float shoot_time = 0;
-
-		shoot_light->set(modelview.inverse());
-
-		ALint state;
-		alGetSourcei(shoot_sound->source, AL_SOURCE_STATE, &state);
-		alSourcef(shoot_sound->source, AL_GAIN, 0.1);
-
-		if (look && shoot == 0 && state != AL_PLAYING && mouseButton & BUTTON_LEFT)
-		{
-			vec3 point, normal;
-			Object* object = Engine::intersection(camera, camera + dir * 1000, point, normal);
-			shoot_sound->play();
-			if (object) {
-				if (object->rigidbody) {
-					object->rigidbody->addImpulse(point, -normal * 100 * fabs(normal * dir));
-				}
-				shoot_particles->set(point - dir * 0.2);
-				shoot_particles->setOffTime(0.2);
-				shoot_time = time;
-				Engine::lights.addLight(shoot_light, false);
-			}
-			shoot = 1;
-		}
-		else {
-			if (state != AL_PLAYING) shoot = 1;
-			else shoot = 0;
-		}
-		if (!(mouseButton & BUTTON_LEFT)) shoot = 0;
-	}
 
 	// camera movement
 	if (robot_toggle) {	// robot view
@@ -373,7 +327,7 @@ void GLAppMain::idle() {
 	else {	// free camera
 		mat4 m0, m1, m2;
 
-		if (!look && mouseButton & BUTTON_LEFT) {
+		if (!look && ((mouseButton & BUTTON_LEFT) || shot_pending)) {
 			setCursor(windowWidth / 2, windowHeight / 2);
 			mouseX = windowWidth / 2;
 			mouseY = windowHeight / 2;
@@ -425,6 +379,39 @@ void GLAppMain::idle() {
 		projection.perspective(89, (float)windowWidth / (float)windowHeight, 0.1, 500);
 	}
 
+	// Shoot with this frame's camera and aim, at a fixed held-fire cadence.
+	shoot_light->set(modelview.inverse());
+	const char* reason = robot_toggle ? "robot view" : pause_toggle ? "paused" :
+		Engine::console->getActivity() ? "console open" : !look ? "mouse aim released" : nullptr;
+	if ((shot_pending || (mouseButton & BUTTON_LEFT)) && reason && reason != shot_block_reason) {
+		spdlog::info("Shot blocked: {}; camera=({}, {}, {}), buttons={}, cooldown={}, timestep={}",
+			reason, camera.x, camera.y, camera.z, mouseButton, shot_cooldown, ifps);
+	}
+	shot_block_reason = reason;
+	if (robot_toggle == 0 && look && !pause_toggle && !Engine::console->getActivity()) {
+		alSourcef(shoot_sound->source, AL_GAIN, 0.1);
+		if (shot_cooldown <= 0 && (shot_pending || (mouseButton & BUTTON_LEFT))) {
+			shot_pending = false;
+			shot_cooldown = 0.15f;
+			vec3 point, normal;
+			Object* object = Engine::intersection(camera, camera + dir * 1000, point, normal);
+#ifndef NDEBUG
+			spdlog::info("Shot fired: camera=({}, {}, {}), hit={}, timestep={}",
+				camera.x, camera.y, camera.z, object != nullptr, ifps);
+#endif
+			shoot_sound->stop();
+			shoot_sound->play();
+			// A muzzle flash occurs even when the ray misses everything.
+			Engine::lights.addLight(shoot_light, false);
+			if (object) {
+				if (object->rigidbody) {
+					object->rigidbody->addImpulse(point, -normal * 100 * fabs(normal * dir));
+				}
+				shoot_particles->set(point - dir * 0.2);
+				shoot_particles->setOffTime(0.2);
+			}
+		}
+	}
 	// robot controls
 	if (keys[KEY_UP]) velocity += ifps * 1;
 	if (keys[KEY_DOWN]) velocity -= ifps * 1;
@@ -526,6 +513,16 @@ void GLAppMain::idle() {
 }
 
 
+void GLAppMain::buttonPress(int button) {
+	if (button == BUTTON_LEFT) {
+		shot_pending = true;
+#ifndef NDEBUG
+		spdlog::info("Shot input: camera=({}, {}, {}), buttons={}, cooldown={}, timestep={}, paused={}, robot={}",
+			camera.x, camera.y, camera.z, mouseButton, shot_cooldown, ifps, pause_toggle, robot_toggle);
+#endif
+	}
+}
+
 void GLAppMain::keyPress(int key) {
 	if (key == KEY_UP) Engine::console->keyPress('\1');
 	else if (key == KEY_DOWN) Engine::console->keyPress('\2');
@@ -535,7 +532,19 @@ void GLAppMain::keyPress(int key) {
 
 	if (Engine::console->getActivity()) return;
 
-	if (key == 'o') {
+	// Toggle only in response to a key event, not a stale polled key state.
+	if (key == ' ' || key == 'i' || key == 'f' || key == 'r' || key == 'o' || key == '3') {
+		keys[key] = 0;
+	}
+	if (key == ' ') {
+		pause_toggle = !pause_toggle;
+		spdlog::info("Simulation {} by Space key event at camera=({}, {}, {})",
+			pause_toggle ? "paused" : "resumed", camera.x, camera.y, camera.z);
+	}
+	else if (key == 'i') info_toggle = !info_toggle;
+	else if (key == 'f') flash_light_toggle = !flash_light_toggle;
+	else if (key == 'r') robot_toggle = !robot_toggle;
+	else if (key == 'o') {
 		currentFrame().wireframe = !currentFrame().wireframe;
 	}
 	else if (key == '3') {

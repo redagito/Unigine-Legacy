@@ -9,7 +9,11 @@
 int main(int argc, char** argv) {
 
 	// open the log before anything can fail
-	logger::init(ENGINE_LOG_NAME);
+	const char* log_name = ENGINE_LOG_NAME;
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-frames") || !strcmp(argv[i], "-headless")) log_name = "Headless.log";
+	}
+	logger::init(log_name);
 
 	try {
 

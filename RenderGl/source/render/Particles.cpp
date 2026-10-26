@@ -160,5 +160,8 @@ float Particles::getRadius() {
 }
 
 float Particles::rand() {
-	return sqrt(-2.0 * log((float)::rand() / RAND_MAX)) * sin(2.0 * PI * (float)::rand() / RAND_MAX);
+	// Box-Muller requires a strictly positive first sample: log(0) generates
+	// infinite velocities which can corrupt particle positions and bounds.
+	double u = (static_cast<double>(::rand()) + 1.0) / (static_cast<double>(RAND_MAX) + 1.0);
+	return sqrt(-2.0 * log(u)) * sin(2.0 * PI * (float)::rand() / RAND_MAX);
 }

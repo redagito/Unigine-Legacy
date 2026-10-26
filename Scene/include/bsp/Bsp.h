@@ -4,6 +4,7 @@ class Material;
 class Portal;
 class Sector;
 class Frustum;
+struct vec3;
 
 // Binary space partitioning
 class Bsp 
@@ -18,6 +19,7 @@ public:
 
 	void bindMaterial(const char* name, Material* material);
 	void render(Frustum* frustum);
+	static int findSector(const vec3& point, int hint = -1);
 
 	void saveState();
 	void restoreState(int frame);

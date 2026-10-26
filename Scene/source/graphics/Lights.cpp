@@ -34,6 +34,9 @@ void Lights::clear()
 
 void Lights::update(float ifps)
 {
+	// Animation and lifetime must not depend on the previous camera view.
+	for (int i = 0; i < num_lights; i++) lights[i]->update(ifps);
+
 	// Remove decayed lights
 	for (int i = 0; i < num_lights; ++i)
 	{
@@ -43,10 +46,6 @@ void Lights::update(float ifps)
 		--i;
 	}
 
-	// update lights
-	for (int i = 0; i < num_visible_lights; i++) {
-		visible_lights[i]->update(ifps);
-	}
 }
 
 void Lights::addLight(Light* light, bool owned)

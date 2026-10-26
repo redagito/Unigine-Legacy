@@ -26,8 +26,9 @@ public:
 	void render();
 
 	void keyPress(int key);
+	void buttonPress(int button) override;
 
-	float time;
+	float time = 0;
 
 	int pause_toggle;				// state toggles
 	int info_toggle;
@@ -59,6 +60,9 @@ public:
 	Paths paths;
 	bool engine_initialized = false;
 	bool capture_frame = false;
+	bool shot_pending = false;
+	float shot_cooldown = 0;
+	const char* shot_block_reason = nullptr;
 #ifdef GRAB
 	Video* video = nullptr;					// video grabber
 	unsigned char* buffer = nullptr;
