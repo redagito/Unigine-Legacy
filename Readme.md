@@ -1,3 +1,5 @@
+![Unigine demo screenshot](docs/sceen1.png)
+
 # Unigine v0.2
 
 Unigine engine version 0.2 from http://frustum.org
